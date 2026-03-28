@@ -244,3 +244,15 @@ class EnterpriseAdapter:
 
     def poll_research(self, *args, **kwargs):
         raise NotImplementedError("Research is not available in the Enterprise REST API.")
+
+    # =========================================================================
+    # Standalone Podcast (enterprise-only, no notebook needed)
+    # =========================================================================
+
+    def create_podcast(self, **kwargs) -> dict | None:
+        """Generate a standalone podcast from raw text."""
+        return self._ec.create_podcast(**kwargs)
+
+    def download_podcast(self, operation_name: str, output_path: str) -> str:
+        """Download a completed podcast."""
+        return self._ec.download_podcast(operation_name, output_path)

@@ -363,6 +363,94 @@ class EnterpriseClient:
         return True
 
     # =========================================================================
+    # Standalone Podcast API (no notebook required)
+    # =========================================================================
+    # Uses v1 (stable), not v1alpha. Does NOT require NotebookLM Enterprise
+    # license — only needs roles/discoveryengine.podcastApiUser IAM role.
+
+    def create_podcast(
+        self,
+        text_contents: list[str] | None = None,
+        title: str = "",
+        description: str = "",
+        focus: str = "",
+        length: str = "STANDARD",
+        language: str = "en",
+    ) -> dict | None:
+        """Generate a standalone podcast from raw content (no notebook needed).
+
+        Args:
+            text_contents: List of text strings to use as podcast source material
+            title: Podcast title
+            description: Podcast description
+            focus: Topic focus prompt for the podcast
+            length: "SHORT" (~4-5 min) or "STANDARD" (~10 min)
+            language: Language code (default: "en")
+
+        Returns:
+            Dict with operation name for polling/downloading, or None on failure.
+            Use download_podcast() with the operation name to get the audio.
+        """
+        if not text_contents:
+            raise ValueError("At least one text content item is required for podcast generation.")
+
+        body: dict[str, Any] = {
+            "podcastConfig": {
+                "length": length.upper(),
+                "languageCode": language,
+            },
+            "contexts": [{"text": t} for t in text_contents],
+        }
+        if focus:
+            body["podcastConfig"]["focus"] = focus
+        if title:
+            body["title"] = title
+        if description:
+            body["description"] = description
+
+        # Standalone Podcast API uses v1 (not v1alpha) and a different base
+        url = (
+            f"https://discoveryengine.googleapis.com/v1"
+            f"/projects/{self.project_id}/locations/global/podcasts"
+        )
+        response = self._client.request("POST", url, headers=self._headers(), json=body)
+
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise httpx.HTTPStatusError(
+                f"Podcast API error: {e.response.status_code}",
+                request=e.request,
+                response=e.response,
+            ) from None
+
+        return response.json() if response.content else None
+
+    def download_podcast(self, operation_name: str, output_path: str) -> str:
+        """Download a completed podcast.
+
+        Args:
+            operation_name: The operation name from create_podcast response
+                (e.g. "projects/123/locations/global/operations/create-podcast-456")
+            output_path: Local file path to save the MP3
+
+        Returns:
+            The output file path
+        """
+        url = f"https://discoveryengine.googleapis.com/v1/{operation_name}:download?alt=media"
+        headers = {"Authorization": f"Bearer {self._get_token()}"}
+
+        with self._client.stream("GET", url, headers=headers, follow_redirects=True) as response:
+            response.raise_for_status()
+            path = Path(output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "wb") as f:
+                for chunk in response.iter_bytes(65536):
+                    f.write(chunk)
+
+        return str(path)
+
+    # =========================================================================
     # Query (not available in REST API)
     # =========================================================================
 

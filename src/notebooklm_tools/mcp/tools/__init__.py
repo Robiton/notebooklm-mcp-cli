@@ -22,6 +22,7 @@ from .notebooks import (
 )
 from .notes import note
 from .pipeline import pipeline
+from .podcast import podcast_create, podcast_download
 from .research import (
     research_import,
     research_start,
@@ -103,4 +104,7 @@ __all__ = [
     "pipeline",
     # Tag/Smart Select (1 consolidated — action: add|remove|list|select)
     "tag",
+    # Podcast (2 — enterprise standalone, no notebook needed)
+    "podcast_create",
+    "podcast_download",
 ]
