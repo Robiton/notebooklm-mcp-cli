@@ -13,18 +13,19 @@ def configure_mode(
 ) -> dict[str, Any]:
     """Configure NotebookLM mode (personal or enterprise).
 
-    For enterprise mode, provide your GCP project ID (found in your
-    NotebookLM URL: ...?project=YOUR_PROJECT_ID) and location.
-
-    Changes are saved to config.toml and take effect immediately.
+    IMPORTANT: Enterprise and personal use SEPARATE authentication.
+    - Enterprise: requires `gcloud auth login` (GCP OAuth2)
+    - Personal: requires `nlm login` (browser cookie auth)
+    Switching modes without the correct auth will cause 400/401 errors.
+    Always confirm the user has authenticated for the target mode before switching.
 
     Args:
         mode: "personal" or "enterprise"
-        project_id: GCP project number (required for enterprise)
+        project_id: GCP project number (required for enterprise, found in NotebookLM URL)
         location: GCP location - "global", "us", or "eu" (default: "global")
 
     Returns:
-        Dictionary with status and current configuration.
+        Dictionary with status, configuration, and auth requirements.
     """
     if mode not in ("personal", "enterprise"):
         return {"status": "error", "error": "mode must be 'personal' or 'enterprise'"}
@@ -37,6 +38,20 @@ def configure_mode(
         }
 
     from notebooklm_tools.utils.config import get_config, reset_config, save_config
+
+    # Pre-check: warn if switching to personal without cookies
+    if mode == "personal":
+        from notebooklm_tools.core.auth import load_cached_tokens
+        cached = load_cached_tokens()
+        if not cached or not cached.cookies:
+            return {
+                "status": "warning",
+                "mode": mode,
+                "message": "Mode set to personal, but no personal auth tokens found. "
+                           "Run 'nlm login' in your terminal first to authenticate "
+                           "with your personal Google account, then try again.",
+                "auth_required": True,
+            }
 
     config = get_config()
     config.enterprise.mode = mode
