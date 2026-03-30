@@ -134,24 +134,24 @@ def _enterprise_profile(project_id: str, location: str = "global") -> APIProfile
 
 
 def get_api_profile() -> APIProfile:
-    """Get the appropriate API profile based on environment configuration.
+    """Get the appropriate API profile based on config.toml and environment.
 
-    Environment variables:
-        NOTEBOOKLM_MODE: "personal" (default) or "enterprise"
-        NOTEBOOKLM_PROJECT_ID: GCP project number (required for enterprise)
-        NOTEBOOKLM_LOCATION: GCP location (default: "global")
+    Resolution chain: env var > config.toml > default ("personal")
     """
-    mode = os.environ.get("NOTEBOOKLM_MODE", "personal").lower()
+    from notebooklm_tools.utils.config import get_config
+
+    config = get_config()
+    mode = config.enterprise.mode.lower()
 
     if mode == "enterprise":
-        project_id = os.environ.get("NOTEBOOKLM_PROJECT_ID", "")
+        project_id = config.enterprise.project_id
         if not project_id:
             raise ValueError(
-                "NOTEBOOKLM_PROJECT_ID is required for enterprise mode.\n"
-                "Find it in your NotebookLM URL: ...?project=YOUR_PROJECT_ID\n"
-                "Then set: export NOTEBOOKLM_PROJECT_ID=YOUR_PROJECT_ID"
+                "Enterprise mode requires a project ID.\n"
+                "Set it with: nlm config set enterprise.project_id YOUR_PROJECT_ID\n"
+                "Or: export NOTEBOOKLM_PROJECT_ID=YOUR_PROJECT_ID"
             )
-        location = os.environ.get("NOTEBOOKLM_LOCATION", "global")
+        location = config.enterprise.location or "global"
         return _enterprise_profile(project_id, location)
 
     return _personal_profile()

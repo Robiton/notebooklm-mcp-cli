@@ -41,7 +41,10 @@ def get_client():
     global _client
 
     # Enterprise mode: use official REST API with GCP OAuth2
-    if os.environ.get("NOTEBOOKLM_MODE", "personal").lower() == "enterprise":
+    from notebooklm_tools.utils.config import get_config
+    config = get_config()
+    mode = config.enterprise.mode.lower()
+    if mode == "enterprise":
         if _client is not None:
             return _client
         with _client_lock:

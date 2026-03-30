@@ -42,13 +42,16 @@ class EnterpriseClient:
         location: str | None = None,
         access_token: str | None = None,
     ):
-        self.project_id = project_id or os.environ.get("NOTEBOOKLM_PROJECT_ID", "")
-        self.location = location or os.environ.get("NOTEBOOKLM_LOCATION", "global")
+        from notebooklm_tools.utils.config import get_config
+        config = get_config()
+        self.project_id = project_id or config.enterprise.project_id
+        self.location = location or config.enterprise.location or "global"
 
         if not self.project_id:
             raise ValueError(
-                "NOTEBOOKLM_PROJECT_ID is required for enterprise mode.\n"
-                "Find it in your NotebookLM URL: ...?project=YOUR_PROJECT_ID"
+                "Enterprise mode requires a project ID.\n"
+                "Set it with: nlm config set enterprise.project_id YOUR_PROJECT_ID\n"
+                "Or: export NOTEBOOKLM_PROJECT_ID=YOUR_PROJECT_ID"
             )
 
         self._endpoint_location = self.location

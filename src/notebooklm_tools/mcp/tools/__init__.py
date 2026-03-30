@@ -29,6 +29,7 @@ from .research import (
     research_status,
 )
 from .server import server_info
+from .setup import configure_mode
 from .sharing import (
     notebook_share_batch,
     notebook_share_invite,
@@ -107,4 +108,6 @@ __all__ = [
     # Podcast (2 — enterprise standalone, no notebook needed)
     "podcast_create",
     "podcast_download",
+    # Setup (1 — configure personal/enterprise mode)
+    "configure_mode",
 ]
