@@ -354,15 +354,16 @@ class EnterpriseClient:
         focus: str = "",
         language: str = "en",
     ) -> dict | None:
-        """Generate an audio overview for a notebook."""
-        body: dict[str, Any] = {}
-        if source_ids:
-            body["sourceIds"] = [{"id": sid} for sid in source_ids]
-        if focus:
-            body["episodeFocus"] = focus
-        if language != "en":
-            body["languageCode"] = language
-        result = self._request("POST", f"notebooks/{notebook_id}/audioOverviews", json=body)
+        """Generate an audio overview for a notebook.
+
+        Note: The Discovery Engine API currently only accepts an empty body.
+        The documented fields (sourceIds, episodeFocus, languageCode) are
+        rejected with "Unknown name" errors as of March 2026. All sources
+        in the notebook are used automatically.
+        """
+        _validate_id(notebook_id, "notebook_id")
+        # API rejects all optional fields — send empty body, uses all sources
+        result = self._request("POST", f"notebooks/{notebook_id}/audioOverviews", json={})
         return result
 
     def delete_audio_overview(self, notebook_id: str) -> bool:
