@@ -1,0 +1,40 @@
+name: Personal Mode Bug
+description: Report a bug in personal (notebooklm.google.com) mode
+labels: ["bug", "personal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Personal mode is inherited from [jacob-bd/notebooklm-mcp-cli](https://github.com/jacob-bd/notebooklm-mcp-cli).**
+        Please check if the bug reproduces on the upstream repo first — if it does, file it there.
+  - type: checkboxes
+    id: upstream-check
+    attributes:
+      label: Upstream check
+      options:
+        - label: I checked jacob-bd/notebooklm-mcp-cli and this bug is fork-specific
+          required: false
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: Output of `nlm --version`
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version`
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message or unexpected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
