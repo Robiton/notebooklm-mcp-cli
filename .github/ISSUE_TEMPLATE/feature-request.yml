@@ -1,0 +1,37 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Feature scope
+      options:
+        - Enterprise mode only
+        - Personal mode only
+        - Both modes
+        - General / CLI / UX
+    validations:
+      required: true
+  - type: checkboxes
+    id: upstream
+    attributes:
+      label: For general features
+      options:
+        - label: I have checked whether this feature belongs in upstream (jacob-bd/notebooklm-mcp-cli)
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution or behavior
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

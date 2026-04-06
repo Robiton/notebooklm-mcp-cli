@@ -1,0 +1,46 @@
+name: Enterprise Mode Bug
+description: Report a bug in enterprise (Google Workspace) mode
+labels: ["bug", "enterprise"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Enterprise bugs are handled by this fork only** — do not file at jacob-bd/notebooklm-mcp-cli.
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: Output of `nlm --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: gcp-api
+    attributes:
+      label: Discovery Engine API enabled?
+      options:
+        - "Yes"
+        - "No / Not sure"
+    validations:
+      required: true
+  - type: input
+    id: gcloud-version
+    attributes:
+      label: gcloud CLI version
+      description: Output of `gcloud --version | head -1`
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message or unexpected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context (GCP project type, region, etc.)
+      description: Do NOT include your project ID, credentials, or tokens.
