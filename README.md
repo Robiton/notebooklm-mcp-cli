@@ -10,6 +10,20 @@
 > It adds full support for **NotebookLM Enterprise** (`notebooklm.cloud.google.com`) via the official Discovery Engine REST API, while keeping all personal-mode features intact.
 > If you only use personal NotebookLM, the upstream repo is the right choice. If you have a Google Workspace enterprise account, you're in the right place.
 
+### What this fork adds over upstream
+
+| Addition | Details |
+|---|---|
+| **Enterprise REST API client** | Official Discovery Engine API — not reverse-engineered batchexecute |
+| **GCP OAuth2 authentication** | `gcloud auth login` instead of browser cookies |
+| **`configure_mode` MCP tool** | Switch personal ↔ enterprise from within Claude, with auth pre-checks |
+| **Paywall detection** | URL sources checked for login/subscription walls before adding |
+| **Per-URL batch fault isolation** | One bad URL in a batch no longer fails the entire batch |
+| **Standalone Podcast API** | Generate podcasts from raw text — no notebook required |
+| **Persistent config** | `nlm config set enterprise.mode enterprise` — no env var editing each session |
+
+> All personal-mode features (chat, video, reports, flashcards, research, sharing, etc.) are fully preserved.
+
 **Programmatic access to Google NotebookLM** — via command-line interface (CLI) or Model Context Protocol (MCP) server. Supports both Personal and Enterprise accounts.
 
 📺 **Watch the Demos**
@@ -587,15 +601,13 @@ uv tool list | grep notebooklm
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, PR process, and how to add new features.
 
-## Vibe Coding Alert
+## A Note on This Fork
 
-Full transparency: this project was built by a non-developer using AI coding assistants. If you're an experienced Python developer, you might look at this codebase and wince. That's okay.
+This fork started as an internal tool to fill a real gap: NotebookLM Enterprise had no programmatic access, and the upstream project (which is excellent) is scoped to personal accounts only. The enterprise implementation was built with AI assistance — I'm not a professional Python developer — so if you see something that could be done better, PRs are genuinely welcome.
 
-The goal here was to scratch an itch - programmatic access to NotebookLM - and learn along the way. The code works, but it's likely missing patterns, optimizations, or elegance that only years of experience can provide.
+The upstream project's original "vibe coding" spirit applies here too: the goal was to solve a problem, not to write a textbook. The code works, passes tests, and is production-stable enough for daily use. But experienced developers will likely see room for improvement, and that input is valuable.
 
-**This is where you come in.** If you see something that makes you cringe, please consider contributing rather than just closing the tab. This is open source specifically because human expertise is irreplaceable. Whether it's refactoring, better error handling, type hints, or architectural guidance - PRs and issues are welcome.
-
-Think of it as a chance to mentor an AI-assisted developer through code review. We all benefit when experienced developers share their knowledge.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved — especially if you have enterprise NotebookLM access and can test end-to-end.
 
 ## Credits
 
