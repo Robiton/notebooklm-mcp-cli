@@ -1,18 +1,16 @@
-# NotebookLM CLI & MCP Server
+# NotebookLM CLI & MCP Server — Enterprise + Personal
 
 ![NotebookLM MCP Header](docs/media/header.jpg)
 
-[![PyPI version](https://img.shields.io/pypi/v/notebooklm-mcp-cli)](https://pypi.org/project/notebooklm-mcp-cli/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/notebooklm-mcp-cli)](https://pypistats.org/packages/notebooklm-mcp-cli)
-[![Total downloads](https://static.pepy.tech/badge/notebooklm-mcp-cli)](https://pepy.tech/projects/notebooklm-mcp-cli)
 [![Python](https://img.shields.io/pypi/pyversions/notebooklm-mcp-cli)](https://pypi.org/project/notebooklm-mcp-cli/)
 [![License](https://img.shields.io/pypi/l/notebooklm-mcp-cli)](https://github.com/jacob-bd/notebooklm-mcp-cli/blob/main/LICENSE)
+[![Fork of](https://img.shields.io/badge/fork%20of-jacob--bd%2Fnotebooklm--mcp--cli-blue)](https://github.com/jacob-bd/notebooklm-mcp-cli)
 
-> 🎉 **January 2026 — Major Update!** This project has been completely refactored to unify **NotebookLM-MCP** and **NotebookLM-CLI** into a single, powerful package. One install gives you both the CLI (`nlm`) and MCP server (`notebooklm-mcp`). See the [CLI Guide](docs/CLI_GUIDE.md) and [MCP Guide](docs/MCP_GUIDE.md) for full documentation.
+> **This is an enterprise-focused fork of [jacob-bd/notebooklm-mcp-cli](https://github.com/jacob-bd/notebooklm-mcp-cli).**
+> It adds full support for **NotebookLM Enterprise** (`notebooklm.cloud.google.com`) via the official Discovery Engine REST API, while keeping all personal-mode features intact.
+> If you only use personal NotebookLM, the upstream repo is the right choice. If you have a Google Workspace enterprise account, you're in the right place.
 
-**Programmatic access to Google NotebookLM** — via command-line interface (CLI) or Model Context Protocol (MCP) server.
-
-> **Supports both Personal and Enterprise NotebookLM.** Personal uses browser cookie auth (all features). Enterprise uses the official Discovery Engine REST API with GCP OAuth2 (stable, documented — see [Enterprise Mode](#enterprise-mode) below).
+**Programmatic access to Google NotebookLM** — via command-line interface (CLI) or Model Context Protocol (MCP) server. Supports both Personal and Enterprise accounts.
 
 📺 **Watch the Demos**
 
@@ -253,6 +251,24 @@ nlm setup remove claude-code
 nlm setup remove cursor
 # ... or any configured tool
 ```
+
+## Why This Fork?
+
+The upstream project targets personal NotebookLM accounts only. Enterprise NotebookLM (`notebooklm.cloud.google.com`) uses a completely different authentication system (GCP OAuth2) and a separate official REST API — it's not just a different URL.
+
+This fork adds:
+- **Enterprise REST API client** — official Discovery Engine API, not reverse-engineered batchexecute
+- **Persistent config** — `nlm config set enterprise.mode enterprise` persists across restarts (no env var editing)
+- **`configure_mode` MCP tool** — switch modes from within Claude with auth pre-checks
+- **Paywall detection** — URL sources are checked for login/subscription walls before adding
+- **Per-URL bulk results** — one bad URL in a batch doesn't fail the whole batch
+- **Standalone Podcast API** — generate podcasts from raw text, no notebook needed
+
+The enterprise REST API (`v1alpha`) covers notebooks, sources, and audio. Chat, video, reports, and other features remain personal-only — they have no documented REST endpoints. The hope is that Google promotes the API to `v1` stable and expands coverage over time.
+
+See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for full enterprise setup instructions.
+
+---
 
 ## Enterprise Mode
 
