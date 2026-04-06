@@ -77,21 +77,25 @@ Current state: v1.0.0, in active use. Enterprise mode tested against GCP project
 - **Upstream**: `jacob-bd/notebooklm-mcp-cli` — personal NotebookLM only
 - **This fork**: `Robiton/notebooklm-mcp-cli` — enterprise + personal
 - **PyPI package name**: `notebooklm-enterprise-mcp` — jacob-bd owns `notebooklm-mcp-cli` on PyPI at v0.5.16
+- **Current synced upstream version**: v0.5.16 (cherry-picked through 2026-04-06)
 - **Merged PRs on fork** (all into `enterprise-url-support`):
-  - Robiton/notebooklm-mcp-cli#2 — AI scaffold adoption — merged
-  - Robiton/notebooklm-mcp-cli#3 — package rename, CI fix, README identity — merged
-  - Robiton/notebooklm-mcp-cli#4 — CONTRIBUTING, CoC, SECURITY, issue templates — merged
+  - Robiton#2 — AI scaffold adoption — merged
+  - Robiton#3 — package rename, CI fix, README identity — merged
+  - Robiton#4 — CONTRIBUTING, CoC, SECURITY, issue templates — merged
+  - Robiton#5 — debt cleanup, upstream sync workflow, .codex, release process — merged
+  - Robiton#6 — upstream sync v0.5.11–v0.5.16 cherry-picks — merged
 - **Open upstream PRs**:
-  - `#129` — standalone podcast tool (podcast-standalone branch) — CI green, pending review
+  - `#129` — standalone podcast tool — CI green, pending jacob-bd review
   - `#126` — full enterprise support — declined (v1alpha instability concern)
-- **Sync strategy**: Periodically merge upstream/main into enterprise-url-support; weekly upstream-check.yml alerts on drift
+- **Skipped upstream commit**: `b31ab7e` (dual RPC fallback) — permanently skip; incompatible with our enterprise adapter design
+- **Sync strategy**: Periodically cherry-pick from upstream/main; weekly upstream-check.yml opens a GitHub issue if we fall behind
 - **Re-submit enterprise PR trigger**: When Discovery Engine API promotes from v1alpha to v1
-- **`gh pr create` in fork**: Always use `--repo Robiton/notebooklm-mcp-cli --head <branch>` or it defaults to the upstream parent (jacob-bd)
-- **ruff version**: Lock file pins ruff 0.14.14. Use `.venv/bin/ruff` (after `uv sync --all-extras`) for CI-consistent checks — `uvx ruff` uses latest and may differ
+- **`gh pr create` in fork**: Always use `--repo Robiton/notebooklm-mcp-cli --base <target> --head <branch>` explicitly — default detects upstream parent (jacob-bd) and creates PR there instead
+- **ruff version**: Lock file pins ruff 0.14.14. Use `uv run --extra dev ruff` (NOT `uvx ruff`) for CI-consistent checks
 
 ### Upstream sync conflict hotspots
 
-These files conflict on every upstream merge. Resolve manually:
+These files conflict on every upstream cherry-pick. Resolve manually:
 
 | File | Conflict type |
 |------|---------------|
@@ -99,7 +103,54 @@ These files conflict on every upstream merge. Resolve manually:
 | `core/__init__.py` | Exports for both clients |
 | `utils/config.py` | Enterprise config section |
 | `pyproject.toml` | Version, package name, and deps |
-| `CHANGELOG.md` | Upstream adds entries at top; our fork header must stay at top |
+| `CHANGELOG.md` | Upstream adds entries at top; our fork header must stay at top — always `git checkout --ours CHANGELOG.md` |
+
+---
+
+## Repository setup status (as of 2026-04-06)
+
+| Item | Status |
+|------|--------|
+| GitHub Issues | ✅ Enabled |
+| GitHub Discussions | ✅ Enabled |
+| Issue templates (4) | ✅ In `.github/ISSUE_TEMPLATE/` |
+| PR template | ✅ In `.github/PULL_REQUEST_TEMPLATE.md` |
+| Dependabot | ✅ Weekly pip + Actions updates |
+| SECURITY.md | ✅ Root level, GitHub recognizes it |
+| CONTRIBUTING.md | ✅ Root level |
+| CODE_OF_CONDUCT.md | ✅ Root level |
+| Branch protection on main | ❌ Not yet — manual GitHub Settings step |
+| Star history chart | ❌ Removed — re-add when repo has traction |
+| PyPI trusted publisher (OIDC) | ✅ Configured (environment: pypi) |
+
+---
+
+## Fork ecosystem research (2026-04-06)
+
+Reviewed ~430 active forks of jacob-bd/notebooklm-mcp-cli. Key findings:
+
+### Worth implementing (not yet done)
+
+| Fork | What it adds | Priority |
+|------|-------------|----------|
+| **D-intelligence** | `_safe_output_path()` — path traversal protection in downloads; `chmod 0o700` on credential dirs | High |
+| **hectorreyes-ship-it** | SSRF URL validation (blocks private IPs, metadata endpoints); sensitive-dir blocklist in `add_file` | High |
+| **RhysEJF** | CDP cookie allowlist: `Network.getCookies` filtered to NotebookLM domain instead of `getAllCookies` (prevents Gmail/Drive cookie capture) | High |
+| **brainupgrade-in** | `custom_style_description` param for video overview — position 6 in RPC options array, ~100 lines | Low |
+| **dizz** | OAuth 2.1 AS for remote MCP via claude.ai — enables hosted server scenario; no new deps | Low |
+
+### Skipped
+
+| Fork | Why |
+|------|-----|
+| **scguoi** | Different enterprise approach (RPC translation vs our REST API) — architecturally incompatible |
+| **sc1zox** | Deliberately removes `delete_notebook` — reduces functionality |
+| **byingyang/GugaMed/VooDisss** | Older `notebooklm-mcp` package format — needs porting, not worth it |
+| Others | Personal tooling, localization, noise |
+
+### Docker / hosted deployment research (pending)
+
+Single-user container (one Google account per container) is viable as a distribution option for teams who don't want to install anything locally. Key open questions documented in BACKLOG.md Docker research task. Multi-user (multiple Google accounts per container) requires new multi-tenancy architecture not yet designed.
 
 ---
 

@@ -5,6 +5,56 @@ _Most recent session at the top._
 
 ---
 
+## 2026-04-06 — Brian Worrell — Claude Code (session 5)
+
+**Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)
+
+**What we worked on:**
+- Resumed from context limit (session 4 ended mid-upstream cherry-pick)
+- Completed cherry-picks from upstream v0.5.11–v0.5.16 onto `chore/upstream-sync-v0.5.16`:
+  - `10f0cd7` auth.json chmod 0o600 (clean)
+  - `67ff30c` auth recovery + --cdp-url fix (clean)
+  - `86e2603` Python 3.13 Literal crash + CDP proxy bypass (clean)
+  - `055629c` research polling loop — minor conflict resolved in services/research.py and tests/
+  - `4ea50fc` configurable base URL merge — many conflicts; kept our enterprise URL routing via APIProfile throughout
+- Fixed 6 ruff errors introduced by cherry-picks (unused imports, B904, I001, SIM105)
+- All tests: 664 passed, 37 skipped — clean
+- Opened and merged Robiton/notebooklm-mcp-cli#6 (upstream sync) into enterprise-url-support
+- README updates: added "What this fork adds" table, updated Vibe Coding Alert to Robiton voice, added demo video attribution note, replaced legacy upgrade section with "Switching from Upstream" guide, removed star history chart
+- Added 4 GitHub issue templates (bug-enterprise, bug-personal, feature-request, question)
+- Added "Reporting Issues" section to README with routing table
+- Enabled GitHub Issues on the repo (was disabled)
+- Added PR template (.github/PULL_REQUEST_TEMPLATE.md)
+- Added Dependabot config (.github/dependabot.yml) — weekly pip + GitHub Actions updates
+- Fixed publish.yml: MCPB build/upload steps now skip on workflow_dispatch (only run on release events)
+- Researched all ~430 active forks of jacob-bd/notebooklm-mcp-cli for useful contributions
+- Deep-dived dizz (OAuth 2.1 remote MCP) and brainupgrade-in (custom video style) forks
+
+**Decisions made:**
+- Star history chart removed — new fork with near-zero stars looks worse than no chart; re-add when repo has traction
+- Upstream cherry-pick `b31ab7e` (dual RPC fallback) permanently skipped — incompatible with our enterprise adapter design
+- For 4ea50fc conflicts: kept our APIProfile-based URL routing throughout; upstream's `get_base_url()` approach is a simpler but less flexible design
+- Docker strategy: single-user container (one Google account per container) is viable and useful as a distributable option for teams; multi-user requires significant new architecture
+- High-priority fork contributions to implement: D-intelligence (path traversal), hectorreyes-ship-it (SSRF + sensitive dir blocklist), RhysEJF (CDP cookie allowlist)
+
+**Problems encountered:**
+- `gh pr create` defaulted to jacob-bd repo again — always use `--repo Robiton/notebooklm-mcp-cli --base <branch>` explicitly
+- 4ea50fc was a merge commit requiring `-m 1` flag for cherry-pick
+
+**Next steps:**
+- Security fixes from forks: D-intelligence path traversal, hectorreyes SSRF + sensitive-dir blocklist, RhysEJF CDP cookie allowlist
+- Research Docker single-user container: what does a minimal secure image look like, and how would distribution/deployment work for teams
+- Add brainupgrade-in custom_style_description for video overview (low effort, good feature)
+- Branch protection on main (manual GitHub Settings → Branches)
+- Merge enterprise-url-support → main for first clean main release
+
+**Backlog changes:**
+- Completed: upstream sync v0.5.11–v0.5.16 (PR #6), README identity overhaul, issue templates, PR template, Dependabot, GitHub Issues enabled, publish.yml MCPB guard
+- Added to up-next: 3 security fixes from fork research, Docker research task, brainupgrade-in video feature
+- Removed from up-next: all items that are now done (PR #5, GitHub About, Discussions, PyPI OIDC were completed in earlier sessions)
+
+---
+
 ## 2026-04-06 — Brian Worrell — Claude Code (session 4)
 
 **Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)

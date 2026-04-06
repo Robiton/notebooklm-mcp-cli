@@ -1,29 +1,43 @@
 # Project Backlog
 
 _This file is the project to-do list. Updated by all tools and team members._
-_Last updated: 2026-04-06 (session 4) by Claude Code_
+_Last updated: 2026-04-06 (session 5) by Claude Code_
 
 ---
 
 ## In progress
 
-- [ ] PR #5: Robiton/notebooklm-mcp-cli#5 (chore/p3-debt → enterprise-url-support) — debt cleanup, upstream sync, codex, release process | Priority: High | Owner: Brian | Due: —
 - [ ] Upstream PR review: jacob-bd/notebooklm-mcp-cli#129 (standalone podcast — CI green) | Priority: Med | Owner: jacob-bd (reviewer) | Due: —
 
 ---
 
 ## Up next
 
-- [ ] Merge PR #5 into enterprise-url-support | Priority: High | Owner: Brian | Due: —
-- [ ] GitHub About section (manual UI): description + topics (mcp, notebooklm, google-workspace, enterprise, python, cli, claude-desktop, ai-tools) | Priority: Med | Owner: Brian | Due: —
-- [ ] Enable GitHub Discussions (manual UI toggle in repo Settings) | Priority: Low | Owner: Brian | Due: —
-- [ ] PyPI OIDC trusted publisher setup (manual on pypi.org — one-time) | Priority: Med | Owner: Brian | Due: —
-- [ ] Test configure_mode + full enterprise workflow end-to-end after scaffold adoption | Priority: Med | Owner: Brian | Due: —
+### Security fixes from fork research (implement in order)
+
+- [ ] **D-intelligence**: Path traversal protection in downloads — `_safe_output_path()` blocks saving files outside `$HOME`/cwd; `chmod 0o700` on credential storage dirs | Priority: High | Owner: Claude Code | Due: —
+- [ ] **hectorreyes-ship-it**: SSRF URL validation in `add_url_source` — block `localhost`, private IPs, `metadata.google.internal`; sensitive-dir blocklist in `add_file` (blocks `~/.ssh`, `~/.aws`, `~/.gnupg`, etc.) | Priority: High | Owner: Claude Code | Due: —
+- [ ] **RhysEJF**: CDP cookie allowlist — switch from `Network.getAllCookies` (captures all browser cookies) to `Network.getCookies` filtered to NotebookLM domain only; prevents Gmail/Drive cookie capture | Priority: High | Owner: Claude Code | Due: —
+
+### Research tasks
+
+- [ ] **Docker research**: Design a minimal secure single-user container image for team distribution. Questions to answer: (1) base image choice (python:3.11-slim vs distroless), (2) how user authenticates their Google account into the container, (3) auth persistence across container restarts (volume mount vs re-auth), (4) how the container exposes the MCP server (SSE/HTTP transport), (5) how a user's Claude Desktop/Code points to the remote container, (6) what the distribution story looks like (Docker Hub, ghcr.io, private registry), (7) security hardening (non-root user, read-only fs, minimal capabilities). Goal: two options — local install (current) vs hosted container — for teams who want to avoid running anything on their laptops. | Priority: Med | Owner: Research | Due: —
+
+### New features from fork research
+
+- [ ] **brainupgrade-in**: Add `custom_style_description` param to video overview — when `visual_style=custom`, passes free-text style description at position 6 of RPC options array. ~100 lines across 4 files. | Priority: Low | Owner: Claude Code | Due: —
+
+### Maintenance
+
+- [ ] Branch protection on `main` (manual: GitHub Settings → Branches → Add ruleset; require PR + CI status checks, block force push) | Priority: Med | Owner: Brian | Due: —
+- [ ] Merge `enterprise-url-support` → `main` for first clean main release | Priority: Med | Owner: Brian | Due: —
+- [ ] Test configure_mode + full enterprise workflow end-to-end | Priority: Med | Owner: Brian | Due: —
 
 ---
 
 ## Backlog
 
+- [ ] dizz fork: OAuth 2.1 provider for remote MCP — enables claude.ai remote MCP connector to authenticate against self-hosted HTTP server. 373-line new module, no new deps. Would enable hosted-server scenario from Docker research. | Priority: Low | Owner: Claude Code | Due: —
 - [ ] Watch Discovery Engine API for v1alpha → v1 promotion; re-submit enterprise PR upstream when stable | Priority: Low | Owner: Brian | Due: —
 - [ ] Consider adding `nlm config set sources.approved_domains` to README quick-start for paywall guidance | Priority: Low | Owner: Brian | Due: —
 
