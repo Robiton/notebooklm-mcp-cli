@@ -19,10 +19,10 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Run ruff linting
-        run: uv run --dev ruff check . --output-format=github
+        run: uv run --extra dev ruff check . --output-format=github
 
       - name: Run ruff format check
-        run: uv run --dev ruff format --check .
+        run: uv run --extra dev ruff format --check .
 
   test:
     name: Run tests
@@ -36,4 +36,4 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Run tests with pytest
-        run: uv run --dev --with pytest-github-actions-annotate-failures --with pytest-asyncio pytest -v --tb=short -m "not e2e"
+        run: uv run --extra dev --with pytest-github-actions-annotate-failures pytest -v --tb=short -m "not e2e"
