@@ -141,10 +141,8 @@ def save_tokens_to_cache(tokens: AuthTokens, silent: bool = False) -> None:
     with open(cache_path, "w", encoding="utf-8") as f:
         json.dump(tokens.to_dict(), f, indent=2)
     # Restrict permissions so only the owner can read/write auth tokens
-    try:
+    with contextlib.suppress(OSError):
         os.chmod(cache_path, 0o600)
-    except OSError:
-        pass
     if not silent:
         logger.info(f"Auth tokens cached to {cache_path}")
 

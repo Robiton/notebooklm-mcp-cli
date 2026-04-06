@@ -162,7 +162,7 @@ def poll_research(
                 target_query=query,
             )
         except Exception as e:
-            raise ServiceError(f"Failed to poll research: {e}")
+            raise ServiceError(f"Failed to poll research: {e}") from e
 
         if not result:
             return {

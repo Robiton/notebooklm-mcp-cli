@@ -4,7 +4,6 @@ from typing import TypedDict
 
 from ..core.api_profile import get_api_profile
 from ..core.client import NotebookLMClient
-from ..utils.config import get_base_url
 from .errors import CreationError, NotFoundError, ServiceError, ValidationError
 
 

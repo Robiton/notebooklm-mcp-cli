@@ -1,7 +1,8 @@
 """Tests for services.research module."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from notebooklm_tools.core.errors import RPCError
 from notebooklm_tools.services.errors import ServiceError, ValidationError
@@ -190,7 +191,12 @@ class TestPollResearch:
 
         mock_client.poll_research.side_effect = [
             {"status": "in_progress", "task_id": "t-1", "sources": [], "report": ""},
-            {"status": "completed", "task_id": "t-1", "sources": [{"title": "A"}], "report": "Done"},
+            {
+                "status": "completed",
+                "task_id": "t-1",
+                "sources": [{"title": "A"}],
+                "report": "Done",
+            },
         ]
 
         result = poll_research(mock_client, "nb-1", poll_interval=5, max_wait=30)
