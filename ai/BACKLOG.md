@@ -1,14 +1,13 @@
 # Project Backlog
 
 _This file is the project to-do list. Updated by all tools and team members._
-_Last updated: 2026-04-07 (session 6) by Claude Code_
+_Last updated: 2026-04-07 (session 6, post-test) by Claude Code_
 
 ---
 
 ## In progress
 
 - [ ] Upstream PR review: jacob-bd/notebooklm-mcp-cli#129 (standalone podcast — CI green) | Priority: Med | Owner: jacob-bd (reviewer) | Due: —
-- [ ] Robiton/notebooklm-mcp-cli#7 — security hardening PR — open, CI running | Priority: High | Owner: Brian (merge) | Due: —
 
 ---
 
@@ -22,10 +21,14 @@ _Last updated: 2026-04-07 (session 6) by Claude Code_
 
 - [ ] **brainupgrade-in**: Add `custom_style_description` param to video overview — when `visual_style=custom`, passes free-text style description at position 6 of RPC options array. ~100 lines across 4 files. | Priority: Low | Owner: Claude Code | Due: —
 
+### Enterprise UX improvements (from 2026-04-07 live test)
+
+- [ ] **`studio_status` enterprise gap** — Currently returns empty silently when in enterprise mode. Should return a clear message: "Artifact status is not available in enterprise mode — check the NotebookLM UI directly." Affects users polling for podcast/audio completion. File: `mcp/tools/studio.py` or the enterprise adapter. | Priority: Med | Owner: Claude Code | Due: —
+- [ ] **Bot-blocked domain list** — THN (thehackernews.com), Orca Security (orca.security), SecurityOnline (securityonline.info) consistently block NotebookLM's crawler. Add to `KNOWN_PAYWALL_DOMAINS` in `services/sources.py` so users get a clear "this site blocks automated access" message upfront instead of a silent red-icon failure. | Priority: Med | Owner: Claude Code | Due: —
+
 ### Maintenance
 
 - [ ] Branch protection on `main` (manual: GitHub Settings → Branches → Add ruleset; require PR + CI status checks, block force push) | Priority: Med | Owner: Brian | Due: —
-- [ ] Merge `enterprise-url-support` → `main` for first clean main release | Priority: Med | Owner: Brian | Due: —
 - [ ] Test configure_mode + full enterprise workflow end-to-end | Priority: Med | Owner: Brian | Due: —
 
 ---
@@ -75,3 +78,6 @@ _Last updated: 2026-04-07 (session 6) by Claude Code_
 - [x] D-intelligence: _safe_output_path() + chmod 0o700 on credential dirs | Completed: 2026-04-07
 - [x] hectorreyes: unconditional SSRF block + sensitive-dir file blocklist | Completed: 2026-04-07
 - [x] RhysEJF: CDP cookie scope to NotebookLM domain only | Completed: 2026-04-07
+- [x] Merge enterprise-url-support → main (PR #8, squash merge) | Completed: 2026-04-07
+- [x] Release v1.0.1 to PyPI (GitHub release tag, publish.yml triggered) | Completed: 2026-04-07
+- [x] Swap local install from upstream notebooklm-mcp-cli to notebooklm-enterprise-mcp v1.0.1 | Completed: 2026-04-07
