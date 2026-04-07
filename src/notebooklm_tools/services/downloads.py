@@ -1,6 +1,7 @@
 """Downloads service — shared validation and routing for artifact downloads."""
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import TypedDict
 
 from ..core.client import NotebookLMClient
@@ -52,6 +53,27 @@ class DownloadResult(TypedDict):
 
     artifact_type: str
     path: str
+
+
+def _safe_output_path(path: str | Path) -> Path:
+    """Resolve path and assert it stays within HOME or cwd.
+
+    Prevents path traversal attacks (e.g. ../../etc/passwd) by ensuring the
+    resolved destination is inside the user's home directory or current working
+    directory before any file is written.
+
+    Raises:
+        ValueError: If the resolved path escapes both HOME and cwd.
+    """
+    resolved = Path(path).expanduser().resolve()
+    home = Path.home().resolve()
+    cwd = Path.cwd().resolve()
+    if not (resolved.is_relative_to(home) or resolved.is_relative_to(cwd)):
+        raise ValueError(
+            f"Output path '{resolved}' is outside your home directory and "
+            "current working directory. Refusing to write."
+        )
+    return resolved
 
 
 def validate_artifact_type(artifact_type: str) -> None:
@@ -110,6 +132,7 @@ def download_sync(
         ServiceError: If the download fails
     """
     validate_artifact_type(artifact_type)
+    _safe_output_path(output_path)
 
     if artifact_type in INTERACTIVE_TYPES:
         validate_output_format(output_format)
@@ -172,6 +195,7 @@ async def download_async(
         ServiceError: If the download fails
     """
     validate_artifact_type(artifact_type)
+    _safe_output_path(output_path)
 
     if artifact_type in INTERACTIVE_TYPES:
         validate_output_format(output_format)
