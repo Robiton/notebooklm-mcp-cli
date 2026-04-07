@@ -673,16 +673,32 @@ def execute_cdp_command(
             return response.get("result", {})
 
 
+# URLs whose cookies are needed for NotebookLM authentication.
+# Using Network.getCookies with an explicit URL list instead of
+# Network.getAllCookies prevents capturing Gmail, Drive, or other
+# Google-product cookies that are not needed by this tool.
+_NOTEBOOKLM_COOKIE_URLS = [
+    "https://notebooklm.google.com",
+    "https://accounts.google.com",  # __Secure-1PSID / __Secure-3PSID auth cookies
+]
+
+
 def get_page_cookies(ws_url: str) -> list[dict]:
-    """Get all cookies for the page via CDP.
+    """Get NotebookLM-scoped cookies via CDP.
 
     This is the key function that avoids keychain access!
-    Uses Network.getAllCookies CDP command to get cookies for all domains.
+    Uses Network.getCookies with an explicit URL filter so that only
+    NotebookLM and Google auth cookies are returned — not Gmail, Drive,
+    banking, or any other domains open in the browser.
 
     Returns:
         List of cookie objects (dicts) including name, value, domain, path, etc.
     """
-    result = execute_cdp_command(ws_url, "Network.getAllCookies")
+    result = execute_cdp_command(
+        ws_url,
+        "Network.getCookies",
+        {"urls": _NOTEBOOKLM_COOKIE_URLS},
+    )
     return result.get("cookies", [])
 
 
