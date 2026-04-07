@@ -15,7 +15,16 @@ _(nothing active)_
 
 ### Research tasks
 
-- [ ] **Enterprise SDK comparison** — Review `dandye/notebooklm_sdk` (Feb 2026) and `K-dash/nblm-rs` (Oct 2025, 9 releases), both targeting the official Discovery Engine Enterprise API. Compare their API patterns, endpoints, and auth flows against our `EnterpriseClient` to find anything we've missed or implemented differently. May reveal undocumented endpoints or better patterns. | Priority: High | Owner: Claude Code | Due: —
+- [x] **Enterprise SDK comparison** — Completed 2026-04-07. See findings below. | Priority: High | Owner: Claude Code | Due: —
+
+### Enterprise API gaps (from SDK comparison — 2026-04-07)
+
+- [ ] **Separate endpoint_location from resource location** — Today we use one `location` value for both the hostname prefix (`global-discoveryengine.googleapis.com`) and the resource path (`locations/global`). These are independent: EU users need `eu-` hostname but may use `global` resources. Blocks EU data residency support. Add `endpoint_location` config option to `EnterpriseClient`. | Priority: High | Owner: Claude Code | Due: —
+- [ ] **YouTube source type in enterprise** — Confirm `videoContent: { youtubeUrl: "..." }` field passes through the enterprise adapter correctly. Personal mode supports YouTube; enterprise adapter needs explicit verification and test. | Priority: Med | Owner: Claude Code | Due: —
+- [ ] **Retry with exponential backoff** — nblm-rs retries up to 3x with jitter (500ms–5s) and respects `Retry-After`. Our enterprise client has no retry logic. Add to `EnterpriseClient` for resilience against transient API errors. | Priority: Med | Owner: Claude Code | Due: —
+- [ ] **`NBLM_ACCESS_TOKEN` env var support** — Allow token injection via env var instead of requiring `gcloud` CLI. Useful for CI/CD pipelines and Docker containers. Add to `EnterpriseClient` auth chain. | Priority: Med | Owner: Claude Code | Due: —
+- [ ] **Surface `isShareable`/`isShared` in notebook responses** — These fields come back from the Enterprise API `notebookMetadata` but we likely discard them. Surface in `notebook_get`/`notebook_list` responses. | Priority: Low | Owner: Claude Code | Due: —
+- [ ] **`youtubeMetadata` in source responses** — `channelName` and `videoId` come back for YouTube sources. Surface in source list/get responses. | Priority: Low | Owner: Claude Code | Due: —
 - [ ] **Docker research**: Design a minimal secure single-user container image for team distribution. Questions to answer: (1) base image choice (python:3.11-slim vs distroless), (2) how user authenticates their Google account into the container, (3) auth persistence across container restarts (volume mount vs re-auth), (4) how the container exposes the MCP server (SSE/HTTP transport), (5) how a user's Claude Desktop/Code points to the remote container, (6) what the distribution story looks like (Docker Hub, ghcr.io, private registry), (7) security hardening (non-root user, read-only fs, minimal capabilities). Goal: two options — local install (current) vs hosted container — for teams who want to avoid running anything on their laptops. | Priority: Med | Owner: Research | Due: —
 
 ### New features (consumer API — from teng-lin/notebooklm-py v0.3.x research)
