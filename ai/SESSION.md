@@ -5,6 +5,38 @@ _Most recent session at the top._
 
 ---
 
+## 2026-04-07 — Brian Worrell — Claude Code (session 6)
+
+**Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)
+
+**What we worked on:**
+- Planned and implemented three high-priority security fixes from fork research on `fix/security-hardening` branch
+- Fix 1 (D-intelligence): Added `_safe_output_path()` to `services/downloads.py` — validates output path is within HOME, cwd, or system temp before any download write; added `chmod 0o700` to all credential dir creation in `utils/config.py`
+- Fix 2 (hectorreyes-ship-it): Moved SSRF `_is_private_url()` check unconditionally before paywall check in `add_source()` so `skip_paywall_check=True` can no longer bypass it; added `_SENSITIVE_DIR_BLOCKLIST` and `_assert_file_safe()` to block file uploads from `~/.ssh`, `~/.aws`, `~/.gnupg`, `~/.config`, `~/.notebooklm-mcp-cli`
+- Fix 3 (RhysEJF): Changed `get_page_cookies()` in `utils/cdp.py` from `Network.getAllCookies` to `Network.getCookies` with `_NOTEBOOKLM_COOKIE_URLS` filter — scopes cookie capture to notebooklm.google.com and accounts.google.com only
+- Opened Robiton/notebooklm-mcp-cli#7 into enterprise-url-support; 664 tests passing, ruff clean
+
+**Decisions made:**
+- `_safe_output_path` also allows system temp dir — tests use `/tmp/...` which macOS resolves to `/private/tmp`; both `tempfile.gettempdir()` and `/tmp` are added as allowed roots
+- `_assert_file_safe` passes the resolved path to `client.add_file()` (canonicalises symlinks); updated test assertion accordingly
+- All three fixes in one PR (simpler than three PRs for closely related security changes)
+
+**Problems encountered:**
+- `tempfile.gettempdir()` on macOS returns `/var/folders/.../T` (resolves to `/private/var/...`) while test paths used `/tmp` (resolves to `/private/tmp`) — these are different; fixed by adding both
+
+**Next steps:**
+- Merge PR #7 into enterprise-url-support (wait for CI green)
+- Docker research: design minimal secure single-user container
+- brainupgrade-in: custom_style_description for video overview (low priority)
+- Branch protection on main (manual GitHub Settings)
+- Merge enterprise-url-support → main for first clean release
+
+**Backlog changes:**
+- Moved 3 security fix items from "up next" to completed
+- Added PR #7 to "in progress"
+
+---
+
 ## 2026-04-06 — Brian Worrell — Claude Code (session 5)
 
 **Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)

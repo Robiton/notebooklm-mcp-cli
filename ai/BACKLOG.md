@@ -1,23 +1,18 @@
 # Project Backlog
 
 _This file is the project to-do list. Updated by all tools and team members._
-_Last updated: 2026-04-06 (session 5) by Claude Code_
+_Last updated: 2026-04-07 (session 6) by Claude Code_
 
 ---
 
 ## In progress
 
 - [ ] Upstream PR review: jacob-bd/notebooklm-mcp-cli#129 (standalone podcast — CI green) | Priority: Med | Owner: jacob-bd (reviewer) | Due: —
+- [ ] Robiton/notebooklm-mcp-cli#7 — security hardening PR — open, CI running | Priority: High | Owner: Brian (merge) | Due: —
 
 ---
 
 ## Up next
-
-### Security fixes from fork research (implement in order)
-
-- [ ] **D-intelligence**: Path traversal protection in downloads — `_safe_output_path()` blocks saving files outside `$HOME`/cwd; `chmod 0o700` on credential storage dirs | Priority: High | Owner: Claude Code | Due: —
-- [ ] **hectorreyes-ship-it**: SSRF URL validation in `add_url_source` — block `localhost`, private IPs, `metadata.google.internal`; sensitive-dir blocklist in `add_file` (blocks `~/.ssh`, `~/.aws`, `~/.gnupg`, etc.) | Priority: High | Owner: Claude Code | Due: —
-- [ ] **RhysEJF**: CDP cookie allowlist — switch from `Network.getAllCookies` (captures all browser cookies) to `Network.getCookies` filtered to NotebookLM domain only; prevents Gmail/Drive cookie capture | Priority: High | Owner: Claude Code | Due: —
 
 ### Research tasks
 
@@ -77,3 +72,6 @@ _Last updated: 2026-04-06 (session 5) by Claude Code_
 - [x] Phase 4-B: .github/workflows/upstream-check.yml (weekly upstream drift alert) | Completed: 2026-04-06
 - [x] Phase 5: Populate .codex with architecture, test commands, version locations, hard rules | Completed: 2026-04-06
 - [x] Phase 6: ai/PLANNING.md release checklist + trigger rules | Completed: 2026-04-06
+- [x] D-intelligence: _safe_output_path() + chmod 0o700 on credential dirs | Completed: 2026-04-07
+- [x] hectorreyes: unconditional SSRF block + sensitive-dir file blocklist | Completed: 2026-04-07
+- [x] RhysEJF: CDP cookie scope to NotebookLM domain only | Completed: 2026-04-07
