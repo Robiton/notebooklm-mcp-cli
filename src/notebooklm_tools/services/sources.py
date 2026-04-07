@@ -404,7 +404,9 @@ def add_source(
             if not file_path:
                 raise ValidationError("file_path is required for source_type='file'")
             safe_path = _assert_file_safe(file_path)
-            result = client.add_file(notebook_id, str(safe_path), wait=wait, wait_timeout=wait_timeout)
+            result = client.add_file(
+                notebook_id, str(safe_path), wait=wait, wait_timeout=wait_timeout
+            )
             fallback_title = safe_path.name
             return _extract_result(result, "file", fallback_title)
 

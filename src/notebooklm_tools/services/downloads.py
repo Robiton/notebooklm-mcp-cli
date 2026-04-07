@@ -1,5 +1,6 @@
 """Downloads service — shared validation and routing for artifact downloads."""
 
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import TypedDict
@@ -68,10 +69,15 @@ def _safe_output_path(path: str | Path) -> Path:
     resolved = Path(path).expanduser().resolve()
     home = Path.home().resolve()
     cwd = Path.cwd().resolve()
-    if not (resolved.is_relative_to(home) or resolved.is_relative_to(cwd)):
+    # Collect all candidate temp roots — on macOS /tmp symlinks to /private/tmp
+    # while tempfile.gettempdir() points to a per-user folder under /private/var.
+    tmp_roots = {Path(tempfile.gettempdir()).resolve(), Path("/tmp").resolve()}
+    allowed = [home, cwd, *tmp_roots]
+    if not any(resolved.is_relative_to(root) for root in allowed):
         raise ValueError(
-            f"Output path '{resolved}' is outside your home directory and "
-            "current working directory. Refusing to write."
+            f"Output path '{resolved}' is outside your home directory, "
+            "current working directory, and system temp directory. "
+            "Refusing to write."
         )
     return resolved
 
