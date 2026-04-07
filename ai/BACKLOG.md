@@ -1,13 +1,13 @@
 # Project Backlog
 
 _This file is the project to-do list. Updated by all tools and team members._
-_Last updated: 2026-04-07 (session 6, post-test) by Claude Code_
+_Last updated: 2026-04-07 (session 6, research update) by Claude Code_
 
 ---
 
 ## In progress
 
-- [ ] Upstream PR review: jacob-bd/notebooklm-mcp-cli#129 (standalone podcast — CI green) | Priority: Med | Owner: jacob-bd (reviewer) | Due: —
+_(nothing active)_
 
 ---
 
@@ -15,11 +15,19 @@ _Last updated: 2026-04-07 (session 6, post-test) by Claude Code_
 
 ### Research tasks
 
+- [ ] **Enterprise SDK comparison** — Review `dandye/notebooklm_sdk` (Feb 2026) and `K-dash/nblm-rs` (Oct 2025, 9 releases), both targeting the official Discovery Engine Enterprise API. Compare their API patterns, endpoints, and auth flows against our `EnterpriseClient` to find anything we've missed or implemented differently. May reveal undocumented endpoints or better patterns. | Priority: High | Owner: Claude Code | Due: —
 - [ ] **Docker research**: Design a minimal secure single-user container image for team distribution. Questions to answer: (1) base image choice (python:3.11-slim vs distroless), (2) how user authenticates their Google account into the container, (3) auth persistence across container restarts (volume mount vs re-auth), (4) how the container exposes the MCP server (SSE/HTTP transport), (5) how a user's Claude Desktop/Code points to the remote container, (6) what the distribution story looks like (Docker Hub, ghcr.io, private registry), (7) security hardening (non-root user, read-only fs, minimal capabilities). Goal: two options — local install (current) vs hosted container — for teams who want to avoid running anything on their laptops. | Priority: Med | Owner: Research | Due: —
+
+### New features (consumer API — from teng-lin/notebooklm-py v0.3.x research)
+
+- [ ] **Infographic style selection** — 10 new styles available: Sketch Note, Kawaii, Professional, Scientific, Anime, Clay, Editorial, Instructional, Bento Grid, Bricks. Add `style` param to `studio_create` for infographic type. Source: teng-lin/notebooklm-py v0.3.x, consumer RPC. | Priority: Med | Owner: Claude Code | Due: —
+- [ ] **PPTX download for slide decks** — teng-lin added PPTX as an alternate download format alongside PDF. Add `format=pptx` option to `download_artifact` for slide_deck type. | Priority: Med | Owner: Claude Code | Due: —
 
 ### New features from fork research
 
 - [ ] **brainupgrade-in**: Add `custom_style_description` param to video overview — when `visual_style=custom`, passes free-text style description at position 6 of RPC options array. ~100 lines across 4 files. | Priority: Low | Owner: Claude Code | Due: —
+- [ ] **EPUB source type** — Google added EPUB as a supported source format. Test whether existing `add_source` with `source_type="file"` handles `.epub` files, or if a new type/MIME mapping is needed. | Priority: Low | Owner: Claude Code | Due: —
+- [ ] **"Agentspace" → "Gemini Enterprise" rename** — Google renamed Agentspace to Gemini Enterprise (Oct 9, 2025). Grep docs and comments for "Agentspace" and update to "Gemini Enterprise". | Priority: Low | Owner: Claude Code | Due: —
 
 ### Enterprise UX improvements (from 2026-04-07 live test)
 
@@ -36,7 +44,7 @@ _Last updated: 2026-04-07 (session 6, post-test) by Claude Code_
 ## Backlog
 
 - [ ] dizz fork: OAuth 2.1 provider for remote MCP — enables claude.ai remote MCP connector to authenticate against self-hosted HTTP server. 373-line new module, no new deps. Would enable hosted-server scenario from Docker research. | Priority: Low | Owner: Claude Code | Due: —
-- [ ] Watch Discovery Engine API for v1alpha → v1 promotion; re-submit enterprise PR upstream when stable | Priority: Low | Owner: Brian | Due: —
+- [ ] Watch Discovery Engine API for v1alpha → v1 promotion (no longer triggers upstream PR — just informs our own stability posture) | Priority: Low | Owner: Brian | Due: —
 - [ ] Consider adding `nlm config set sources.approved_domains` to README quick-start for paywall guidance | Priority: Low | Owner: Brian | Due: —
 
 ---
@@ -81,3 +89,4 @@ _Last updated: 2026-04-07 (session 6, post-test) by Claude Code_
 - [x] Merge enterprise-url-support → main (PR #8, squash merge) | Completed: 2026-04-07
 - [x] Release v1.0.1 to PyPI (GitHub release tag, publish.yml triggered) | Completed: 2026-04-07
 - [x] Swap local install from upstream notebooklm-mcp-cli to notebooklm-enterprise-mcp v1.0.1 | Completed: 2026-04-07
+- [x] Close upstream contribution strategy — jacob-bd closed #126 (enterprise) and #129 (podcast); fork is now one-way sync only | Completed: 2026-04-07
