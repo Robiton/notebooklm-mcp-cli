@@ -1,7 +1,7 @@
 # Project Backlog
 
 _This file is the project to-do list. Updated by all tools and team members._
-_Last updated: 2026-04-07 (session 6, research update) by Claude Code_
+_Last updated: 2026-04-07 (session 7, enterprise improvements) by Claude Code_
 
 ---
 
@@ -19,18 +19,18 @@ _(nothing active)_
 
 ### Enterprise API gaps (from SDK comparison — 2026-04-07)
 
-- [ ] **Separate endpoint_location from resource location** — Today we use one `location` value for both the hostname prefix (`global-discoveryengine.googleapis.com`) and the resource path (`locations/global`). These are independent: EU users need `eu-` hostname but may use `global` resources. Blocks EU data residency support. Add `endpoint_location` config option to `EnterpriseClient`. | Priority: High | Owner: Claude Code | Due: —
-- [ ] **YouTube source type in enterprise** — Confirm `videoContent: { youtubeUrl: "..." }` field passes through the enterprise adapter correctly. Personal mode supports YouTube; enterprise adapter needs explicit verification and test. | Priority: Med | Owner: Claude Code | Due: —
-- [ ] **Retry with exponential backoff** — nblm-rs retries up to 3x with jitter (500ms–5s) and respects `Retry-After`. Our enterprise client has no retry logic. Add to `EnterpriseClient` for resilience against transient API errors. | Priority: Med | Owner: Claude Code | Due: —
-- [ ] **`NBLM_ACCESS_TOKEN` env var support** — Allow token injection via env var instead of requiring `gcloud` CLI. Useful for CI/CD pipelines and Docker containers. Add to `EnterpriseClient` auth chain. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **Separate endpoint_location from resource location** — Completed 2026-04-07. Added `endpoint_location` field to `EnterpriseConfig` and `NOTEBOOKLM_ENDPOINT_LOCATION` env var. `EnterpriseClient` now uses it as the API hostname prefix (falls back to `location`). | Priority: High | Owner: Claude Code | Due: —
+- [x] **YouTube source type in enterprise** — Completed 2026-04-07. `enterprise_adapter.add_url_source()` now detects `youtube.com/youtu.be` URLs and routes to `add_source_youtube()` which uses the correct `videoContent` body format. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **Retry with exponential backoff** — Completed 2026-04-07. `_request()` in `enterprise_client.py` retries up to 3x on 429/500/502/503/504 with 500ms–5s backoff, ±25% jitter, and Retry-After header support. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **`NBLM_ACCESS_TOKEN` env var support** — Completed 2026-04-07. `_get_token()` checks `NBLM_ACCESS_TOKEN` env var before falling back to gcloud CLI. | Priority: Med | Owner: Claude Code | Due: —
 - [ ] **Surface `isShareable`/`isShared` in notebook responses** — These fields come back from the Enterprise API `notebookMetadata` but we likely discard them. Surface in `notebook_get`/`notebook_list` responses. | Priority: Low | Owner: Claude Code | Due: —
 - [ ] **`youtubeMetadata` in source responses** — `channelName` and `videoId` come back for YouTube sources. Surface in source list/get responses. | Priority: Low | Owner: Claude Code | Due: —
 - [ ] **Docker research**: Design a minimal secure single-user container image for team distribution. Questions to answer: (1) base image choice (python:3.11-slim vs distroless), (2) how user authenticates their Google account into the container, (3) auth persistence across container restarts (volume mount vs re-auth), (4) how the container exposes the MCP server (SSE/HTTP transport), (5) how a user's Claude Desktop/Code points to the remote container, (6) what the distribution story looks like (Docker Hub, ghcr.io, private registry), (7) security hardening (non-root user, read-only fs, minimal capabilities). Goal: two options — local install (current) vs hosted container — for teams who want to avoid running anything on their laptops. | Priority: Med | Owner: Research | Due: —
 
 ### New features (consumer API — from teng-lin/notebooklm-py v0.3.x research)
 
-- [ ] **Infographic style selection** — 10 new styles available: Sketch Note, Kawaii, Professional, Scientific, Anime, Clay, Editorial, Instructional, Bento Grid, Bricks. Add `style` param to `studio_create` for infographic type. Source: teng-lin/notebooklm-py v0.3.x, consumer RPC. | Priority: Med | Owner: Claude Code | Due: —
-- [ ] **PPTX download for slide decks** — teng-lin added PPTX as an alternate download format alongside PDF. Add `format=pptx` option to `download_artifact` for slide_deck type. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **Infographic style selection** — Already implemented (discovered during session 7 audit). 10 styles in `constants.py`, exposed via `studio_create` MCP tool and `nlm infographic create --style`. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **PPTX download for slide decks** — Already implemented (discovered during session 7 audit). `download_artifact` accepts `slide_deck_format=pptx`; CLI exposes `--format pptx`. | Priority: Med | Owner: Claude Code | Due: —
 
 ### New features from fork research
 
@@ -40,8 +40,8 @@ _(nothing active)_
 
 ### Enterprise UX improvements (from 2026-04-07 live test)
 
-- [ ] **`studio_status` enterprise gap** — Currently returns empty silently when in enterprise mode. Should return a clear message: "Artifact status is not available in enterprise mode — check the NotebookLM UI directly." Affects users polling for podcast/audio completion. File: `mcp/tools/studio.py` or the enterprise adapter. | Priority: Med | Owner: Claude Code | Due: —
-- [ ] **Bot-blocked domain list** — THN (thehackernews.com), Orca Security (orca.security), SecurityOnline (securityonline.info) consistently block NotebookLM's crawler. Add to `KNOWN_PAYWALL_DOMAINS` in `services/sources.py` so users get a clear "this site blocks automated access" message upfront instead of a silent red-icon failure. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **`studio_status` enterprise gap** — Completed 2026-04-07. `poll_studio_status` in enterprise adapter now raises `NotImplementedError` with a clear message; `services/studio.py` propagates it as a user-facing `ServiceError`. | Priority: Med | Owner: Claude Code | Due: —
+- [x] **Bot-blocked domain list** — Completed 2026-04-07. Added `thehackernews.com`, `orca.security`, `securityonline.info` to `KNOWN_PAYWALL_DOMAINS` in `services/sources.py`. | Priority: Med | Owner: Claude Code | Due: —
 
 ### Maintenance
 
