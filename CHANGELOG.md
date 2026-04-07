@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-04-07 — Security Patch
+
+### Security
+
+- **Path traversal protection** — `_safe_output_path()` added to the downloads service. Output paths are resolved and must remain within the user's home directory, current working directory, or system temp directory before any file is written. Blocks AI-generated paths from escaping intended write locations.
+- **SSRF hardening** — Private-IP block in `add_source()` is now unconditional. Previously it could be bypassed by passing `skip_paywall_check=True`; the guard now runs before the paywall check regardless of that flag.
+- **Sensitive-directory file blocklist** — File sources (`source_type="file"`) now reject paths inside `~/.ssh`, `~/.aws`, `~/.gnupg`, `~/.config`, and `~/.notebooklm-mcp-cli` to prevent accidental or AI-directed credential exposure.
+- **CDP cookie scope** — Cookie extraction via Chrome DevTools Protocol now uses `Network.getCookies` filtered to `notebooklm.google.com` and `accounts.google.com` instead of `Network.getAllCookies`. Prevents capturing Gmail, Google Drive, or other browser cookies.
+- **Credential directory permissions** — All `~/.notebooklm-mcp-cli/` subdirectories are now created with `chmod 0o700` (owner-only), preventing other local users from reading stored credentials.
+
+### Dependencies
+
+- Updated `fastmcp` 2.14.2 → 3.x (resolves CVE-2025-64340, CVE-2026-27124)
+- Updated transitive dependencies: `authlib`, `cryptography`, `jaraco-context`, `pygments`, `pyjwt`, `python-multipart`, `requests` — resolves all remaining known CVEs
+
+---
+
 ## [1.0.0] - 2026-04 — Fork Release (Robiton/notebooklm-mcp-cli)
 
 This release marks the fork divergence from jacob-bd/notebooklm-mcp-cli (which stops

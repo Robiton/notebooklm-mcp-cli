@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "notebooklm-enterprise-mcp"
-version = "1.0.0"
+version = "1.0.1"
 description = "Unified CLI and MCP server for Google NotebookLM (Enterprise + Personal)"
 readme = "README.md"
 license = "MIT"
@@ -81,4 +81,9 @@ asyncio_mode = "auto"
 markers = [
     "e2e: End-to-end tests requiring live authentication",
     "integration: Integration tests for CLI functionality",
+]
+
+[dependency-groups]
+dev = [
+    "pip-audit>=2.10.0",
 ]
