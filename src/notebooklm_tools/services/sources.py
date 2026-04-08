@@ -3,6 +3,7 @@
 import ipaddress
 import socket
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import TypedDict
@@ -13,6 +14,9 @@ from .errors import ServiceError, ValidationError
 
 VALID_SOURCE_TYPES = ("url", "text", "drive", "file")
 VALID_DRIVE_DOC_TYPES = ("doc", "slides", "sheets", "pdf")
+
+# Only allow safe, public URL schemes for URL sources
+ALLOWED_URL_SCHEMES = frozenset({"http", "https"})
 
 # Directories whose contents must never be uploaded as sources.
 # Evaluated at import time so HOME is resolved correctly.
@@ -363,6 +367,12 @@ def add_source(
         if source_type == "url":
             if not url:
                 raise ValidationError("url is required for source_type='url'")
+            parsed = urllib.parse.urlparse(url)
+            if not parsed.scheme or parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
+                raise ValidationError(
+                    f"URL scheme '{parsed.scheme}' is not allowed. "
+                    "Only http:// and https:// URLs are supported."
+                )
             # SSRF guard: block private/internal URLs unconditionally,
             # even when skip_paywall_check=True, to prevent server-side
             # request forgery to localhost, cloud metadata endpoints, etc.
