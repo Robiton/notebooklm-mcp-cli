@@ -47,7 +47,7 @@ _(nothing active)_
 
 - [x] Branch protection on `main` — Completed 2026-04-07. Ruleset configured in GitHub Settings. | Priority: Med | Owner: Brian | Due: —
 - [ ] Test configure_mode + full enterprise workflow end-to-end | Priority: Med | Owner: Brian | Due: —
-- [ ] **Upstream sync v0.5.17** — jacob-bd released v0.5.17 (21 commits, 47 files). Key additions: URL source fallback (240-line test file), new chat service tests, studio/research service improvements, cdp.py refactor, config.py changes. Cherry-pick onto our main after reviewing for conflicts with our enterprise changes. | Priority: High | Owner: Claude Code | Due: —
+- [x] **Upstream sync v0.5.17** — Completed 2026-04-07. Cherry-picked 5 commits (audio type 10, custom video style, visual_style_prompt parsing, CDP exception chaining, security hardening). Skipped b31ab7e (dual-RPC fallback, incompatible with enterprise adapter) and style/release/docs-only commits. Merged as Robiton#12. | Priority: High | Owner: Claude Code | Due: —
 
 ---
 
