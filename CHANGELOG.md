@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-04-08 — Upstream Sync v0.5.17
+
+### Added
+
+- **Audio file sources (type 10)** — `nlm source add --file audio.m4a --wait` now supports audio files. The source type is auto-detected by MIME type; `source_type="audio"` is mapped to type 10 in the RPC payload.
+- **Custom video visual style** — `studio_create video --visual-style custom --visual-style-prompt "..."` now passes a free-text style description to the API. Previously only the preset enum values (`cinematic`, `animated`, etc.) were supported.
+- **`visual_style_prompt` in studio status** — `studio_status` responses now include `visual_style_prompt` for video artifacts when the API returns it.
+
+### Fixed
+
+- **CDP exception chaining** — WebSocket timeout errors in CDP now chain the original exception (`raise TimeoutError(...) from err`) for cleaner tracebacks.
+
+### Security
+
+- **CDP origins restriction** — Chrome is now launched with `--remote-allow-origins=http://localhost,http://127.0.0.1` to restrict which origins can connect to the DevTools endpoint.
+- **Port map file permissions** — `chrome-port-map.json` is now written with `chmod 0o600` (owner-read-only) to prevent other local users from reading CDP port assignments.
+- **`NOTEBOOKLM_BASE_URL` allowlist** — The env var is now validated against an explicit allowlist (`notebooklm.google.com`, `notebooklm.cloud.google.com`). Arbitrary URLs are rejected with a clear error.
+- **Sensitive directory/file blocklist in downloads** — Output paths are now additionally checked against a blocklist of sensitive directory names (`.ssh`, `.aws`, `.gnupg`, `.config`, `.claude`, `.kube`) and sensitive filenames (`.bashrc`, `id_rsa`, etc.) on top of the existing whitelist check.
+- **CDP auth cookie scope** — Cookie extraction now uses `Network.getCookies` filtered to `notebooklm.google.com` and `accounts.google.com` (carried forward from v1.0.1; this is a re-statement for clarity in the sync commit).
+
+---
+
 ## [1.0.2] - 2026-04-07 — Enterprise Improvements
 
 ### Added
