@@ -300,6 +300,16 @@ class BaseClient:
         # The lock protects: _client, _reqid_counter, _conversation_cache,
         # csrf_token, _session_id, cookies.
         # It is never held during network I/O.
+        # RPC version detection: None = unresolved, "v1" = izAoDd, "v2" = ozz5Z
+        # Protected by _state_lock to prevent TOCTOU races in concurrent calls.
+        self._source_rpc_version: str | None = None
+
+        # Lock for thread-safe access to mutable instance state.
+        # FastMCP dispatches sync tool functions into a thread pool, so
+        # concurrent MCP tool calls share this singleton client instance.
+        # The lock protects: _client, _reqid_counter, _conversation_cache,
+        # _source_rpc_version, csrf_token, _session_id, cookies.
+        # It is never held during network I/O.
         self._state_lock = threading.Lock()
 
         # Only refresh CSRF token if not provided - tokens actually last hours/days, not minutes
