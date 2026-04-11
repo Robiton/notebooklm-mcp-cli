@@ -120,7 +120,7 @@ def _setup_oauth(
         return provider.handle_token(form)
 
     middleware = Middleware(OAuthMiddleware, provider=provider)
-    mcp_logger.info("OAuth 2.1 enabled — client_id=%s server_url=%s", client_id, server_url)
+    mcp_logger.info("OAuth 2.1 enabled — server_url=%s", server_url)
     return provider, middleware
 
 
