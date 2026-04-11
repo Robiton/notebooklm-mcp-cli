@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-04-11 — Upstream Sync v0.5.18–v0.5.21 + OAuth 2.1 Remote MCP
+
+### Added
+
+- **OAuth 2.1 remote MCP support** — New `--transport http --oauth-client-id / --oauth-client-secret / --oauth-server-url` flags (and matching `NOTEBOOKLM_OAUTH_*` env vars) enable the server to act as a remote MCP connector in claude.ai. Implements Authorization Code + PKCE S256, token refresh, RFC 8414 auth-server metadata, and RFC 9728 protected-resource metadata. The OAuth layer is an ASGI middleware that protects the MCP endpoint without touching the underlying Google cookie auth.
+- **Chromium auth resilience** — New `auth_browser.py` module adds robust Chromium/Chrome detection across OS paths, isolated profile launch, and retry logic for the `nlm login` browser flow.
+- **Thread-safe client singleton** — `BaseClient` now initialises a `_state_lock` (threading.Lock) protecting shared state (req-id counter, conversation cache, auth tokens) when FastMCP dispatches tool calls into a thread pool.
+- **`source_add` and `studio_create` verb parity** — 13 previously missing parameters added to tool wrappers: `source_add` gains `repl`, `audio`, `skip_paywall_check`; `studio_create` gains `visual_style`, `visual_style_prompt`, `title`, `narration_instructions`, `presentation_style`, `difficulty_level`, and others.
+- **REPL source type** — `source_type="repl"` (code execution sessions) now supported in personal mode.
+- **`fastmcp>=2.0.0,<4.0`** — Dependency upper bound widened from `<3.0` to `<4.0`.
+
+### Fixed
+
+- **HTTP 400 treated as auth failure** — A 400 response from the NotebookLM API now triggers CSRF token recovery in the same way as a 401, handling cases where an expired CSRF token produces a 400 instead of 401.
+- **CDP WebSocket 30s timeout restored** — Upstream accidentally removed the timeout in a security commit; it is now re-applied alongside the security improvements.
+- **Source alias normalisation** — Source aliases are now normalised consistently before storage and lookup, fixing stale-alias edge cases after source renames.
+- **Audio title propagation** — Audio overview title is now correctly passed through to the studio creation RPC.
+
+### Security
+
+- **URL scheme allowlist** — File and `ftp://` URLs are now rejected at the `add_source()` entry point before reaching the SSRF or paywall checks. Only `http` and `https` schemes are accepted.
+- **Sensitive-param redaction in debug logs** — MCP debug logging now redacts `cookies`, `csrf_token`, `session_id`, and similar fields instead of logging them verbatim.
+- **CodeQL CWE-020 fixes** — All substring URL checks (`"youtube.com" in url`, `"notebooklm.google.com" in url`) replaced with `urlparse().hostname in frozenset(...)` to prevent bypass via crafted query strings.
+- **GitHub Actions least-privilege** — `permissions: contents: read` added to all three CI workflow files (`lint-test.yml`, `version-check.yml`, `scaffold-check.yml`).
+- **CDP `chmod 0o600` on port-map file** — Restored after upstream accidentally removed it in a security commit.
+
+---
+
 ## [1.0.3] - 2026-04-08 — Upstream Sync v0.5.17
 
 ### Added
