@@ -552,8 +552,15 @@ def add_url_verb(
     """Add a URL source to notebook."""
     # Explicitly wrap the single URL string in a list so it doesn't get unpacked as characters
     add_source(
-        notebook, url=[url_arg], text=None, drive=None, youtube=None, file=None,
-        wait=wait, wait_timeout=wait_timeout, profile=profile,
+        notebook,
+        url=[url_arg],
+        text=None,
+        drive=None,
+        youtube=None,
+        file=None,
+        wait=wait,
+        wait_timeout=wait_timeout,
+        profile=profile,
     )
 
 
@@ -962,7 +969,10 @@ def download_slides_verb(
 ) -> None:
     """Download slide deck."""
     download_slide_deck(
-        notebook_id=notebook, output=output, artifact_id=artifact_id, no_progress=no_progress,
+        notebook_id=notebook,
+        output=output,
+        artifact_id=artifact_id,
+        no_progress=no_progress,
         format=format,
     )
 

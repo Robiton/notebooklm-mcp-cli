@@ -302,7 +302,6 @@ class BaseClient:
         # It is never held during network I/O.
         self._state_lock = threading.Lock()
 
-
         # Only refresh CSRF token if not provided - tokens actually last hours/days, not minutes
         # The retry logic in _call_rpc() handles expired tokens gracefully
         if not self.csrf_token:
