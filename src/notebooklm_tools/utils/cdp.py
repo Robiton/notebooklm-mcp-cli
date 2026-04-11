@@ -745,9 +745,12 @@ def navigate_to_url(ws_url: str, url: str) -> None:
     execute_cdp_command(ws_url, "Page.navigate", {"url": url})
 
 
+_NOTEBOOKLM_HOSTS = frozenset({"notebooklm.google.com", "notebooklm.cloud.google.com"})
+
+
 def _is_notebooklm_url(url: str) -> bool:
     """Check if a URL belongs to any NotebookLM domain (personal or enterprise)."""
-    return "notebooklm.google.com" in url or "notebooklm.cloud.google.com" in url
+    return urlparse(url).hostname in _NOTEBOOKLM_HOSTS
 
 
 def is_logged_in(url: str) -> bool:
@@ -755,7 +758,7 @@ def is_logged_in(url: str) -> bool:
 
     If NotebookLM redirects to accounts.google.com, user is not logged in.
     """
-    if "accounts.google.com" in url:
+    if urlparse(url).hostname == "accounts.google.com":
         return False
     return _is_notebooklm_url(url)
 

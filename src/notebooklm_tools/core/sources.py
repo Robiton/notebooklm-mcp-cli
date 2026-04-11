@@ -18,6 +18,7 @@ HTTP resumable upload implementation adapted from notebooklm-py.
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -25,6 +26,16 @@ from . import constants
 from .base import SOURCE_ADD_TIMEOUT, BaseClient
 from .exceptions import FileUploadError, FileValidationError
 from .retry import execute_with_retry
+
+# Exact hostnames that identify YouTube URLs.
+# Using parsed hostname instead of substring check to avoid false positives
+# from URLs like https://evil.com/path?ref=youtube.com.
+_YOUTUBE_HOSTS = frozenset({"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"})
+
+
+def _is_youtube_url(url: str) -> bool:
+    """Return True if url's hostname is a known YouTube domain."""
+    return urlparse(url).hostname in _YOUTUBE_HOSTS
 
 
 class SourceMixin(BaseClient):
@@ -311,9 +322,7 @@ class SourceMixin(BaseClient):
             Source dict with id and title, or None on failure
         """
         # URL position differs for YouTube vs regular websites
-        is_youtube = "youtube.com" in url.lower() or "youtu.be" in url.lower()
-
-        if is_youtube:
+        if _is_youtube_url(url):
             source_data = [None, None, None, None, None, None, None, [url], None, None, 1]
         else:
             source_data = [None, None, [url], None, None, None, None, None, None, None, 1]
@@ -373,8 +382,7 @@ class SourceMixin(BaseClient):
         """
         source_data_list = []
         for url in urls:
-            is_youtube = "youtube.com" in url.lower() or "youtu.be" in url.lower()
-            if is_youtube:
+            if _is_youtube_url(url):
                 source_data = [None, None, None, None, None, None, None, [url], None, None, 1]
             else:
                 source_data = [None, None, [url], None, None, None, None, None, None, None, 1]
