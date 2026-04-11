@@ -7,6 +7,7 @@ responses into the data structures the service layer expects.
 """
 
 import contextlib
+from urllib.parse import urlparse
 
 from .data_types import Notebook
 from .enterprise_client import EnterpriseClient
@@ -96,7 +97,8 @@ class EnterpriseAdapter:
 
     def add_url_source(self, notebook_id: str, url: str, **kwargs) -> dict | None:
         """Add a URL source, routing YouTube URLs to the dedicated video endpoint."""
-        if "youtube.com/watch" in url or "youtu.be/" in url:
+        hostname = urlparse(url).hostname or ""
+        if hostname in ("youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"):
             return self._ec.add_source_youtube(notebook_id, url)
         return self._ec.add_source_url(notebook_id, url)
 

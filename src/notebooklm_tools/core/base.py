@@ -706,7 +706,7 @@ class BaseClient:
             response = client.get(f"{self._get_base_url()}/")
 
             # Check if redirected to login (cookies expired)
-            if "accounts.google.com" in str(response.url):
+            if urllib.parse.urlparse(str(response.url)).hostname == "accounts.google.com":
                 raise ValueError(
                     "Authentication expired. AI assistants: Run `nlm login` via Bash/terminal tool to re-authenticate automatically. Users: Run `nlm login` in your terminal."
                 )
