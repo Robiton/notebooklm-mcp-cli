@@ -155,8 +155,6 @@ class StudioMixin(BaseClient):
         focus_prompt: str = "",
     ) -> dict[str, Any] | None:
         """Create an Audio Overview (podcast) for a notebook."""
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -183,14 +181,7 @@ class StudioMixin(BaseClient):
             [None, None, self.STUDIO_TYPE_AUDIO, sources_nested, None, None, audio_options],
         ]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -223,8 +214,6 @@ class StudioMixin(BaseClient):
         focus_prompt: str = "",
     ) -> dict[str, Any] | None:
         """Create a Video Overview for a notebook."""
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -271,14 +260,7 @@ class StudioMixin(BaseClient):
             ],
         ]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -646,8 +628,6 @@ class StudioMixin(BaseClient):
         focus_prompt: str = "",
     ) -> dict[str, Any] | None:
         """Create an Infographic from notebook sources."""
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -693,14 +673,7 @@ class StudioMixin(BaseClient):
 
         params = [[2], notebook_id, content]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -733,8 +706,6 @@ class StudioMixin(BaseClient):
         focus_prompt: str = "",
     ) -> dict[str, Any] | None:
         """Create a Slide Deck from notebook sources."""
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -772,14 +743,7 @@ class StudioMixin(BaseClient):
 
         params = [[2], notebook_id, content]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -810,8 +774,6 @@ class StudioMixin(BaseClient):
         language: str = "en",
     ) -> dict[str, Any] | None:
         """Create a Report from notebook sources."""
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -900,14 +862,7 @@ class StudioMixin(BaseClient):
 
         params = [[2], notebook_id, content]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -936,8 +891,6 @@ class StudioMixin(BaseClient):
         focus_prompt: str = "",
     ) -> dict[str, Any] | None:
         """Create Flashcards from notebook sources."""
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -982,14 +935,7 @@ class StudioMixin(BaseClient):
 
         params = [[2], notebook_id, content]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -1026,8 +972,6 @@ class StudioMixin(BaseClient):
             difficulty: Difficulty level (default: 2)
             focus_prompt: Optional focus prompt to guide quiz generation
         """
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -1069,14 +1013,7 @@ class StudioMixin(BaseClient):
 
         params = [[2], notebook_id, content]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -1112,8 +1049,6 @@ class StudioMixin(BaseClient):
             description: Description of the data table to create
             language: Language code (default: "en")
         """
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -1152,14 +1087,7 @@ class StudioMixin(BaseClient):
 
         params = [[2], notebook_id, content]
 
-        body = self._build_request_body(self.RPC_CREATE_STUDIO, params)
-        url = self._build_url(self.RPC_CREATE_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_CREATE_STUDIO)
+        result = self._call_rpc(self.RPC_CREATE_STUDIO, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             artifact_data = result[0]
@@ -1208,8 +1136,6 @@ class StudioMixin(BaseClient):
         Raises:
             ValueError: If no sources found in notebook
         """
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -1233,14 +1159,7 @@ class StudioMixin(BaseClient):
             [2, None, [1]],
         ]
 
-        body = self._build_request_body(self.RPC_GENERATE_MIND_MAP, params)
-        url = self._build_url(self.RPC_GENERATE_MIND_MAP)
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_GENERATE_MIND_MAP)
+        result = self._call_rpc(self.RPC_GENERATE_MIND_MAP, params)
 
         if result and isinstance(result, list) and len(result) > 0:
             # Response is nested: [[json_string, null, [gen_ids]]]
@@ -1283,8 +1202,6 @@ class StudioMixin(BaseClient):
         Returns:
             Dict with mind_map_id and saved info, or None on failure
         """
-        client = self._get_client()
-
         # Default to all sources if not specified
         if source_ids is None:
             source_ids = self._get_all_source_ids(notebook_id)
@@ -1301,14 +1218,7 @@ class StudioMixin(BaseClient):
 
         params = [notebook_id, mind_map_json, metadata, None, title]
 
-        body = self._build_request_body(self.RPC_SAVE_MIND_MAP, params)
-        url = self._build_url(self.RPC_SAVE_MIND_MAP, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_SAVE_MIND_MAP)
+        result = self._call_rpc(self.RPC_SAVE_MIND_MAP, params, f"/notebook/{notebook_id}")
 
         if result and isinstance(result, list) and len(result) > 0:
             # Response is nested: [[mind_map_id, json, metadata, null, title]]
@@ -1329,18 +1239,9 @@ class StudioMixin(BaseClient):
 
     def list_mind_maps(self, notebook_id: str) -> list[dict[str, Any]]:
         """List all Mind Maps in a notebook."""
-        client = self._get_client()
-
         params = [notebook_id]
 
-        body = self._build_request_body(self.RPC_LIST_MIND_MAPS, params)
-        url = self._build_url(self.RPC_LIST_MIND_MAPS, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_LIST_MIND_MAPS)
+        result = self._call_rpc(self.RPC_LIST_MIND_MAPS, params, f"/notebook/{notebook_id}")
 
         mind_maps = []
         if result and isinstance(result, list) and len(result) > 0:
