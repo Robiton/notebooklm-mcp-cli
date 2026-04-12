@@ -21,6 +21,7 @@ mcp_logger = logging.getLogger("notebooklm_tools.mcp")
 _SENSITIVE_PARAMS = frozenset({"cookies", "csrf_token", "session_id", "request_body"})
 P = ParamSpec("P")
 R = TypeVar("R")
+T = TypeVar("T")
 ResultDict: TypeAlias = dict[str, Any]
 _StrConverter: TypeAlias = Callable[[Any], str]
 _DEFAULT_STR_CONVERTER: _StrConverter = str
@@ -256,8 +257,8 @@ ESSENTIAL_COOKIES = [
 
 def coerce_list(
     val: object | None,
-    item_type: Callable[[Any], Any] = _DEFAULT_STR_CONVERTER,
-) -> list[R] | None:
+    item_type: Callable[[Any], T] = _DEFAULT_STR_CONVERTER,
+) -> list[T] | None:
     """Coerce a value into a list of ``item_type``.
 
     MCP clients (Claude Desktop, Cursor, etc.) may serialize list parameters as:
@@ -270,7 +271,7 @@ def coerce_list(
     This helper normalizes all forms into ``list[item_type]`` while preserving
     ``None`` as ``None`` for "use default / all" semantics.
     """
-    converter = cast(Callable[[Any], R], item_type)
+    converter = item_type
     if val is None:
         return None  # Preserve None semantics (means "use default / all")
     if isinstance(val, list):

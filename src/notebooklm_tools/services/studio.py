@@ -553,62 +553,61 @@ def get_studio_status(
 
     artifacts: list[ArtifactInfo] = []
     for raw_artifact in raw_artifacts:
-        artifacts.append(
-            {
-                "artifact_id": raw_artifact.get("artifact_id")
-                if isinstance(raw_artifact.get("artifact_id"), str)
-                else "",
-                "type": raw_artifact.get("type")
-                if isinstance(raw_artifact.get("type"), str)
-                else "unknown",
-                "title": raw_artifact.get("title")
-                if isinstance(raw_artifact.get("title"), str)
-                else "",
-                "status": raw_artifact.get("status")
-                if isinstance(raw_artifact.get("status"), str)
-                else "unknown",
-                "created_at": raw_artifact.get("created_at")
-                if isinstance(raw_artifact.get("created_at"), str)
-                or raw_artifact.get("created_at") is None
-                else str(raw_artifact.get("created_at")),
-                "custom_instructions": raw_artifact.get("custom_instructions")
-                if isinstance(raw_artifact.get("custom_instructions"), str)
-                or raw_artifact.get("custom_instructions") is None
-                else str(raw_artifact.get("custom_instructions")),
-                "visual_style_prompt": raw_artifact.get("visual_style_prompt")
-                if isinstance(raw_artifact.get("visual_style_prompt"), str)
-                or raw_artifact.get("visual_style_prompt") is None
-                else str(raw_artifact.get("visual_style_prompt")),
-                "audio_url": raw_artifact.get("audio_url")
-                if isinstance(raw_artifact.get("audio_url"), str)
-                or raw_artifact.get("audio_url") is None
-                else None,
-                "video_url": raw_artifact.get("video_url")
-                if isinstance(raw_artifact.get("video_url"), str)
-                or raw_artifact.get("video_url") is None
-                else None,
-                "infographic_url": raw_artifact.get("infographic_url")
-                if isinstance(raw_artifact.get("infographic_url"), str)
-                or raw_artifact.get("infographic_url") is None
-                else None,
-                "slide_deck_url": raw_artifact.get("slide_deck_url")
-                if isinstance(raw_artifact.get("slide_deck_url"), str)
-                or raw_artifact.get("slide_deck_url") is None
-                else None,
-                "report_content": raw_artifact.get("report_content")
-                if isinstance(raw_artifact.get("report_content"), str)
-                or raw_artifact.get("report_content") is None
-                else None,
-                "flashcard_count": raw_artifact.get("flashcard_count")
-                if isinstance(raw_artifact.get("flashcard_count"), int)
-                or raw_artifact.get("flashcard_count") is None
-                else None,
-                "duration_seconds": raw_artifact.get("duration_seconds")
-                if isinstance(raw_artifact.get("duration_seconds"), int)
-                or raw_artifact.get("duration_seconds") is None
-                else None,
-            }
-        )
+        artifact: ArtifactInfo = {
+            "type": raw_artifact.get("type")
+            if isinstance(raw_artifact.get("type"), str)
+            else "unknown",
+            "title": raw_artifact.get("title")
+            if isinstance(raw_artifact.get("title"), str)
+            else "",
+            "status": raw_artifact.get("status")
+            if isinstance(raw_artifact.get("status"), str)
+            else "unknown",
+            "created_at": raw_artifact.get("created_at")
+            if isinstance(raw_artifact.get("created_at"), str)
+            or raw_artifact.get("created_at") is None
+            else str(raw_artifact.get("created_at")),
+            "custom_instructions": raw_artifact.get("custom_instructions")
+            if isinstance(raw_artifact.get("custom_instructions"), str)
+            or raw_artifact.get("custom_instructions") is None
+            else str(raw_artifact.get("custom_instructions")),
+            "visual_style_prompt": raw_artifact.get("visual_style_prompt")
+            if isinstance(raw_artifact.get("visual_style_prompt"), str)
+            or raw_artifact.get("visual_style_prompt") is None
+            else str(raw_artifact.get("visual_style_prompt")),
+            "audio_url": raw_artifact.get("audio_url")
+            if isinstance(raw_artifact.get("audio_url"), str)
+            or raw_artifact.get("audio_url") is None
+            else None,
+            "video_url": raw_artifact.get("video_url")
+            if isinstance(raw_artifact.get("video_url"), str)
+            or raw_artifact.get("video_url") is None
+            else None,
+            "infographic_url": raw_artifact.get("infographic_url")
+            if isinstance(raw_artifact.get("infographic_url"), str)
+            or raw_artifact.get("infographic_url") is None
+            else None,
+            "slide_deck_url": raw_artifact.get("slide_deck_url")
+            if isinstance(raw_artifact.get("slide_deck_url"), str)
+            or raw_artifact.get("slide_deck_url") is None
+            else None,
+            "report_content": raw_artifact.get("report_content")
+            if isinstance(raw_artifact.get("report_content"), str)
+            or raw_artifact.get("report_content") is None
+            else None,
+            "flashcard_count": raw_artifact.get("flashcard_count")
+            if isinstance(raw_artifact.get("flashcard_count"), int)
+            or raw_artifact.get("flashcard_count") is None
+            else None,
+            "duration_seconds": raw_artifact.get("duration_seconds")
+            if isinstance(raw_artifact.get("duration_seconds"), int)
+            or raw_artifact.get("duration_seconds") is None
+            else None,
+        }
+        artifact_id = raw_artifact.get("artifact_id")
+        if isinstance(artifact_id, str):
+            artifact["artifact_id"] = artifact_id
+        artifacts.append(artifact)
 
     # Also fetch mind maps
     try:
