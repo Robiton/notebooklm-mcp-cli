@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-04-12 — Upstream Sync v0.5.22 (studio status normalization)
+
+### Added
+
+- **Rich artifact fields in JSON output** — `nlm describe notebook --json --full` now dynamically includes `audio_url`, `video_url`, `infographic_url`, `slide_deck_url`, `report_content`, `flashcard_count`, and `duration_seconds` when the API returns them. Backward compatible: fields only appear when present.
+
+### Fixed
+
+- **`poll_studio_status` bypassing auth recovery** — The polling function was making raw HTTP calls outside `_call_rpc`, causing immediate failures when `build_label` or session tokens went stale. It now routes through `_call_rpc` and gets auth recovery, retries, and unified debug logging for free.
+- **`_normalize_studio_status` applied consistently** — Status extraction is now centralised in one helper across audio, video, and all artifact paths. Short or non-list `artifact_data` returns `"unknown"` instead of crashing.
+
+---
+
 ## [1.0.4] - 2026-04-11 — Upstream Sync v0.5.18–v0.5.21 + OAuth 2.1 Remote MCP
 
 ### Added
