@@ -31,7 +31,7 @@ def tag(
     try:
         if action == "add":
             if not notebook_id:
-                return {"status": "error", "error": "notebook_id is required for action=add"}
+                return error_result("notebook_id is required for action=add")
             if not tags:
                 return error_result("tags parameter is required for action=add")
             tag_list = [t.strip() for t in tags.split(",") if t.strip()]
@@ -40,7 +40,7 @@ def tag(
 
         elif action == "remove":
             if not notebook_id:
-                return {"status": "error", "error": "notebook_id is required for action=remove"}
+                return error_result("notebook_id is required for action=remove")
             if not tags:
                 return error_result("tags parameter is required for action=remove")
             tag_list = [t.strip() for t in tags.split(",") if t.strip()]

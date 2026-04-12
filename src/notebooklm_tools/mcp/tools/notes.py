@@ -66,7 +66,7 @@ def note(
 
         elif action == "delete":
             if not note_id:
-                return {"status": "error", "error": "note_id is required for action='delete'"}
+                return error_result("note_id is required for action='delete'")
             if not confirm:
                 return error_result(
                     "Deletion not confirmed. Set confirm=True after user approval.",
