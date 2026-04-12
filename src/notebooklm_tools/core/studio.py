@@ -106,7 +106,7 @@ class StudioMixin(BaseClient):
 
         return None
 
-    def _normalize_studio_status(self, artifact_data: list[Any]) -> str:
+    def _normalize_studio_status(self, artifact_data: Any) -> str:
         """Map raw artifact status codes to stable CLI status labels.
 
         Audio artifacts have been observed returning status code ``2`` after
@@ -114,6 +114,9 @@ class StudioMixin(BaseClient):
         Treat only that verified combination as completed; keep other unknown
         codes unchanged.
         """
+        if not isinstance(artifact_data, list) or len(artifact_data) <= 4:
+            return "unknown"
+
         status_code = artifact_data[4] if len(artifact_data) > 4 else None
         if status_code == 1:
             return "in_progress"
@@ -190,21 +193,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "audio",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "format": constants.AUDIO_FORMATS.get_name(format_code),
                 "length": constants.AUDIO_LENGTHS.get_name(length_code),
                 "language": language,
@@ -287,21 +281,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "video",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "format": constants.VIDEO_FORMATS.get_name(format_code),
                 "visual_style": constants.VIDEO_STYLES.get_name(visual_style_code)
                 if format_code != constants.VIDEO_FORMAT_CINEMATIC and visual_style_code is not None
@@ -314,18 +299,9 @@ class StudioMixin(BaseClient):
 
     def poll_studio_status(self, notebook_id: str) -> list[dict]:
         """Poll for studio content (audio/video overviews) status."""
-        client = self._get_client()
-
         # Poll params: [[2], notebook_id, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"']
         params = [[2], notebook_id, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"']
-        body = self._build_request_body(self.RPC_POLL_STUDIO, params)
-        url = self._build_url(self.RPC_POLL_STUDIO, f"/notebook/{notebook_id}")
-
-        response = client.post(url, content=body)
-        response.raise_for_status()
-
-        parsed = self._parse_response(response.text)
-        result = self._extract_rpc_result(parsed, self.RPC_POLL_STUDIO)
+        result = self._call_rpc(self.RPC_POLL_STUDIO, params, path=f"/notebook/{notebook_id}")
 
         artifacts = []
         if result and isinstance(result, list) and len(result) > 0:
@@ -643,17 +619,12 @@ class StudioMixin(BaseClient):
             if isinstance(artifact_data, list) and len(artifact_data) > 0:
                 new_artifact_id = artifact_data[0]
                 title = artifact_data[2] if len(artifact_data) > 2 else None
-                status_code = artifact_data[4] if len(artifact_data) > 4 else None
 
                 return {
                     "artifact_id": new_artifact_id,
                     "title": title,
                     "original_artifact_id": artifact_id,
-                    "status": "in_progress"
-                    if status_code == 1
-                    else "completed"
-                    if status_code == 3
-                    else "unknown",
+                    "status": self._normalize_studio_status(artifact_data),
                 }
 
         return None
@@ -732,21 +703,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "infographic",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "orientation": constants.INFOGRAPHIC_ORIENTATIONS.get_name(orientation_code),
                 "detail_level": constants.INFOGRAPHIC_DETAILS.get_name(detail_level_code),
                 "visual_style": constants.INFOGRAPHIC_STYLES.get_name(visual_style_code),
@@ -820,21 +782,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "slide_deck",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "format": constants.SLIDE_DECK_FORMATS.get_name(format_code),
                 "length": constants.SLIDE_DECK_LENGTHS.get_name(length_code),
                 "language": language,
@@ -957,21 +910,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "report",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "format": report_format,
                 "language": language,
             }
@@ -1048,21 +992,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "flashcards",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "difficulty": constants.FLASHCARD_DIFFICULTIES.get_name(difficulty_code),
             }
 
@@ -1144,21 +1079,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "quiz",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "question_count": question_count,
                 "difficulty": constants.FLASHCARD_DIFFICULTIES.get_name(difficulty),
             }
@@ -1236,21 +1162,12 @@ class StudioMixin(BaseClient):
                 if isinstance(artifact_data, list) and len(artifact_data) > 0
                 else None
             )
-            status_code = (
-                artifact_data[4]
-                if isinstance(artifact_data, list) and len(artifact_data) > 4
-                else None
-            )
 
             return {
                 "artifact_id": artifact_id,
                 "notebook_id": notebook_id,
                 "type": "data_table",
-                "status": "in_progress"
-                if status_code == 1
-                else "completed"
-                if status_code == 3
-                else "unknown",
+                "status": self._normalize_studio_status(artifact_data),
                 "description": description,
             }
 

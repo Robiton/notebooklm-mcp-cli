@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **REPL source type** — `source_type="repl"` (code execution sessions) now supported in personal mode.
 - **`fastmcp>=2.0.0,<4.0`** — Dependency upper bound widened from `<3.0` to `<4.0`.
 
+## [0.5.21] - 2026-04-11
+
 ### Fixed
 
 - **HTTP 400 treated as auth failure** — A 400 response from the NotebookLM API now triggers CSRF token recovery in the same way as a 401, handling cases where an expired CSRF token produces a 400 instead of 401.
