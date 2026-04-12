@@ -2,11 +2,15 @@
 """StudioMixin for NotebookLM client - studio content creation and status."""
 
 import contextlib
-from typing import Any
+from typing import Any, Protocol, cast
 
 from . import constants
 from .base import BaseClient
 from .utils import parse_timestamp
+
+
+class _SourceLookupProtocol(Protocol):
+    def get_notebook_sources_with_types(self, notebook_id: str) -> list[dict[str, Any]]: ...
 
 
 class StudioMixin(BaseClient):
@@ -40,7 +44,8 @@ class StudioMixin(BaseClient):
             List of source UUIDs, or empty list if none found
         """
         try:
-            sources = self.get_notebook_sources_with_types(notebook_id)
+            source_client = cast(_SourceLookupProtocol, self)
+            sources = source_client.get_notebook_sources_with_types(notebook_id)
             return [s["id"] for s in sources if s.get("id")]
         except Exception:
             # Return empty list on error - caller methods will handle gracefully
@@ -148,7 +153,7 @@ class StudioMixin(BaseClient):
         length_code: int = 2,  # AUDIO_LENGTH_DEFAULT
         language: str = "en",
         focus_prompt: str = "",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create an Audio Overview (podcast) for a notebook."""
         client = self._get_client()
 
@@ -216,7 +221,7 @@ class StudioMixin(BaseClient):
         visual_style_prompt: str = "",
         language: str = "en",
         focus_prompt: str = "",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create a Video Overview for a notebook."""
         client = self._get_client()
 
@@ -298,7 +303,7 @@ class StudioMixin(BaseClient):
 
         return None
 
-    def poll_studio_status(self, notebook_id: str) -> list[dict]:
+    def poll_studio_status(self, notebook_id: str) -> list[dict[str, Any]]:
         """Poll for studio content (audio/video overviews) status."""
         # Poll params: [[2], notebook_id, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"']
         params = [[2], notebook_id, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"']
@@ -430,7 +435,11 @@ class StudioMixin(BaseClient):
                     self.STUDIO_TYPE_SLIDE_DECK: "slide_deck",
                     self.STUDIO_TYPE_DATA_TABLE: "data_table",
                 }
-                artifact_type = "quiz" if is_quiz else type_map.get(type_code, "unknown")
+                artifact_type = (
+                    "quiz"
+                    if is_quiz
+                    else type_map.get(cast(int, type_code), "unknown")
+                )
                 status = self._normalize_studio_status(artifact_data)
 
                 # Extract custom_instructions (focus prompt) if present
@@ -499,7 +508,7 @@ class StudioMixin(BaseClient):
 
         return artifacts
 
-    def get_studio_status(self, notebook_id: str) -> list[dict]:
+    def get_studio_status(self, notebook_id: str) -> list[dict[str, Any]]:
         """Alias for poll_studio_status (used by CLI)."""
         return self.poll_studio_status(notebook_id)
 
@@ -592,7 +601,7 @@ class StudioMixin(BaseClient):
         self,
         artifact_id: str,
         slide_instructions: list[tuple[int, str]],
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Revise an existing slide deck with per-slide instructions.
 
         Creates a NEW slide deck artifact with the requested changes applied.
@@ -639,7 +648,7 @@ class StudioMixin(BaseClient):
         visual_style_code: int = 1,  # INFOGRAPHIC_STYLE_AUTO_SELECT
         language: str = "en",
         focus_prompt: str = "",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create an Infographic from notebook sources."""
         client = self._get_client()
 
@@ -726,7 +735,7 @@ class StudioMixin(BaseClient):
         length_code: int = 3,  # SLIDE_DECK_LENGTH_DEFAULT
         language: str = "en",
         focus_prompt: str = "",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create a Slide Deck from notebook sources."""
         client = self._get_client()
 
@@ -803,7 +812,7 @@ class StudioMixin(BaseClient):
         report_format: str = "Briefing Doc",
         custom_prompt: str = "",
         language: str = "en",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create a Report from notebook sources."""
         client = self._get_client()
 
@@ -929,7 +938,7 @@ class StudioMixin(BaseClient):
         source_ids: list[str] | None = None,
         difficulty_code: int = 2,  # FLASHCARD_DIFFICULTY_MEDIUM
         focus_prompt: str = "",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create Flashcards from notebook sources."""
         client = self._get_client()
 
@@ -1011,7 +1020,7 @@ class StudioMixin(BaseClient):
         question_count: int = 2,
         difficulty: int = 2,
         focus_prompt: str = "",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create Quiz from notebook sources.
 
         Args:
@@ -1098,7 +1107,7 @@ class StudioMixin(BaseClient):
         source_ids: list[str] | None = None,
         description: str = "",
         language: str = "en",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Create Data Table from notebook sources.
 
         Args:
@@ -1178,7 +1187,7 @@ class StudioMixin(BaseClient):
         self,
         notebook_id: str,
         source_ids: list[str] | None = None,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Generate a Mind Map JSON from sources.
 
         This is step 1 of 2 for creating a mind map. After generation,
@@ -1263,7 +1272,7 @@ class StudioMixin(BaseClient):
         mind_map_json: str,
         source_ids: list[str] | None = None,
         title: str = "Mind Map",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Save a generated Mind Map to a notebook.
 
         This is step 2 of 2 for creating a mind map. First use
@@ -1322,7 +1331,7 @@ class StudioMixin(BaseClient):
 
         return None
 
-    def list_mind_maps(self, notebook_id: str) -> list[dict]:
+    def list_mind_maps(self, notebook_id: str) -> list[dict[str, Any]]:
         """List all Mind Maps in a notebook."""
         client = self._get_client()
 

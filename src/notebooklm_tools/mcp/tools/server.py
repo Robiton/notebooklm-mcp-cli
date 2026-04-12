@@ -1,7 +1,9 @@
 """Server tools - Server info with auth status."""
 
+import json
 import subprocess
-from typing import Any
+import urllib.request
+from typing import Any, cast
 
 from notebooklm_tools import __version__
 
@@ -35,6 +37,37 @@ def _check_personal_auth() -> str:
     except Exception:
         pass
     return "not authenticated — run 'nlm login'"
+
+
+def _get_latest_pypi_version() -> str | None:
+    """Fetch the latest version from PyPI."""
+    try:
+        url = "https://pypi.org/pypi/notebooklm-mcp-cli/json"
+        req = urllib.request.Request(url, headers={"User-Agent": "notebooklm-mcp-cli"})
+        with urllib.request.urlopen(req, timeout=2) as response:
+            data = cast(dict[str, Any], json.loads(response.read().decode()))
+            info = data.get("info")
+            if isinstance(info, dict):
+                version = info.get("version")
+                if isinstance(version, str):
+                    return version
+    except Exception:
+        return None
+    return None
+
+
+def _compare_versions(current: str, latest: str) -> bool:
+    """Compare version strings to determine if an update is available.
+
+    Returns:
+        True if latest is greater than current.
+    """
+    try:
+        current_parts = [int(x) for x in current.split(".")]
+        latest_parts = [int(x) for x in latest.split(".")]
+        return latest_parts > current_parts
+    except (ValueError, AttributeError):
+        return False
 
 
 @logged_tool()
