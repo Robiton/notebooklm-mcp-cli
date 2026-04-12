@@ -1,6 +1,5 @@
 """Source tools - Source management with consolidated source_add."""
 
-
 from ...services import ServiceError, ValidationError
 from ...services import sources as sources_service
 from ._utils import ResultDict, coerce_list, error_result, get_client, logged_tool

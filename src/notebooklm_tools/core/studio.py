@@ -435,11 +435,7 @@ class StudioMixin(BaseClient):
                     self.STUDIO_TYPE_SLIDE_DECK: "slide_deck",
                     self.STUDIO_TYPE_DATA_TABLE: "data_table",
                 }
-                artifact_type = (
-                    "quiz"
-                    if is_quiz
-                    else type_map.get(cast(int, type_code), "unknown")
-                )
+                artifact_type = "quiz" if is_quiz else type_map.get(cast(int, type_code), "unknown")
                 status = self._normalize_studio_status(artifact_data)
 
                 # Extract custom_instructions (focus prompt) if present

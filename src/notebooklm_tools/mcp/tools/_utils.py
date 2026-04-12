@@ -182,9 +182,7 @@ def logged_tool() -> Callable[[Callable[P, Any]], Callable[P, Any]]:
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
                 tool_name = async_func.__name__
                 if mcp_logger.isEnabledFor(logging.DEBUG):
-                    params = _sanitize_params(
-                        {k: v for k, v in kwargs.items() if v is not None}
-                    )
+                    params = _sanitize_params({k: v for k, v in kwargs.items() if v is not None})
                     mcp_logger.debug(f"MCP Request: {tool_name}({json.dumps(params, default=str)})")
 
                 result: Any = await async_func(*args, **kwargs)
@@ -196,6 +194,7 @@ def logged_tool() -> Callable[[Callable[P, Any]], Callable[P, Any]]:
                     mcp_logger.debug(f"MCP Response: {tool_name} -> {result_str}")
 
                 return result
+
             wrapper = cast(Callable[P, R], async_wrapper)
         else:
             sync_func = func
@@ -204,9 +203,7 @@ def logged_tool() -> Callable[[Callable[P, Any]], Callable[P, Any]]:
             def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 tool_name = sync_func.__name__
                 if mcp_logger.isEnabledFor(logging.DEBUG):
-                    params = _sanitize_params(
-                        {k: v for k, v in kwargs.items() if v is not None}
-                    )
+                    params = _sanitize_params({k: v for k, v in kwargs.items() if v is not None})
                     mcp_logger.debug(f"MCP Request: {tool_name}({json.dumps(params, default=str)})")
 
                 result: R = sync_func(*args, **kwargs)
@@ -218,6 +215,7 @@ def logged_tool() -> Callable[[Callable[P, Any]], Callable[P, Any]]:
                     mcp_logger.debug(f"MCP Response: {tool_name} -> {result_str}")
 
                 return result
+
             wrapper = sync_wrapper
 
         # Store for later registration
@@ -252,6 +250,7 @@ ESSENTIAL_COOKIES = [
     "__Secure-1PSIDCC",
     "__Secure-3PSIDCC",  # Session cookies (rotate frequently)
 ]
+
 
 def coerce_list(
     val: object | None,

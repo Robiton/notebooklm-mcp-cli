@@ -327,9 +327,13 @@ async def _dispatch_async(
     """Route to the correct async client method."""
     # Non-streaming types (sync client methods callable from async context)
     if artifact_type == "report":
-        return await _resolve_download_result(client.download_report(notebook_id, output_path, artifact_id))
+        return await _resolve_download_result(
+            client.download_report(notebook_id, output_path, artifact_id)
+        )
     elif artifact_type == "mind_map":
-        return await _resolve_download_result(client.download_mind_map(notebook_id, output_path, artifact_id))
+        return await _resolve_download_result(
+            client.download_mind_map(notebook_id, output_path, artifact_id)
+        )
     elif artifact_type == "data_table":
         return await _resolve_download_result(
             client.download_data_table(notebook_id, output_path, artifact_id)

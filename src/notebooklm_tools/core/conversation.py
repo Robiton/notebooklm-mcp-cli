@@ -112,9 +112,7 @@ class ConversationMixin(BaseClient):
                 return True
             return False
 
-    def get_conversation_history(
-        self, conversation_id: str
-    ) -> list[dict[str, str | int]] | None:
+    def get_conversation_history(self, conversation_id: str) -> list[dict[str, str | int]] | None:
         """Get the conversation history for a specific conversation."""
         with self._state_lock:
             turns = list(self._conversation_cache.get(conversation_id, []))
@@ -367,9 +365,7 @@ class ConversationMixin(BaseClient):
     # Response Parsing
     # =========================================================================
 
-    def _parse_query_response(
-        self, response_text: str
-    ) -> tuple[str, dict[str, Any], str | None]:
+    def _parse_query_response(self, response_text: str) -> tuple[str, dict[str, Any], str | None]:
         """Parse the streaming response from the query endpoint.
 
         The query endpoint returns a streaming response with multiple chunks.
