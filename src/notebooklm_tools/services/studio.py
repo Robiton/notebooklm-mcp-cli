@@ -555,10 +555,18 @@ def get_studio_status(
     for raw_artifact in raw_artifacts:
         artifacts.append(
             {
-                "artifact_id": str(raw_artifact.get("artifact_id", "")),
-                "type": str(raw_artifact.get("type", "unknown")),
-                "title": str(raw_artifact.get("title", "")),
-                "status": str(raw_artifact.get("status", "unknown")),
+                "artifact_id": raw_artifact.get("artifact_id")
+                if isinstance(raw_artifact.get("artifact_id"), str)
+                else "",
+                "type": raw_artifact.get("type")
+                if isinstance(raw_artifact.get("type"), str)
+                else "unknown",
+                "title": raw_artifact.get("title")
+                if isinstance(raw_artifact.get("title"), str)
+                else "",
+                "status": raw_artifact.get("status")
+                if isinstance(raw_artifact.get("status"), str)
+                else "unknown",
                 "created_at": raw_artifact.get("created_at")
                 if isinstance(raw_artifact.get("created_at"), str)
                 or raw_artifact.get("created_at") is None

@@ -166,10 +166,12 @@ _tool_registry: list[tuple[str, Callable[..., Any]]] = []
 
 
 def logged_tool() -> Callable[[Callable[P, Any]], Callable[P, Any]]:
-    """Decorator that combines @mcp.tool() with MCP request/response logging.
+    """Decorator that adds MCP request/response logging to a tool.
 
-    Tools are registered immediately with the MCP server when decorated.
-    Supports both synchronous and asynchronous functions.
+    Decorated tools are added to the internal registry for later MCP server
+    registration via ``register_all_tools()`` rather than being registered
+    immediately when decorated. Supports both synchronous and asynchronous
+    functions.
     """
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
