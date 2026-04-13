@@ -256,7 +256,7 @@ def studio_status(
         }
     except (ValidationError, ServiceError) as e:
         message = e.user_message if isinstance(e, ServiceError) else str(e)
-        err = error_result(message)
+        err = error_result(message, hint=getattr(e, "hint", None))
         # For status checks, always include the notebook URL so users can
         # navigate directly (especially useful in enterprise mode where
         # artifact polling is not available via the REST API).
@@ -371,6 +371,6 @@ def studio_revise(
         }
     except (ValidationError, ServiceError) as e:
         message = e.user_message if isinstance(e, ServiceError) else str(e)
-        return error_result(message)
+        return error_result(message, hint=getattr(e, "hint", None))
     except Exception as e:
         return error_result(str(e))
