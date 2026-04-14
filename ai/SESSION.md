@@ -5,6 +5,40 @@ _Most recent session at the top._
 
 ---
 
+## 2026-04-11 — Brian Worrell — Claude Code (session 8)
+
+**Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)
+
+**What we worked on:**
+- Upstream sync v0.5.18–v0.5.24 onto `chore/upstream-sync-v0.5.18-v0.5.24` branch
+- Applied 22 commits via cherry-pick in dependency order across six release versions
+- Major commits: thread-safety (56d5c8c), security hardening (dddd518), CDP regression fix (6511197), v1/v2 RPC dispatch (b31ab7e-style via 56d5c8c), MCP runtime contracts (f23b211 — 26 files), ruff format (70edb43), chat timeout (5ff8cca), studio None leaks (1389efd), _call_rpc consistency (de07758), Windows desktop fixes (2d7cf12, 7c12af6), studio revise errors (d7db3bb)
+- Skipped: WSL2-only (a4f6174, 5626e64), housekeeping/release (805e5e9, 3d3f1c9, c838c5a, 6f921dd, 8c11438, 9dedf29), already-applied (7c612ed, e8b68ac, 0d5cba8)
+- Resolved 30+ merge conflicts preserving enterprise additions: `get_api_profile().web_url()`, enterprise error fallback in studio_status, `_check_enterprise_auth()`, `skip_paywall_check`, `_SENSITIVE_DIR_BLOCKLIST`, CDP 30s timeout + chmod 600
+- Post-cherry-pick fixes: added `RPCError` import, `RPC_ADD_SOURCE_V2` constant, `return result` to v1 sub-methods, reconstructed `_add_url_sources_v2`, removed inner TimeoutException catches, guarded `_parse_source_result` against None, fixed E402/duplicate-logger in studio service
+- Full security scan: pip-audit clean, bandit 0 HIGH (4 Medium pre-existing), ruff --select S clean, auth diff clean
+- 750 tests pass (up from 736 pre-sync), 37 skipped, 0 failures
+- Version bumped to 1.0.7 in all four locations
+
+**Decisions made:**
+- `_add_url_source_v1/_v2` sub-methods do NOT catch `httpx.TimeoutException` — they let it bubble to `add_url_source`'s outer handler which returns the `{"status": "timeout"}` dict
+- `_parse_source_result` returns `None` if `source_data` is `None` or `source_id` is `None` (guard against malformed RPC responses)
+- `RPC_ADD_SOURCE_V2 = "ozz5Z"` added as distinct constant from `RPC_SUBSCRIPTION = "ozz5Z"` to make the v2 dispatch self-documenting (same RPC ID, different semantic context)
+- Kept `get_api_profile().web_url(notebook_id)` over `f"{get_base_url()}/notebook/{notebook_id}"` — former is enterprise-aware
+
+**Problems encountered:**
+- f23b211 conflict left `_add_url_source_v1` and `_add_url_sources_v1` without `return result` statements (HEAD had inline parsing; f23b211 refactored to static methods but git auto-merged wrong)
+- `_add_url_sources_v2` body was incorrectly merged inside `_add_url_sources_v1` — had to reconstruct the v2 method manually
+- `RPCError` used in sources.py but never imported; `RPC_ADD_SOURCE_V2` referenced but never defined
+- Studio service had duplicate `logger = logging.getLogger(__name__)` and imports out of order (E402) from a bad auto-merge
+
+**Next steps:**
+- Push branch and open PR into main
+- Wait for CI green, then squash-merge
+- Consider promoting OAuth 2.1 backlog item (dizz fork already implemented) — enables hosted deployment scenario
+
+---
+
 ## 2026-04-07 — Brian Worrell — Claude Code (session 6)
 
 **Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)

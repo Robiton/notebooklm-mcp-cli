@@ -9,8 +9,6 @@ verify that the internal locking prevents race conditions.
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import patch
 
-import pytest
-
 
 def _make_client():
     """Create a NotebookLMClient with mocked auth (no network)."""
@@ -146,10 +144,6 @@ class TestGetClient:
         assert len(set(results)) == 1
 
 
-@pytest.mark.skip(
-    reason="_source_rpc_version removed: dual-RPC fallback (b31ab7e) permanently skipped "
-    "in this fork as incompatible with enterprise adapter routing"
-)
 class TestSourceRpcVersion:
     """Verify _source_rpc_version is safely read/written."""
 

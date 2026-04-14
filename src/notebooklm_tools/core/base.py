@@ -83,7 +83,8 @@ class BaseClient:
     RPC_DELETE_NOTEBOOK = "WWINqb"
 
     # Source operations
-    RPC_ADD_SOURCE = "izAoDd"  # Used for URL, text, and Drive sources
+    RPC_ADD_SOURCE = "izAoDd"  # Used for URL, text, and Drive sources (v1)
+    RPC_ADD_SOURCE_V2 = "ozz5Z"  # New unified URL endpoint (issue #121, v2)
     RPC_ADD_SOURCE_FILE = "o4cbdc"  # Register file for resumable upload
     RPC_GET_SOURCE = "hizoJc"  # Get source details
     RPC_CHECK_FRESHNESS = "yR9Yof"  # Check if Drive source is stale
@@ -299,6 +300,16 @@ class BaseClient:
         # concurrent MCP tool calls share this singleton client instance.
         # The lock protects: _client, _reqid_counter, _conversation_cache,
         # csrf_token, _session_id, cookies.
+        # It is never held during network I/O.
+        # RPC version detection: None = unresolved, "v1" = izAoDd, "v2" = ozz5Z
+        # Protected by _state_lock to prevent TOCTOU races in concurrent calls.
+        self._source_rpc_version: str | None = None
+
+        # Lock for thread-safe access to mutable instance state.
+        # FastMCP dispatches sync tool functions into a thread pool, so
+        # concurrent MCP tool calls share this singleton client instance.
+        # The lock protects: _client, _reqid_counter, _conversation_cache,
+        # _source_rpc_version, csrf_token, _session_id, cookies.
         # It is never held during network I/O.
         self._state_lock = threading.Lock()
 

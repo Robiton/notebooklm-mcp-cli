@@ -1,6 +1,7 @@
 """Chat service — shared business logic for notebook querying and chat configuration."""
 
-from typing import TypedDict
+import threading
+from typing import Any, TypedDict, cast
 
 from ..core.client import NotebookLMClient
 from ..core.conversation import QueryRejectedError
@@ -16,9 +17,24 @@ class QueryResult(TypedDict):
 
     answer: str
     conversation_id: str | None
-    sources_used: list
-    citations: dict
-    references: list
+    sources_used: list[Any]
+    citations: dict[str, Any]
+    references: list[dict[str, Any]]
+
+
+class PendingQueryState(TypedDict):
+    """Tracked state for an async query."""
+
+    status: str
+    result: QueryResult | None
+    error: str | None
+    created_at: float
+
+
+# --- Async query state management ---
+_QUERY_TTL_SECONDS = 600  # 10 minutes
+_pending_queries: dict[str, PendingQueryState] = {}
+_pending_lock = threading.Lock()
 
 
 class ConfigureResult(TypedDict):
@@ -67,7 +83,7 @@ def query(
             query_text=query_text,
             source_ids=source_ids,
             conversation_id=conversation_id,
-            timeout=timeout,
+            **({"timeout": cast(float, timeout)} if timeout is not None else {}),
         )
     except QueryRejectedError as e:
         raise ServiceError(
