@@ -62,7 +62,7 @@ source_add(
     url="https://...",        # for source_type=url
     text="...",               # for source_type=text
     title="...",              # optional title
-    file_path="/path/to.pdf", # for source_type=file
+    file_path="/path/to.pdf", # for source_type=file (.pdf, .txt, .md, .docx, .epub, .csv, .mp3, .m4a, .wav, .aac, .ogg, .opus, .mp4, .jpg, .jpeg, .png, .gif, .webp)
     document_id="...",        # for source_type=drive
     doc_type="doc",           # doc | slides | sheets | pdf
     wait=True,                # wait for processing to complete

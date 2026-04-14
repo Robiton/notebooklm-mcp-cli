@@ -67,7 +67,7 @@ nlm source list <notebook>                         # List sources
 nlm source add <notebook> --url "https://..."      # Add URL
 nlm source add <notebook> --url "https://..." --wait  # Add and wait until ready
 nlm source add <notebook> --text "content" --title "Notes"  # Add text
-nlm source add <notebook> --file document.pdf --wait  # Upload file
+nlm source add <notebook> --file document.pdf --wait  # Upload file (.pdf, .txt, .md, .docx, .epub, .csv, audio, video, images)
 nlm source add <notebook> --youtube "https://..."  # Add YouTube
 nlm source add <notebook> --drive <doc-id>         # Add Drive doc
 nlm source get <source-id>                         # Get content
