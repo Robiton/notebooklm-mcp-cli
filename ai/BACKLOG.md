@@ -48,6 +48,7 @@ _(nothing active)_
 - [x] Branch protection on `main` — Completed 2026-04-07. Ruleset configured in GitHub Settings. | Priority: Med | Owner: Brian | Due: —
 - [ ] Test configure_mode + full enterprise workflow end-to-end | Priority: Med | Owner: Brian | Due: —
 - [x] **Upstream sync v0.5.17** — Completed 2026-04-07. Cherry-picked 5 commits (audio type 10, custom video style, visual_style_prompt parsing, CDP exception chaining, security hardening). Skipped b31ab7e (dual-RPC fallback, incompatible with enterprise adapter) and style/release/docs-only commits. Merged as Robiton#12. | Priority: High | Owner: Claude Code | Due: —
+- [x] **Upstream sync v0.5.18–v0.5.24** — Completed 2026-04-11. Cherry-picked 22 commits covering thread-safety, security hardening, MCP runtime contracts, v1/v2 URL RPC dispatch, chat timeout, studio fixes, Windows desktop fixes, RPC error surfacing. Resolved 30+ conflicts preserving all enterprise additions. 750 tests pass, security scan clean. Versioned as 1.0.7. Branch: chore/upstream-sync-v0.5.18-v0.5.24 (PR pending). | Priority: High | Owner: Claude Code | Due: —
 
 ---
 
