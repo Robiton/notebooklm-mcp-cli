@@ -212,6 +212,11 @@ studio_delete(
 **Video Formats:** explainer, brief, cinematic
 **Video Styles:** auto_select, custom, classic, whiteboard, kawaii, anime, watercolor, retro_print, heritage, paper_craft
 
+> **Enterprise mode constraints (hard API limits — not bugs):**
+> - `studio_status` polling does **not** work in enterprise mode. The Discovery Engine REST API does not expose artifact completion status. Use the `notebook_url` from the error response and check status in the NotebookLM UI.
+> - **Video generation** is **not available** in enterprise mode. The Discovery Engine REST API has no video endpoint. Users must generate video manually via the Studio panel in the NotebookLM UI.
+> - In enterprise mode: only `studio_create` with `artifact_type=audio` is supported via MCP.
+
 ---
 
 ## Base Endpoint

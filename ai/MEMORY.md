@@ -20,7 +20,7 @@ Cursor, Codex, or other MCP-compatible AI tools.
 
 Deployment: local machine tool, installed via `uv tool install .`. Config in `~/.notebooklm-mcp-cli/`.
 
-Current state: v1.0.0, in active use. Enterprise mode tested against GCP project YOUR_PROJECT_ID.
+Current state: v1.0.8, in active use. Enterprise mode tested against GCP project YOUR_PROJECT_ID.
 
 ---
 
@@ -35,6 +35,10 @@ Current state: v1.0.0, in active use. Enterprise mode tested against GCP project
 | 2026-03 | Empty body for audio overview API | Enterprise audio API rejects all documented fields (episodeFocus, sourceIds, languageCode) despite documentation claiming support | Using documented fields: returns 400 |
 | 2026-03 | Per-URL individual processing in bulk add | One failed URL shouldn't fail the whole batch; returns per-URL results | Batch API call: fails atomically, no partial results |
 | 2026-04 | `tests/conftest.py` forces `NOTEBOOKLM_MODE=personal` | Prevents local config.toml enterprise mode from breaking the test suite | Per-test mode: harder to maintain |
+| 2026-04-11 | `_add_url_source_v1/_v2` sub-methods do NOT catch `httpx.TimeoutException` | Inner catch prevented outer handler from returning the `{"status": "timeout"}` dict correctly | Inner try/except: masked timeout, broke callers |
+| 2026-04-11 | `RPC_ADD_SOURCE_V2 = "ozz5Z"` as a named constant (same ID as `RPC_SUBSCRIPTION`) | Self-documenting — two distinct semantic uses of the same RPC ID | Reusing the subscription constant: semantically misleading |
+| 2026-04-14 | `studio_status` and video documented as intentionally unsupported in enterprise | Discovery Engine REST API confirmed by live test to have no artifact status or video endpoints — not a bug | Attempting a workaround: no API surface to work with |
+| 2026-04-14 | `is_shareable` defaults to `True` in `Notebook` dataclass | Consumer API does not surface this field; True is the safe fallback (most notebooks are shareable) | Default False: would incorrectly block sharing UX for consumer users |
 
 ---
 
@@ -77,13 +81,16 @@ Current state: v1.0.0, in active use. Enterprise mode tested against GCP project
 - **Upstream**: `jacob-bd/notebooklm-mcp-cli` — personal NotebookLM only
 - **This fork**: `Robiton/notebooklm-mcp-cli` — enterprise + personal
 - **PyPI package name**: `notebooklm-enterprise-mcp` — jacob-bd owns `notebooklm-mcp-cli` on PyPI at v0.5.16
-- **Current synced upstream version**: v0.5.16 (cherry-picked through 2026-04-06)
+- **Current synced upstream version**: v0.5.24 (cherry-picked through 2026-04-11, versioned as 1.0.7)
 - **Merged PRs on fork** (all into `enterprise-url-support`):
   - Robiton#2 — AI scaffold adoption — merged
   - Robiton#3 — package rename, CI fix, README identity — merged
   - Robiton#4 — CONTRIBUTING, CoC, SECURITY, issue templates — merged
   - Robiton#5 — debt cleanup, upstream sync workflow, .codex, release process — merged
   - Robiton#6 — upstream sync v0.5.11–v0.5.16 cherry-picks — merged
+  - Robiton#7–#22 — security hardening, enterprise URL support, various feature/fix PRs — merged
+  - Robiton#23 — upstream sync v0.5.18–v0.5.24 (1.0.7) — merged
+  - Robiton#24 — backlog sweep v1.0.8 (EPUB, is_shareable, YouTube metadata, enterprise studio constraints, Docker design doc) — merged
 - **Upstream PR strategy**: **No further PRs to jacob-bd.** Both #126 (enterprise) and #129 (podcast) were closed by jacob-bd — his project is intentionally personal-only. We are a dual-use fork; that scope divergence is permanent. We will cherry-pick useful upstream fixes/features into our fork, but we no longer submit PRs back.
 - **Skipped upstream commit**: `b31ab7e` (dual RPC fallback) — permanently skip; incompatible with our enterprise adapter design
 - **Sync strategy**: Periodically cherry-pick from upstream/main; weekly upstream-check.yml opens a GitHub issue if we fall behind. One-way only — upstream → us.
@@ -116,7 +123,7 @@ These files conflict on every upstream cherry-pick. Resolve manually:
 | SECURITY.md | ✅ Root level, GitHub recognizes it |
 | CONTRIBUTING.md | ✅ Root level |
 | CODE_OF_CONDUCT.md | ✅ Root level |
-| Branch protection on main | ❌ Not yet — manual GitHub Settings step |
+| Branch protection on main | ✅ Configured 2026-04-07 via GitHub Rulesets |
 | Star history chart | ❌ Removed — re-add when repo has traction |
 | PyPI trusted publisher (OIDC) | ✅ Configured (environment: pypi) |
 
