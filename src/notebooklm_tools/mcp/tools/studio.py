@@ -1,5 +1,6 @@
 """Studio tools - Artifact creation with consolidated studio_create."""
 
+import contextlib
 from typing import Any
 
 from ...core.api_profile import get_api_profile
@@ -239,10 +240,17 @@ def studio_status(
             "notebook_url": get_api_profile().web_url(notebook_id),
         }
     except (ValidationError, ServiceError) as e:
-        return {
+        err: dict[str, Any] = {
             "status": "error",
             "error": e.user_message if isinstance(e, ServiceError) else str(e),
         }
+        # For status checks, always include the notebook URL so users can
+        # navigate directly (especially useful in enterprise mode where
+        # artifact polling is not available via the REST API).
+        if action == "status" and notebook_id:
+            with contextlib.suppress(Exception):
+                err["notebook_url"] = get_api_profile().web_url(notebook_id)
+        return err
     except Exception as e:
         return {"status": "error", "error": str(e)}
 

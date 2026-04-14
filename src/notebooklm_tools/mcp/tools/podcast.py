@@ -8,7 +8,19 @@ only the roles/discoveryengine.podcastApiUser IAM role.
 import os
 from typing import Any
 
+from ...utils.config import get_config
 from ._utils import get_client, logged_tool
+
+
+def _is_enterprise_mode() -> bool:
+    """Check enterprise mode from env var (takes precedence) or config file."""
+    env_mode = os.environ.get("NOTEBOOKLM_MODE", "").lower()
+    if env_mode:
+        return env_mode == "enterprise"
+    try:
+        return get_config().enterprise.mode.lower() == "enterprise"
+    except Exception:
+        return False
 
 
 @logged_tool()
@@ -34,11 +46,11 @@ def podcast_create(
     Returns:
         Dictionary with operation name for tracking and downloading.
     """
-    if os.environ.get("NOTEBOOKLM_MODE", "personal").lower() != "enterprise":
+    if not _is_enterprise_mode():
         return {
             "status": "error",
             "error": "Standalone podcast creation is only available in enterprise mode. "
-            "Set NOTEBOOKLM_MODE=enterprise.",
+            "Run `nlm config set enterprise.mode enterprise` or set NOTEBOOKLM_MODE=enterprise.",
         }
 
     client = get_client()
@@ -85,7 +97,7 @@ def podcast_download(
     Returns:
         Dictionary with the downloaded file path.
     """
-    if os.environ.get("NOTEBOOKLM_MODE", "personal").lower() != "enterprise":
+    if not _is_enterprise_mode():
         return {"status": "error", "error": "Only available in enterprise mode."}
 
     client = get_client()
