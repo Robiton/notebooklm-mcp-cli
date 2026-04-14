@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-04-14 — Enterprise bug fixes
+
+### Fixed
+
+- **`podcast_create` ignoring config-file enterprise mode** — `podcast_create` and `podcast_download` previously checked only the `NOTEBOOKLM_MODE` environment variable to gate enterprise-only behaviour. When enterprise mode is configured via `nlm config set enterprise.mode enterprise` (stored in `config.toml`), Claude Desktop's MCP subprocess does not inherit env vars, so the tools incorrectly returned "only available in enterprise mode" even though mode was correctly set. The check now reads from the config file as a fallback, matching how `get_client()` already determines the active mode.
+- **`studio_status` returns notebook URL on enterprise error** — When artifact polling is unavailable in enterprise mode, the error response now includes `notebook_url` so users can navigate directly to the notebook in the NotebookLM UI.
+
+---
+
 ## [1.0.5] - 2026-04-12 — Upstream Sync v0.5.22 (studio status normalization)
 
 ### Added
