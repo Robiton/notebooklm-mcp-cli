@@ -25,7 +25,7 @@ _(nothing active)_
 - [x] **`NBLM_ACCESS_TOKEN` env var support** — Completed 2026-04-07. `_get_token()` checks `NBLM_ACCESS_TOKEN` env var before falling back to gcloud CLI. | Priority: Med | Owner: Claude Code | Due: —
 - [x] **Surface `isShareable`/`isShared` in notebook responses** — Added `is_shareable` to `Notebook` dataclass; enterprise adapter extracts `metadata.isShareable` and `metadata.isShared`; service layer includes `is_shareable` in `list_notebooks` output. Completed 2026-04-14. | Priority: Low | Owner: Claude Code | Due: —
 - [x] **`youtubeMetadata` in source responses** — Enterprise `_parse_source_result` now extracts `metadata.youtubeMetadata.channelName` → `youtube_channel` and `metadata.youtubeMetadata.videoId` → `youtube_video_id` when present. Completed 2026-04-14. | Priority: Low | Owner: Claude Code | Due: —
-- [ ] **Docker research**: Design a minimal secure single-user container image for team distribution. Questions to answer: (1) base image choice (python:3.11-slim vs distroless), (2) how user authenticates their Google account into the container, (3) auth persistence across container restarts (volume mount vs re-auth), (4) how the container exposes the MCP server (SSE/HTTP transport), (5) how a user's Claude Desktop/Code points to the remote container, (6) what the distribution story looks like (Docker Hub, ghcr.io, private registry), (7) security hardening (non-root user, read-only fs, minimal capabilities). Goal: two options — local install (current) vs hosted container — for teams who want to avoid running anything on their laptops. | Priority: Med | Owner: Research | Due: —
+- [x] **Docker research** — Completed 2026-04-14. Design doc written to `docs/DOCKER.md`. Recommendation: enterprise-only v1 on `python:3.12-slim`, ADC volume-mount auth, HTTP transport on port 8000/mcp, non-root + `--cap-drop ALL` + read-only rootfs, GitHub Container Registry for distribution. Personal mode excluded (CDP/Chrome incompatible with minimal container). | Priority: Med | Owner: Claude Code | Due: —
 
 ### New features (consumer API — from teng-lin/notebooklm-py v0.3.x research)
 
@@ -57,7 +57,7 @@ _(nothing active)_
 - [x] OAuth 2.1 provider for remote MCP — already implemented in `mcp/server.py` (`_setup_oauth()`) and `mcp/oauth.py` via upstream sync. Enabled via `--oauth-client-id/secret/server-url` flags or env vars. Completed in upstream sync v0.5.18-v0.5.24. | Priority: Low | Owner: Claude Code | Due: —
 - [x] Consider adding `nlm config set sources.approved_domains` to README quick-start for paywall guidance — Added to README.md Enterprise Mode section. Completed 2026-04-14. | Priority: Low | Owner: Brian | Due: —
 - [ ] Watch Discovery Engine API for v1alpha → v1 promotion (no longer triggers upstream PR — just informs our own stability posture) | Priority: Low | Owner: Brian | Due: —
-- [ ] Docker container design — enterprise-only image using HTTP transport + gcloud token injection. Design doc pending (research in progress). | Priority: Med | Owner: Claude Code | Due: —
+- [ ] **Docker container implementation** — Build Dockerfile + docker-compose.yml + GitHub Actions publish workflow per design in `docs/DOCKER.md`. Scope: enterprise-only, `python:3.12-slim`, non-root, HTTP transport, ghcr.io distribution. | Priority: Med | Owner: Claude Code | Due: —
 
 ---
 
