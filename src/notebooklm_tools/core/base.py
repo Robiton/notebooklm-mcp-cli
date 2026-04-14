@@ -83,7 +83,8 @@ class BaseClient:
     RPC_DELETE_NOTEBOOK = "WWINqb"
 
     # Source operations
-    RPC_ADD_SOURCE = "izAoDd"  # Used for URL, text, and Drive sources
+    RPC_ADD_SOURCE = "izAoDd"  # Used for URL, text, and Drive sources (v1)
+    RPC_ADD_SOURCE_V2 = "ozz5Z"  # New unified URL endpoint (issue #121, v2)
     RPC_ADD_SOURCE_FILE = "o4cbdc"  # Register file for resumable upload
     RPC_GET_SOURCE = "hizoJc"  # Get source details
     RPC_CHECK_FRESHNESS = "yR9Yof"  # Check if Drive source is stale

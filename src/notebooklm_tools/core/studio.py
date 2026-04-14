@@ -122,7 +122,6 @@ class StudioMixin(BaseClient):
         if not isinstance(artifact_data, list) or len(artifact_data) <= 4:
             return "unknown"
 
-
         status_code = artifact_data[4] if len(artifact_data) > 4 else None
         if status_code == 1:
             return "in_progress"

@@ -13,7 +13,6 @@ import pytest
 
 def _collect_pairs():
     """Build the list of verb/target pairs by inspecting verbs.py imports and calls."""
-    from notebooklm_tools.cli.commands import verbs
     from notebooklm_tools.cli.commands import (
         alias,
         download,
@@ -21,6 +20,7 @@ def _collect_pairs():
         research,
         source,
         studio,
+        verbs,
     )
 
     # Each entry: (verb_func_name, verb_func, target_func, skip_set)
@@ -29,15 +29,35 @@ def _collect_pairs():
         ("create_audio_verb", verbs.create_audio_verb, studio.create_audio, set()),
         ("create_video_verb", verbs.create_video_verb, studio.create_video, set()),
         ("create_report_verb", verbs.create_report_verb, studio.create_report, set()),
-        ("create_infographic_verb", verbs.create_infographic_verb, studio.create_infographic, set()),
+        (
+            "create_infographic_verb",
+            verbs.create_infographic_verb,
+            studio.create_infographic,
+            set(),
+        ),
         ("create_slides_verb", verbs.create_slides_verb, studio.create_slides, set()),
         ("create_quiz_verb", verbs.create_quiz_verb, studio.create_quiz, set()),
         ("create_flashcards_verb", verbs.create_flashcards_verb, studio.create_flashcards, set()),
         ("create_data_table_verb", verbs.create_data_table_verb, studio.create_data_table, set()),
         ("create_mindmap_verb", verbs.create_mindmap_verb, studio.create_mindmap, set()),
-        ("add_url_verb", verbs.add_url_verb, source.add_source, {"text", "drive", "youtube", "file", "title", "doc_type", "notebook_id"}),
-        ("add_text_verb", verbs.add_text_verb, source.add_source, {"url", "drive", "youtube", "file", "doc_type", "notebook_id"}),
-        ("add_drive_verb", verbs.add_drive_verb, source.add_source, {"url", "text", "youtube", "file", "notebook_id"}),
+        (
+            "add_url_verb",
+            verbs.add_url_verb,
+            source.add_source,
+            {"text", "drive", "youtube", "file", "title", "doc_type", "notebook_id"},
+        ),
+        (
+            "add_text_verb",
+            verbs.add_text_verb,
+            source.add_source,
+            {"url", "drive", "youtube", "file", "doc_type", "notebook_id"},
+        ),
+        (
+            "add_drive_verb",
+            verbs.add_drive_verb,
+            source.add_source,
+            {"url", "text", "youtube", "file", "notebook_id"},
+        ),
         ("describe_notebook_verb", verbs.describe_notebook_verb, notebook.describe_notebook, set()),
         ("describe_source_verb", verbs.describe_source_verb, source.describe_source, set()),
         ("query_notebook_verb", verbs.query_notebook_verb, notebook.query_notebook, set()),

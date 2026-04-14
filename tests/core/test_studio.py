@@ -119,7 +119,6 @@ class TestStudioMixinMethods:
         assert mixin._normalize_studio_status({"status": 3}) == "unknown"
         assert mixin._normalize_studio_status(["too-short"]) == "unknown"
 
-
     def test_extract_audio_media_url_prefers_media_list_over_thumbnail_slot(self):
         mixin = StudioMixin(cookies={"test": "cookie"}, csrf_token="test")
 

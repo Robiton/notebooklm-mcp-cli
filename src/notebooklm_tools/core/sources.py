@@ -26,6 +26,7 @@ import httpx
 
 from . import constants
 from .base import SOURCE_ADD_TIMEOUT, BaseClient
+from .errors import RPCError
 from .exceptions import FileUploadError, FileValidationError
 from .retry import execute_with_retry
 
@@ -390,15 +391,9 @@ class SourceMixin(BaseClient):
         ]
         source_path = f"/notebook/{notebook_id}"
 
-        try:
-            result = self._call_rpc(
-                self.RPC_ADD_SOURCE, params, path=source_path, timeout=SOURCE_ADD_TIMEOUT
-            )
-        except httpx.TimeoutException:
-            return {
-                "status": "timeout",
-                "message": f"Operation timed out after {SOURCE_ADD_TIMEOUT}s but may have succeeded.",
-            }
+        return self._call_rpc(
+            self.RPC_ADD_SOURCE, params, path=source_path, timeout=SOURCE_ADD_TIMEOUT
+        )
 
     def _add_url_source_v2(self, notebook_id: str, url: str, source_path: str) -> Any:
         """New ozz5Z RPC for adding a URL source (issue #121).
@@ -431,9 +426,11 @@ class SourceMixin(BaseClient):
             source_list = result[0] if result else []
             if source_list and len(source_list) > 0:
                 source_data = source_list[0]
-                source_id = source_data[0][0] if source_data[0] else None
-                source_title = source_data[1] if len(source_data) > 1 else "Untitled"
-                source_result = {"id": source_id, "title": source_title}
+                if source_data is not None:
+                    source_id = source_data[0][0] if source_data[0] else None
+                    source_title = source_data[1] if len(source_data) > 1 else "Untitled"
+                    if source_id is not None:
+                        source_result = {"id": source_id, "title": source_title}
         return source_result
 
     def add_url_sources(
@@ -521,17 +518,20 @@ class SourceMixin(BaseClient):
         ]
         source_path = f"/notebook/{notebook_id}"
 
-        try:
-            result = self._call_rpc(
-                self.RPC_ADD_SOURCE, params, path=source_path, timeout=SOURCE_ADD_TIMEOUT
-            )
-        except httpx.TimeoutException:
-            return [
-                {
-                    "status": "timeout",
-                    "message": f"Operation timed out after {SOURCE_ADD_TIMEOUT}s but may have succeeded.",
-                }
+        return self._call_rpc(
+            self.RPC_ADD_SOURCE, params, path=source_path, timeout=SOURCE_ADD_TIMEOUT
+        )
+
+    def _add_url_sources_v2(self, notebook_id: str, urls: list[str], source_path: str) -> Any:
+        """New ozz5Z RPC for adding multiple URL sources (issue #121)."""
+        source_data_list = []
+        for url in urls:
+            source_data = [
+                [None, url, 627],
+                [None, None, None, None, None, None, None, None, None, [None, None, 1]],
+                1,
             ]
+            source_data_list.append(source_data)
 
         params = [source_data_list]
 

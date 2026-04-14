@@ -15,8 +15,6 @@ import logging
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypedDict
 
-logger = logging.getLogger(__name__)
-
 from notebooklm_tools.core import constants
 from notebooklm_tools.core.errors import RPCError
 

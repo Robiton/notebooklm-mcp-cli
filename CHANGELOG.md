@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2026-04-11 — Upstream Sync v0.5.18–v0.5.24
+
+### Changed
+
+- Upstream sync: cherry-picked improvements from upstream v0.5.18–v0.5.24
+  - Thread-safety for concurrent MCP tool calls (`_state_lock`, `_source_rpc_version`)
+  - v1/v2 source RPC auto-detection and dispatch (`_add_url_source_v1/v2`, `_parse_source_result`)
+  - Security hardening: URL scheme validation (`ALLOWED_URL_SCHEMES`), SSRF guard, non-loopback HTTP warning, `_sanitize_params()` for log redaction, double-checked locking in `get_client()`
+  - MCP runtime contracts: `ResultDict` type alias, `error_result()` helper, typed `logged_tool()` decorator, async query tools (`notebook_query_start`, `notebook_query_status`)
+  - Validation error normalization for `source_type` and `artifact_type`
+  - Chat timeout preservation
+  - None string leak fixes in studio status payloads
+  - Artifact typing improvements
+  - `_call_rpc` consistency in download and research services
+  - Windows desktop path fixes (subprocess replacement, explicit stdio passthrough)
+  - Verb wrapper parameter sync for 13 CLI commands
+  - RPC error surface with hints in studio revise
+
+---
+
 ## [1.0.6] - 2026-04-14 — Enterprise bug fixes
 
 ### Fixed

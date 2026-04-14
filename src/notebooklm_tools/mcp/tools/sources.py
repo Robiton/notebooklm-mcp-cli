@@ -1,5 +1,7 @@
 """Source tools - Source management with consolidated source_add."""
 
+from typing import Any
+
 from ...services import ServiceError, ValidationError
 from ...services import sources as sources_service
 from ._utils import ResultDict, coerce_list, error_result, get_client, logged_tool
@@ -107,9 +109,6 @@ def source_add(
     """
     try:
         client = get_client()
-
-        # Coerce list params from MCP clients (may arrive as strings)
-        coerced_urls: list[str] | None = coerce_list(urls)
 
         # Bulk URL add: when urls list is provided
         if urls and source_type == "url":

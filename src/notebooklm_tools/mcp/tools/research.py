@@ -38,7 +38,6 @@ def research_start(
                 "Please provide either a notebook_id or a title for a new notebook."
             )
 
-
         result = research_service.start_research(
             client,
             notebook_id,

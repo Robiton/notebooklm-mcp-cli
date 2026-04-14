@@ -1,9 +1,6 @@
 """Chat service — shared business logic for notebook querying and chat configuration."""
 
-import logging
 import threading
-import time
-import uuid
 from typing import Any, TypedDict, cast
 
 from ..core.client import NotebookLMClient
