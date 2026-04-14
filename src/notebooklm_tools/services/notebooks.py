@@ -16,6 +16,7 @@ class NotebookInfo(TypedDict):
     url: str
     ownership: str
     is_shared: bool
+    is_shareable: bool
     created_at: str | None
     modified_at: str | None
 
@@ -111,6 +112,7 @@ def list_notebooks(
                 "url": nb.url,
                 "ownership": nb.ownership,
                 "is_shared": nb.is_shared,
+                "is_shareable": nb.is_shareable,
                 "created_at": nb.created_at,
                 "modified_at": nb.modified_at,
             }

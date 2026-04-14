@@ -890,6 +890,7 @@ class SourceMixin(BaseClient):
             ".txt",
             ".md",
             ".docx",
+            ".epub",
             ".csv",  # Documents
             ".mp3",
             ".m4a",

@@ -41,12 +41,15 @@ class EnterpriseAdapter:
         results = self._ec.list_notebooks()
         notebooks = []
         for nb in results:
+            metadata = nb.get("metadata", {})
             notebooks.append(
                 Notebook(
                     id=nb["notebook_id"],
                     title=nb["title"],
                     source_count=0,  # REST API doesn't return source count in list
                     sources=[],
+                    is_shared=bool(metadata.get("isShared", False)),
+                    is_shareable=bool(metadata.get("isShareable", True)),
                 )
             )
         return notebooks
