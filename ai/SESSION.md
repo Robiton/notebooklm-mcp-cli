@@ -5,6 +5,37 @@ _Most recent session at the top._
 
 ---
 
+## 2026-04-14 — Brian Worrell — Claude Code (session 9)
+
+**Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)
+
+**What we worked on:**
+- Backlog sweep: all outstanding enterprise API gap items from BACKLOG.md
+- Enterprise studio constraints: updated FastMCP system prompt (`mcp/server.py`) and `data/SKILL.md` to explicitly document that `studio_status` polling and video generation do NOT work in enterprise mode (hard Discovery Engine REST API limits confirmed by live test in v1.0.7)
+- EPUB source support: `.epub` / `application/epub+zip` added to `core/sources.py` supported_extensions and enterprise_client suffix_map
+- Notebook `is_shareable`: added field to `Notebook` dataclass, extracted from enterprise API `notebookMetadata.isShareable`, surfaced through enterprise_adapter, services/notebooks, and MCP list_notebooks output
+- YouTube metadata surfacing: `enterprise_client._parse_source_result` now extracts `youtubeMetadata.channelName` → `youtube_channel` and `videoId` → `youtube_video_id`
+- README approved_domains quick-start: added `nlm config set sources.approved_domains` example under Enterprise Mode section
+- Marked complete: custom_style_description (already video_style_prompt), Agentspace rename (no code refs found), OAuth 2.1 (already implemented in upstream sync)
+- Added Docker container design as new research backlog item
+- Version bumped 1.0.7 → 1.0.8 in all four locations; CHANGELOG.md v1.0.8 entry added
+- PR #24 opened: feat/backlog-sweep-v1.0.8 → main
+
+**Decisions made:**
+- Enterprise `studio_status` and video are documented as intentionally unsupported via MCP (not bugs) — system prompt directs LLMs to use notebook_url from error response for manual UI access
+- `is_shareable` defaults to `True` in `Notebook` dataclass (safe fallback for consumer API which doesn't surface this field)
+- Docker research deferred — needs design doc before implementation
+
+**Problems encountered:**
+- `tests/services/test_notebooks.py` mock SimpleNamespace missing `is_shareable` attribute after adding it to `NotebookInfo` TypedDict — fixed by adding to test defaults
+
+**Next steps:**
+- Wait for CI green on PR #24, then squash-merge
+- Docker container design research (background agent running)
+- Release v1.0.8 to PyPI after merge
+
+---
+
 ## 2026-04-11 — Brian Worrell — Claude Code (session 8)
 
 **Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)

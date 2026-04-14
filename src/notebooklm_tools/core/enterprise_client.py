@@ -341,6 +341,7 @@ class EnterpriseClient:
             ".pdf": "application/pdf",
             ".txt": "text/plain",
             ".md": "text/markdown",
+            ".epub": "application/epub+zip",
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -393,12 +394,19 @@ class EnterpriseClient:
             src = sources[0]
             sid = src.get("sourceId", {})
             source_id = sid.get("id", "") if isinstance(sid, dict) else str(sid)
-            return {
+            out: dict = {
                 "id": source_id,
                 "title": src.get("title", ""),
                 "name": src.get("name", ""),
                 "status": src.get("settings", {}).get("status", ""),
             }
+            yt = src.get("metadata", {}).get("youtubeMetadata", {})
+            if yt:
+                if yt.get("channelName"):
+                    out["youtube_channel"] = yt["channelName"]
+                if yt.get("videoId"):
+                    out["youtube_video_id"] = yt["videoId"]
+            return out
         # uploadFile returns sourceId directly
         sid = result.get("sourceId", {})
         source_id = sid.get("id", "") if isinstance(sid, dict) else str(sid)

@@ -36,6 +36,7 @@ def _make_notebook(**kwargs):
         "ownership": "owned",
         "is_owned": True,
         "is_shared": False,
+        "is_shareable": True,
         "created_at": "2024-01-01",
         "modified_at": "2024-01-02",
     }

@@ -48,7 +48,12 @@ mcp = FastMCP(
 
 **Mode Switching:** Use configure_mode tool or `nlm config set enterprise.mode <personal|enterprise>`.
 **Confirmation:** Tools with confirm param require user approval before setting confirm=True.
-**Studio:** After creating audio, poll studio_status for completion. Enterprise only supports audio.
+**Studio:** After creating audio in personal mode, poll studio_status for completion.
+
+**IMPORTANT - Enterprise Studio Limitations (hard API constraints, not bugs):**
+- `studio_status` polling does NOT work in enterprise mode — the Discovery Engine REST API does not expose artifact completion status. Always provide the notebook_url from the error response so the user can check status in the UI.
+- Video generation is NOT available in enterprise mode — the REST API has no video endpoint. Direct users to the notebook UI (Studio panel → Video Overview) to generate video manually.
+- In enterprise mode: ONLY use studio_create for audio artifacts. Never attempt studio_status polling for enterprise.
 
 Consolidated tools:
 - source_add(source_type=url|text|drive|file): Add any source type

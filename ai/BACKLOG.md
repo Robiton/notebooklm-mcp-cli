@@ -23,9 +23,9 @@ _(nothing active)_
 - [x] **YouTube source type in enterprise** — Completed 2026-04-07. `enterprise_adapter.add_url_source()` now detects `youtube.com/youtu.be` URLs and routes to `add_source_youtube()` which uses the correct `videoContent` body format. | Priority: Med | Owner: Claude Code | Due: —
 - [x] **Retry with exponential backoff** — Completed 2026-04-07. `_request()` in `enterprise_client.py` retries up to 3x on 429/500/502/503/504 with 500ms–5s backoff, ±25% jitter, and Retry-After header support. | Priority: Med | Owner: Claude Code | Due: —
 - [x] **`NBLM_ACCESS_TOKEN` env var support** — Completed 2026-04-07. `_get_token()` checks `NBLM_ACCESS_TOKEN` env var before falling back to gcloud CLI. | Priority: Med | Owner: Claude Code | Due: —
-- [ ] **Surface `isShareable`/`isShared` in notebook responses** — These fields come back from the Enterprise API `notebookMetadata` but we likely discard them. Surface in `notebook_get`/`notebook_list` responses. | Priority: Low | Owner: Claude Code | Due: —
-- [ ] **`youtubeMetadata` in source responses** — `channelName` and `videoId` come back for YouTube sources. Surface in source list/get responses. | Priority: Low | Owner: Claude Code | Due: —
-- [ ] **Docker research**: Design a minimal secure single-user container image for team distribution. Questions to answer: (1) base image choice (python:3.11-slim vs distroless), (2) how user authenticates their Google account into the container, (3) auth persistence across container restarts (volume mount vs re-auth), (4) how the container exposes the MCP server (SSE/HTTP transport), (5) how a user's Claude Desktop/Code points to the remote container, (6) what the distribution story looks like (Docker Hub, ghcr.io, private registry), (7) security hardening (non-root user, read-only fs, minimal capabilities). Goal: two options — local install (current) vs hosted container — for teams who want to avoid running anything on their laptops. | Priority: Med | Owner: Research | Due: —
+- [x] **Surface `isShareable`/`isShared` in notebook responses** — Added `is_shareable` to `Notebook` dataclass; enterprise adapter extracts `metadata.isShareable` and `metadata.isShared`; service layer includes `is_shareable` in `list_notebooks` output. Completed 2026-04-14. | Priority: Low | Owner: Claude Code | Due: —
+- [x] **`youtubeMetadata` in source responses** — Enterprise `_parse_source_result` now extracts `metadata.youtubeMetadata.channelName` → `youtube_channel` and `metadata.youtubeMetadata.videoId` → `youtube_video_id` when present. Completed 2026-04-14. | Priority: Low | Owner: Claude Code | Due: —
+- [x] **Docker research** — Completed 2026-04-14. Design doc written to `docs/DOCKER.md`. Recommendation: enterprise-only v1 on `python:3.12-slim`, ADC volume-mount auth, HTTP transport on port 8000/mcp, non-root + `--cap-drop ALL` + read-only rootfs, GitHub Container Registry for distribution. Personal mode excluded (CDP/Chrome incompatible with minimal container). | Priority: Med | Owner: Claude Code | Due: —
 
 ### New features (consumer API — from teng-lin/notebooklm-py v0.3.x research)
 
@@ -34,9 +34,9 @@ _(nothing active)_
 
 ### New features from fork research
 
-- [ ] **brainupgrade-in**: Add `custom_style_description` param to video overview — when `visual_style=custom`, passes free-text style description at position 6 of RPC options array. ~100 lines across 4 files. | Priority: Low | Owner: Claude Code | Due: —
-- [ ] **EPUB source type** — Google added EPUB as a supported source format. Test whether existing `add_source` with `source_type="file"` handles `.epub` files, or if a new type/MIME mapping is needed. | Priority: Low | Owner: Claude Code | Due: —
-- [ ] **"Agentspace" → "Gemini Enterprise" rename** — Google renamed Agentspace to Gemini Enterprise (Oct 9, 2025). Grep docs and comments for "Agentspace" and update to "Gemini Enterprise". | Priority: Low | Owner: Claude Code | Due: —
+- [x] **brainupgrade-in**: `custom_style_description` for video overview — already implemented as `video_style_prompt` param in `studio_create`. No code change needed. | Priority: Low | Owner: Claude Code | Due: —
+- [x] **EPUB source type** — Added `.epub` (application/epub+zip) to supported_extensions in `core/sources.py` and to the enterprise client suffix_map. Completed 2026-04-14. | Priority: Low | Owner: Claude Code | Due: —
+- [x] **"Agentspace" → "Gemini Enterprise" rename** — No code references found; the term only appeared in this backlog entry. Marked complete 2026-04-14. | Priority: Low | Owner: Claude Code | Due: —
 
 ### Enterprise UX improvements (from 2026-04-07 live test)
 
@@ -54,9 +54,10 @@ _(nothing active)_
 
 ## Backlog
 
-- [ ] dizz fork: OAuth 2.1 provider for remote MCP — enables claude.ai remote MCP connector to authenticate against self-hosted HTTP server. 373-line new module, no new deps. Would enable hosted-server scenario from Docker research. | Priority: Low | Owner: Claude Code | Due: —
+- [x] OAuth 2.1 provider for remote MCP — already implemented in `mcp/server.py` (`_setup_oauth()`) and `mcp/oauth.py` via upstream sync. Enabled via `--oauth-client-id/secret/server-url` flags or env vars. Completed in upstream sync v0.5.18-v0.5.24. | Priority: Low | Owner: Claude Code | Due: —
+- [x] Consider adding `nlm config set sources.approved_domains` to README quick-start for paywall guidance — Added to README.md Enterprise Mode section. Completed 2026-04-14. | Priority: Low | Owner: Brian | Due: —
 - [ ] Watch Discovery Engine API for v1alpha → v1 promotion (no longer triggers upstream PR — just informs our own stability posture) | Priority: Low | Owner: Brian | Due: —
-- [ ] Consider adding `nlm config set sources.approved_domains` to README quick-start for paywall guidance | Priority: Low | Owner: Brian | Due: —
+- [ ] **Docker container implementation** — Build Dockerfile + docker-compose.yml + GitHub Actions publish workflow per design in `docs/DOCKER.md`. Scope: enterprise-only, `python:3.12-slim`, non-root, HTTP transport, ghcr.io distribution. | Priority: Med | Owner: Claude Code | Due: —
 
 ---
 

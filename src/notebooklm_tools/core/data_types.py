@@ -58,6 +58,9 @@ class Notebook:
     sources: list[dict]
     is_owned: bool = True  # True if owned by user, False if shared with user
     is_shared: bool = False  # True if shared with others (for owned notebooks)
+    is_shareable: bool = (
+        True  # True if the notebook can be shared (enterprise: from notebookMetadata.isShareable)
+    )
     created_at: str | None = None  # ISO format timestamp
     modified_at: str | None = None  # ISO format timestamp
 

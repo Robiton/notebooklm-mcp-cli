@@ -1,6 +1,6 @@
 ---
 name: nlm-skill
-version: "1.0.7"
+version: "1.0.8"
 description: "Expert guide for the NotebookLM CLI (`nlm`) and MCP server - interfaces for Google NotebookLM. Use this skill when users want to interact with NotebookLM programmatically, including: creating/managing notebooks, adding sources (URLs, YouTube, text, Google Drive), generating content (podcasts, reports, quizzes, flashcards, mind maps, slides, infographics, videos, data tables), conducting research, chatting with sources, or automating NotebookLM workflows. Triggers on mentions of \"nlm\", \"notebooklm\", \"notebook lm\", \"podcast generation\", \"audio overview\", or any NotebookLM-related automation task."
 ---
 
@@ -335,6 +335,11 @@ nlm data-table create <id> "Extract all dates and events" --confirm
 ```
 
 ### 6. Studio (Artifact Management)
+
+> **Enterprise mode constraints (hard API limits — not bugs):**
+> - `studio_status` polling does **not** work in enterprise mode. The Discovery Engine REST API does not expose artifact completion status. When the tool returns an error with `notebook_url`, give the user that URL to check status in the NotebookLM UI.
+> - **Video generation** is **not available** in enterprise mode. The REST API has no video endpoint. Direct users to open the notebook URL and use the Studio panel → Video Overview in the browser.
+> - In enterprise mode: only `studio_create` with `artifact_type=audio` is supported via MCP.
 
 #### MCP Tools
 

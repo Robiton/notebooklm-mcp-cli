@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2026-04-14 — Backlog sweep
+
+### Added
+
+- **EPUB source support** — `.epub` files now accepted by `source_add` (personal: `core/sources.py`; enterprise: `enterprise_client.py` with `application/epub+zip` MIME type)
+- **Enterprise notebook sharing metadata** — `list_notebooks` now surfaces `is_shareable` (from `notebookMetadata.isShareable`) alongside the existing `is_shared` field
+- **Enterprise YouTube source metadata** — source creation responses now include `youtube_channel` and `youtube_video_id` when the Discovery Engine API returns `youtubeMetadata`
+- **Paywall approved_domains quick-start** — README Enterprise Mode section now documents `nlm config set sources.approved_domains` with examples
+
+### Fixed
+
+- **Enterprise studio instructions clarified** — `mcp/server.py` system prompt and `SKILL.md` now explicitly state that `studio_status` polling and video generation are unavailable in enterprise mode (hard API constraints), with guidance to use the `notebook_url` and the NotebookLM UI instead
+
+---
+
 ## [1.0.7] - 2026-04-11 — Upstream Sync v0.5.18–v0.5.24
 
 ### Changed

@@ -305,6 +305,20 @@ nlm config set enterprise.mode personal
 
 Environment variables (`NOTEBOOKLM_MODE`, `NOTEBOOKLM_PROJECT_ID`, `NOTEBOOKLM_LOCATION`) override config.toml when set.
 
+### Paywall / Login-Required URLs
+
+When adding URL sources, the MCP checks if the URL is behind a paywall or login wall. If your organisation hosts content on an internal domain or a subscription site you have access to, add it to your approved list to skip the check:
+
+```bash
+# Approve a single domain
+nlm config set sources.approved_domains '["yourcompany.com"]'
+
+# Approve multiple domains
+nlm config set sources.approved_domains '["yourcompany.com", "ft.com", "wsj.com"]'
+```
+
+Or in the MCP, call `source_add` with `skip_paywall_check=True` to bypass for a single URL.
+
 ## Authentication
 
 Before using the CLI or MCP, you need to authenticate with NotebookLM:
