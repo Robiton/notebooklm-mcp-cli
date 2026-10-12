@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_wsl_firewall_scope.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Regression tests for WSL firewall rule scoping.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Regression tests for WSL firewall rule scoping.
 
 Covers GHSA-v558-4774-r6wq: the CDP bridge listens on 0.0.0.0, so the Windows

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_auth_recovery.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1438
+# Purpose:  Regression tests for long-lived auth recovery (issue #316).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Regression tests for long-lived auth recovery (issue #316).
 
 Covers two confirmed defects in ``BaseClient`` auth recovery:

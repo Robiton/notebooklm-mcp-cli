@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_download_containment.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Security tests: MCP downloads must stay inside an approved directory.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Security tests: MCP downloads must stay inside an approved directory.
 
 Covers GHSA-92q4-9x75-55rf. ``validate_output_path`` used a denylist, so every

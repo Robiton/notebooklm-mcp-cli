@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_e2e.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  End-to-end tests for MCP Server Tools.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """End-to-end tests for MCP Server Tools.
 
 Tests the consolidated MCP tools against the real NotebookLM API.

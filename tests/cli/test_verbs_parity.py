@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_verbs_parity.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Test that verb wrappers pass all parameters their target functions accept.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Test that verb wrappers pass all parameters their target functions accept.
 
 When a verb wrapper calls a target function directly (not through Typer),

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_studio_cli.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1438
+# Purpose:  Tests for Studio CLI commands.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for Studio CLI commands."""
 
 import json

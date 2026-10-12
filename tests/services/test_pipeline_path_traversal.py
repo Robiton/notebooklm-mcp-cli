@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_pipeline_path_traversal.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Path-traversal regression tests for pipeline names (GHSA-596g-p98x-c7hw).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Path-traversal regression tests for pipeline names (GHSA-596g-p98x-c7hw).
 
 `_load_pipeline` (read, reachable over MCP) and `pipeline_create` (write, CLI)

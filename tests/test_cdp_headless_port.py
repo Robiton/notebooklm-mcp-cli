@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_cdp_headless_port.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Headless auth must not launch on a hardcoded port that a foreign process
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Headless auth must not launch on a hardcoded port that a foreign process
 may already hold, which would let it probe the wrong browser (issue #330)."""
 

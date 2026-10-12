@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_skill_workflows.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Tests for bundled cross-MCP workflow contracts.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for bundled cross-MCP workflow contracts."""
 
 from pathlib import Path
