@@ -190,6 +190,34 @@ jobs:
           # `git diff base...HEAD` fail, and a comparison that cannot run is not a pass.
           fetch-depth: 0
 
+      # LOCAL ADDITION (notebooklm-mcp-cli): this repo runs on GitHub-hosted ubuntu-latest
+      # only, which carries none of the pinned scanners, so every audit leg would GAP and
+      # scaffold-check-complete fails "nothing audited". Install the exact pins the gates
+      # require (tools/shell_lint.sh, tools/workflow_audit.sh) plus osv-scanner, each
+      # verified against its release SHA-256. Skipped on self-hosted legs, which carry
+      # their own toolchain. Keep these pins in step with the tools/ constants on upgrade.
+      - name: Install pinned scanners (GitHub-hosted Linux only)
+        if: runner.os == 'Linux' && runner.environment == 'github-hosted'
+        run: |
+          set -euo pipefail
+          bin="$HOME/.local/scanners"; mkdir -p "$bin"; cd "$(mktemp -d)"
+          fetch() { curl -fsSL -o "$2" "$1"; echo "$3  $2" | sha256sum -c -; }
+          fetch https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz \
+            sc.tgz b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6
+          tar xzf sc.tgz && install -m 0755 shellcheck-v0.11.0/shellcheck "$bin/"
+          fetch https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz \
+            al.tgz 023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+          tar xzf al.tgz actionlint && install -m 0755 actionlint "$bin/"
+          fetch https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz \
+            zz.tgz e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a
+          tar xzf zz.tgz zizmor && install -m 0755 zizmor "$bin/"
+          fetch https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64 \
+            osv ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+          install -m 0755 osv "$bin/osv-scanner"
+          echo "$bin" >> "$GITHUB_PATH"
+          "$bin/shellcheck" --version | sed -n 2p; "$bin/actionlint" -version | head -1
+          "$bin/zizmor" --version; "$bin/osv-scanner" --version | head -1
+
       - name: Run every tool selftest
         run: |
           # DISCOVERED, NOT LISTED. Three tools shipped a --selftest this round and CI ran

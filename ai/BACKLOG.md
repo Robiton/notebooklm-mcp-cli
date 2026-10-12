@@ -20,6 +20,8 @@ _(nothing active)_
 - [ ] **Header rule vs. upstream files** — CI now fails any PR editing a `.py` file without a scaffold header. Decide whether upstream-derived `src/` files get headers on edit (cherry-pick conflict surface) or need a declared exemption (scaffold has none today) | Priority: Med | Owner: Brian | Due: —
 - [ ] Declare a version-stamp baseline in AGENTS.md (`<!-- notebooklm:version-stamp-baseline X -->`) — `release_status.sh` reports GAP until then | Priority: Low | Owner: Brian | Due: —
 - [ ] Install local scanners so gates stop reporting DID NOT RUN: `brew install osv-scanner actionlint zizmor` | Priority: Low | Owner: Brian | Due: —
+- [ ] **Keep CI scanner pins current** — `scaffold-check.yml` has a LOCAL install step (shellcheck 0.11.0, actionlint 1.7.7, zizmor 1.30.1, osv-scanner 2.6.0, SHA-256 verified) because this repo runs on GitHub-hosted runners only. Scaffold upgrades will sidecar this file — re-apply the step and match pins to `tools/*` constants | Priority: Low | Owner: Brian | Due: —
+- [ ] **Open Dependabot alerts** — 1 critical + 3 high (PyJWT, urllib3) on main as of 2026-10-12; bump in a separate PR | Priority: High | Owner: Brian | Due: —
 - [ ] Wire session hooks into `.claude/settings.json` (`./setup.sh`) — SessionStart/Stop/PreCompact journal | Priority: Low | Owner: Brian | Due: —
 - [ ] Resolve stray `uv.lock` churn (2-line rewrite by `uv run`) — commit or revert on main | Priority: Low | Owner: Brian | Due: —
 
