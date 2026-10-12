@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/utils/cdp.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Chrome DevTools Protocol (CDP) utilities for cookie extraction
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Chrome DevTools Protocol (CDP) utilities for cookie extraction.
 
 This module provides a keychain-free way to extract cookies from Chrome
