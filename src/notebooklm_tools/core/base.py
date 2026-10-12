@@ -287,6 +287,9 @@ class BaseClient:
     RPC_DELETE_STUDIO = "V5N4be"  # Delete Audio or Video Overview
     RPC_RENAME_ARTIFACT = "rc3d8d"  # Rename any studio artifact (Audio, Video, etc.)
     RPC_GET_INTERACTIVE_HTML = "v9rmvd"  # Fetch quiz/flashcard HTML content
+    RPC_GET_ARTIFACT = "v9rmvd"  # Get one artifact by id (same RPC; also reads element metadata)
+    RPC_SET_ARTIFACT_FIELDS = "rc3d8d"  # Update artifact fields via field mask (same RPC as rename)
+    RPC_START_ARTIFACT = "Rytqqe"  # Kick off generation of a (suggested) artifact
     RPC_REVISE_SLIDE_DECK = "KmcKPe"  # Revise existing slide deck with per-slide instructions
 
     # Mind map RPCs
@@ -312,6 +315,14 @@ class BaseClient:
 
     # Export RPCs
     RPC_EXPORT_ARTIFACT = "Krh3pd"  # Export to Google Docs/Sheets
+
+    # Usage RPCs
+    RPC_GET_USAGE = "EylDcb"  # Remaining allowance and reset time per usage window
+    # Same endpoint as RPC_ADD_SOURCE_V2: Google dual-maps ozz5Z, returning the
+    # subscription tier for homepage params and adding a URL source for notebook
+    # params. Kept as its own constant so the two uses stay independently
+    # documented and independently patchable via NOTEBOOKLM_RPC_OVERRIDES.
+    RPC_GET_ENTITLEMENT = "ozz5Z"  # Subscription tier the account is entitled to
 
     # =========================================================================
     # API Constants (re-exported from constants module)
@@ -341,6 +352,7 @@ class BaseClient:
     STUDIO_TYPE_SLIDE_DECK = constants.STUDIO_TYPE_SLIDE_DECK
     STUDIO_TYPE_DATA_TABLE = constants.STUDIO_TYPE_DATA_TABLE
     STUDIO_TYPE_DATA_TABLE_XLSX = constants.STUDIO_TYPE_DATA_TABLE_XLSX
+    STUDIO_TYPE_INTERACTIVE_REPORT = constants.STUDIO_TYPE_INTERACTIVE_REPORT
 
     # Audio formats and lengths
     AUDIO_FORMAT_DEEP_DIVE = constants.AUDIO_FORMAT_DEEP_DIVE
@@ -977,6 +989,8 @@ class BaseClient:
         _retry: bool = False,
         _deep_retry: bool = False,
         _server_retry: int = 0,
+        *,
+        retry_server_errors: bool = True,
     ) -> Any:
         """Execute an RPC call and return the extracted result.
 
@@ -984,6 +998,10 @@ class BaseClient:
         1. Refresh CSRF/session tokens (fast, handles token expiry)
         2. Reload cookies from disk (handles external re-authentication)
         3. Run headless auth (auto-refresh if Chrome profile has saved login)
+
+        retry_server_errors: False disables the HTTP 5xx/429 replay. Use for
+        non-idempotent mutations whose delivery may have succeeded (e.g. the
+        Rytqqe kickoff).
         """
         if self._cdp_rpc_transport_enabled():
             return self._call_rpc_via_cdp(
@@ -1059,7 +1077,7 @@ class BaseClient:
             # Retry on transient server errors (5xx, 429) with exponential backoff.
             # Rate limits have a separate ceiling so external schedulers can own
             # retry policy without disabling safe connection or 5xx retries.
-            if is_retryable_error(e):
+            if retry_server_errors and is_retryable_error(e):
                 import time as _time
 
                 status = e.response.status_code
@@ -1080,6 +1098,7 @@ class BaseClient:
                         _retry,
                         _deep_retry,
                         _server_retry=_server_retry + 1,
+                        retry_server_errors=retry_server_errors,
                     )
                 # Exhausted retries, re-raise
                 raise
@@ -1123,6 +1142,7 @@ class BaseClient:
                     _retry,
                     _deep_retry,
                     _server_retry=_server_retry + 1,
+                    retry_server_errors=retry_server_errors,
                 )
             # Exhausted retries, re-raise
             raise
@@ -1150,6 +1170,7 @@ class BaseClient:
                     _retry,
                     _deep_retry,
                     _server_retry=_server_retry + 1,
+                    retry_server_errors=retry_server_errors,
                 )
             raise
 
@@ -1165,7 +1186,14 @@ class BaseClient:
                 self._refresh_auth_tokens()
                 with self._state_lock:
                     self._client = None
-                return self._call_rpc(rpc_id, params, path, timeout, _retry=True)
+                return self._call_rpc(
+                    rpc_id,
+                    params,
+                    path,
+                    timeout,
+                    _retry=True,
+                    retry_server_errors=retry_server_errors,
+                )
             except (ValueError, httpx.HTTPError, OSError) as exc:
                 # A transport or 5xx failure is not evidence that credentials
                 # expired. Retrying auth would produce the wrong user guidance
@@ -1184,9 +1212,30 @@ class BaseClient:
 
         # Layer 2 & 3: Reload from disk or run headless auth (deep retry)
         if not _deep_retry and self._try_reload_or_headless_auth():
+            # Layer 2 (disk reload) blanks the CSRF token to force a fresh
+            # extraction, but the deep retry below skips Layer 1 — the only
+            # place that re-extracts it. Without re-extracting here the retry
+            # would POST an empty at= token, get an HTTP 400, and fail even
+            # though valid cookies were just loaded (issue #316). Layer 3
+            # (headless) already supplies a token, so only refresh when missing.
+            if not self.csrf_token:
+                try:
+                    self._refresh_auth_tokens()
+                except (ValueError, httpx.HTTPError, OSError) as exc:
+                    # Freshly loaded cookies may themselves be expired; fall
+                    # through to the deep retry, which surfaces the auth failure.
+                    logger.debug("CSRF re-extraction after auth recovery failed: %s", exc)
             with self._state_lock:
                 self._client = None
-            return self._call_rpc(rpc_id, params, path, timeout, _retry=True, _deep_retry=True)
+            return self._call_rpc(
+                rpc_id,
+                params,
+                path,
+                timeout,
+                _retry=True,
+                _deep_retry=True,
+                retry_server_errors=retry_server_errors,
+            )
 
         # All recovery attempts failed
         msg = (
@@ -1222,9 +1271,11 @@ class BaseClient:
         headers = self._PAGE_FETCH_HEADERS.copy()
 
         # Use a temporary client for the page fetch. Before the fetch, touch
-        # Google's RotateCookies endpoint as a non-fatal freshness recovery
-        # step. This helps when the short-lived *PSIDTS cookies are stale while
-        # the browser profile can still rotate them.
+        # Google's RotateCookies endpoint as a non-fatal freshness step. Note
+        # this refreshes only the short-lived *SIDCC session cookies; it does
+        # NOT rotate *PSIDTS from a plain HTTP client (only a real browser
+        # session does), so it cannot revive an aged-out session on its own —
+        # the headless refresh in _try_reload_or_headless_auth does (issue #316).
         with httpx.Client(
             cookies=cookies, headers=headers, follow_redirects=True, timeout=15.0
         ) as client:
@@ -1256,11 +1307,18 @@ class BaseClient:
 
                 debug_dir = get_storage_dir()
                 debug_path = debug_dir / "debug_page.html"
-                debug_path.write_text(html, encoding="utf-8")
-                import contextlib as _ctxlib
-
-                with _ctxlib.suppress(OSError):
-                    debug_path.chmod(0o600)
+                # The dump is the authenticated page: session identifiers and
+                # notebook metadata. Create it 0o600 atomically rather than
+                # writing first and narrowing after, which leaves a window in
+                # which the file is world-readable.
+                fd = os.open(str(debug_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                try:
+                    f = os.fdopen(fd, "w", encoding="utf-8")
+                except BaseException:
+                    os.close(fd)
+                    raise
+                with f:
+                    f.write(html)
                 raise ValueError(
                     f"Could not extract CSRF token from page. "
                     f"Page saved to {debug_path} for debugging. "
@@ -1328,20 +1386,30 @@ class BaseClient:
         """
         from .auth import load_cached_tokens
 
-        # Layer 2: Reload cookies from the same profile on disk. The configured
-        # default may also fall back to legacy auth.json for compatibility.
+        # Layer 2: Reload cookies from the same profile on disk — but only when
+        # those cookies actually differ from the known-bad ones already in
+        # memory (e.g. the user ran `nlm login` in another terminal). Reloading
+        # identical cookies cannot fix the auth failure, and returning True here
+        # regardless is what kept Layer 3 (headless refresh) from ever running
+        # (issue #316). The configured default may also fall back to legacy
+        # auth.json for compatibility.
         cached = load_cached_tokens(profile_name=self._profile_name)
-        if cached and cached.cookies:
-            # Always reload from disk when auth fails - current tokens are known-bad
-            # The cached tokens may be fresher (user ran nlm login)
-            # or the same, but worth retrying with a fresh CSRF token extraction
+        if cached and cached.cookies and cached.cookies != self.cookies:
             with self._state_lock:
                 self.cookies = cached.cookies
                 self.csrf_token = ""  # Force re-extraction of CSRF token
                 self._session_id = ""  # Force re-extraction of session ID
             return True
 
-        # Try headless auth for the same profile that owns this client.
+        # Layer 3: Headless auth for the same profile that owns this client.
+        # Relaunching Chrome with the saved profile makes Google reissue the
+        # short-lived *PSIDTS freshness cookies, which is what revives an
+        # otherwise-valid session that aged out (issue #316). Some Workspace
+        # accounts instead have the relaunch revoke the session server-side, so
+        # this can be disabled (issue #330).
+        if os.environ.get("NOTEBOOKLM_DISABLE_HEADLESS_REFRESH") == "1":
+            logger.debug("Headless refresh disabled via NOTEBOOKLM_DISABLE_HEADLESS_REFRESH")
+            return False
         try:
             from notebooklm_tools.utils.auth_browser import run_headless_auth
             from notebooklm_tools.utils.config import get_config

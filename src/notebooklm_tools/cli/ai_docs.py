@@ -99,6 +99,8 @@ nlm status artifacts <notebook>
 | Command | Description |
 |---------|-------------|
 | `nlm login` | Authenticate with NotebookLM and manage profiles (**START HERE**) |
+| `nlm auth refresh` | Non-interactive headless session refresh (for unattended/schedulers) |
+| `nlm usage` | Show rolling and weekly plan usage, reset times, and subscription tier |
 | `nlm config` | View/edit configuration (show, get, set) |
 | `nlm notebook` | Manage notebooks (list, create, get, describe, rename, delete, query) |
 | `nlm source` | Manage sources (list, add, get, describe, content, rename, delete, stale, sync) |
@@ -108,7 +110,7 @@ nlm status artifacts <notebook>
 | `nlm alias` | Manage ID shortcuts (set, get, list, delete) |
 | `nlm download` | Download artifacts (audio, video, report, mind-map, slides, infographic, data-table) |
 | `nlm audio` | Create audio overviews/podcasts (create) |
-| `nlm report` | Create reports (create) |
+| `nlm report` | Reports (create, get, elements, element create) |
 | `nlm quiz` | Create quizzes (create) |
 | `nlm flashcards` | Create flashcards (create) |
 | `nlm mindmap` | Create mind maps (create) |
@@ -187,7 +189,25 @@ nlm login switch <profile>          # Switch the default profile
 nlm login profile list              # List all profiles with email addresses
 nlm login profile delete <name>     # Delete a profile
 nlm login profile rename <old> <new> # Rename a profile
+nlm auth refresh                    # Non-interactive headless refresh (unattended/schedulers)
 ```
+
+
+### Plan Usage
+
+Check the account's measured Gemini Notebook compute allowance before
+quota-limited chat or Studio work:
+
+```bash
+nlm usage                 # Human-readable table; reset times use local timezone
+nlm usage --json          # Machine-readable JSON; reset timestamps are ISO 8601 UTC
+```
+
+The report contains `rolling` (about five hours) and `weekly` windows with
+`percent_used`, `percent_remaining`, and `resets_at`, plus the subscription
+`tier` when available. The backend may return windows in either order; use the
+window name. If this call reports an authentication error, run `nlm auth refresh`
+or `nlm login` rather than treating the allowance as exhausted.
 
 
 ### Notebook Commands
@@ -381,7 +401,20 @@ nlm create audio <notebook-id> --format deep_dive --length short --confirm
 nlm report create <notebook-id> --confirm
 nlm report create <notebook-id> --format "Study Guide" --confirm
 nlm report create <notebook-id> --format "Create Your Own" --prompt "Summary..." --confirm
-# Formats: "Briefing Doc", "Study Guide", "Blog Post", "Create Your Own"
+# Formats: "Briefing Doc", "Study Guide", "Blog Post", "Create Your Own", "Interactive"
+
+# Interactive lesson report (embeds elements - see Workflow 17 in the skill)
+nlm report create <notebook-id> --format Interactive --prompt "Lesson goal..." --confirm
+nlm report get <notebook-id> <report-id>             # markdown to stdout
+nlm report get <notebook-id> <report-id> --json      # + prompt, language, elements
+nlm report get <notebook-id> <report-id> -o lesson.md
+nlm report elements <notebook-id> <report-id>        # element ids/types/status
+nlm report elements <notebook-id> <report-id> --wait <id> --content
+nlm report element create <notebook-id> <report-id> --type infographic --confirm
+nlm report element create <notebook-id> <report-id> --type quiz --setting difficulty=hard --confirm
+nlm report element create-batch <notebook-id> <report-id> --plan plan.json --confirm
+# MCP: report(action=get|elements|generate)
+# Omit --prompt to use the card's recommended description (same as "Generate" in the UI).
 ```
 
 **Verb-First:**
@@ -537,7 +570,7 @@ nlm delete artifact <notebook-id> <artifact-id> --confirm  # Delete artifact
 **Noun-First:**
 ```bash
 nlm download audio <notebook-id> --id <artifact-id>              # Download specific audio
-nlm download audio <notebook-id> --output podcast.mp3          # Download latest audio to file
+nlm download audio <notebook-id> --output podcast.m4a          # Download latest audio to file
 nlm download video <notebook-id>                               # Download latest video (default filename)
 nlm download report <notebook-id> --output report.md           # Download report
 nlm download mind-map <notebook-id>                            # Download mind map
@@ -567,14 +600,14 @@ nlm download file <notebook-id> --id <artifact-id>             # Generic Studio 
 
 **Download with format conversion:**
 ```bash
-nlm download quiz <notebook-id> <artifact-id>                    # JSON (default)
-nlm download quiz <notebook-id> <artifact-id> --format json      # Structured JSON
-nlm download quiz <notebook-id> <artifact-id> --format markdown  # Markdown format
-nlm download quiz <notebook-id> <artifact-id> --format html      # Interactive HTML
+nlm download quiz <notebook-id> --id <artifact-id>                    # JSON (default)
+nlm download quiz <notebook-id> --id <artifact-id> --format json      # Structured JSON
+nlm download quiz <notebook-id> --id <artifact-id> --format markdown  # Markdown format
+nlm download quiz <notebook-id> --id <artifact-id> --format html      # Interactive HTML
 
-nlm download flashcards <notebook-id> <artifact-id>                    # JSON (default)
-nlm download flashcards <notebook-id> <artifact-id> --format markdown  # Markdown format
-nlm download flashcards <notebook-id> <artifact-id> --format html      # Interactive HTML
+nlm download flashcards <notebook-id> --id <artifact-id>                    # JSON (default)
+nlm download flashcards <notebook-id> --id <artifact-id> --format markdown  # Markdown format
+nlm download flashcards <notebook-id> --id <artifact-id> --format html      # Interactive HTML
 ```
 
 **Format Options:**
@@ -842,7 +875,7 @@ Many commands support `--json` for structured output:
 | Flag | Description | Available On |
 |------|-------------|------|
 | (none) | Rich table (human-readable) | All |
-| `--json` | JSON output (for parsing/piping) | list, get, describe, query, content, status, source add/delete, notebook delete, Studio create |
+| `--json` | JSON output (for parsing/piping) | list, get, describe, query, content, status, usage, source add/delete, notebook delete, Studio create |
 | `--quiet` | IDs only (for piping) | list |
 | `--title` | "ID: Title" format | notebook list |
 | `--url` | "ID: URL" format | source list |
@@ -860,7 +893,7 @@ Many commands support `--json` for structured output:
 | "authentication may have expired" | Session expired | Run `nlm login` |
 | "Notebook not found" | Invalid ID | Run `nlm notebook list` |
 | "Source not found" | Invalid ID | Run `nlm source list <notebook-id>` |
-| "Rate limit exceeded" | Too many API calls | Briefly auto-retried; Studio limits may require waiting 1-2 minutes |
+| "Rate limit exceeded" | Too many calls or an exhausted usage window | Run `nlm usage`; wait for the reported reset time when a window is exhausted |
 | Server 503/502/500 | Google API flaky | Auto-retried (up to 3x with backoff) |
 | "Research already in progress" | Pending research | Use `--force` or import first |
 
@@ -891,15 +924,18 @@ nlm research status ai --max-wait 900
 # 6. Import all sources
 nlm research import ai task456...
 
-# 7. Generate podcast
+# 7. Check remaining usage before quota-limited generation
+nlm usage --json
+
+# 8. Generate podcast
 nlm audio create ai --format deep_dive --confirm
 
-# 8. Check status until completed
+# 9. Check status until completed
 nlm studio status ai
 # Note artifact ID: audio789...
 
-# 9. Download when ready
-nlm download audio ai audio789... --output podcast.mp3
+# 10. Download when ready
+nlm download audio ai audio789... --output podcast.m4a
 ```
 
 ### Sequence 1 Alternative: Research → Podcast → Download (Verb-First)
@@ -931,7 +967,7 @@ nlm create audio ai --confirm
 nlm status artifacts ai
 
 # 9. Download
-nlm download-verb audio ai audio789... --output podcast.mp3
+nlm download-verb audio ai audio789... --output podcast.m4a
 ```
 
 ### Sequence 2: Quick Source Ingestion
@@ -1011,15 +1047,16 @@ nlm download infographic <notebook-id> --id <infographic-id>
 11. **DO NOT launch REPL** - Never use `nlm chat start` - it opens an interactive REPL that AI tools cannot control. Use `nlm notebook query` or `nlm query notebook` for one-shot Q&A instead.
 12. **Choose output format wisely** - Default output (no flags) is compact and token-efficient—use it for status checks. Use `--quiet` to capture IDs for piping. Only use `--json` when you need to parse specific fields programmatically.
 13. **Verb-first vs Noun-first** - Both command styles work identically. Use whichever is more natural for the context. Noun-first groups by resource (notebook, source), verb-first groups by action (create, list, delete).
-14. **Download workflow** - Always wait for artifact completion before downloading. Check status with `nlm studio status <notebook>`, get the artifact ID, then download with `nlm download <type> <notebook> <artifact-id>`.
+14. **Download workflow** - Always wait for artifact completion before downloading. Check status with `nlm studio status <notebook>`, get the artifact ID, then download with `nlm download <type> <notebook> --id <artifact-id>`.
 15. **Artifact generation takes time** - Audio/video: 1-5 minutes. Reports/quizzes: 30-60 seconds. Always poll status before attempting download.
-16. **Download output files** - If no `--output` specified, files are saved with default names (e.g., `audio_<id>.mp3`, `video_<id>.mp4`, `report_<id>.txt`). Use `--output` to specify custom filenames.
+16. **Download output files** - If no `--output` specified, files are saved with default names (e.g., `audio_<id>.m4a`, `video_<id>.mp4`, `report_<id>.md`). Use `--output` to specify custom filenames.
 17. **Streaming downloads** - All downloads use efficient streaming to handle large files without memory issues. This is automatic.
 18. **Drive source sync** - Use `nlm source stale <notebook>` or `nlm list stale-sources <notebook>` to check which Drive sources need syncing before running sync commands.
 19. **Use --wait for blocking source adds** - When adding sources before querying, use `nlm source add ... --wait` to block until processing completes. This ensures the source is ready for queries.
 20. **Export to Google Docs/Sheets** - Reports can be exported to Google Docs, Data Tables to Google Sheets. Use `nlm export to-docs/to-sheets <notebook> <artifact-id>`.
 21. **Batch with tags** - Tag notebooks first (`nlm tag add ... --tags "topic"`), then use `--tags` flag with batch commands for targeted multi-notebook operations.
 22. **Pipelines for automation** - Use `nlm pipeline list` to see available workflows, then `nlm pipeline run` for automated multi-step operations (ingest → generate).
+23. **Check plan usage before quota-limited work** - Run `nlm usage` or call the MCP `usage_get` tool to inspect rolling and weekly percentages and reset times. Refresh authentication when the check fails; an auth error is not an exhausted quota.
 """
 
 

@@ -49,6 +49,7 @@ from notebooklm_tools.cli.commands.studio import (
     video_app,
 )
 from notebooklm_tools.cli.commands.tag import app as tag_app
+from notebooklm_tools.cli.commands.usage import app as usage_app
 from notebooklm_tools.cli.commands.verbs import (
     add_app,
     configure_app,
@@ -93,6 +94,13 @@ login_app = typer.Typer(
 # Profile management subcommands
 profile_app = typer.Typer(
     help="Manage authentication profiles",
+    rich_markup_mode="rich",
+    no_args_is_help=True,
+)
+
+# Non-interactive session maintenance (for unattended installs / schedulers)
+auth_app = typer.Typer(
+    help="Session auth maintenance (headless refresh for schedulers)",
     rich_markup_mode="rich",
     no_args_is_help=True,
 )
@@ -325,7 +333,10 @@ def login_callback(
         console.print("[dim]Supported values: builtin, openclaw[/dim]")
         raise typer.Exit(1)
 
-    if not force:
+    # --clear switches accounts, so it must reach the browser even when the
+    # current session still validates; otherwise the early return skips the
+    # profile wipe entirely (issue #330).
+    if not force and not clear:
         try:
             p, notebook_count = _validate_saved_profile(auth)
             _print_auth_valid(p, notebook_count)
@@ -367,7 +378,7 @@ def login_callback(
                 wsl = False
 
         if wsl:
-            from notebooklm_tools.utils.wsl import DEFAULT_WSL_CDP_PORT
+            from notebooklm_tools.utils.wsl import DEFAULT_WSL_CDP_PORT, WSL_ADAPTER_ALIAS
 
             wsl_port = DEFAULT_WSL_CDP_PORT
             # Chrome binds to localhost only (newer Chrome ignores
@@ -407,7 +418,7 @@ def login_callback(
                     "\n[bold]Step 1:[/bold] Open [cyan]Windows PowerShell as Administrator[/cyan] and run:"
                 )
                 console.print(
-                    f'\n  New-NetFirewallRule -DisplayName "NotebookLM-CDP-{wsl_port}" -Direction Inbound -Action Allow -Protocol TCP -LocalPort {wsl_port} -RemoteAddress LocalSubnet\n'
+                    f'\n  New-NetFirewallRule -DisplayName "NotebookLM-CDP-{wsl_port}" -Direction Inbound -Action Allow -Protocol TCP -LocalPort {wsl_port} -InterfaceAlias "{WSL_ADAPTER_ALIAS}" -RemoteAddress LocalSubnet\n'
                 )
                 console.print(
                     "[bold]Step 2:[/bold] After running the command above, press [bold]Enter[/bold] here to continue..."
@@ -425,6 +436,12 @@ def login_callback(
                 console.print()
             else:
                 console.print("[dim]Windows Firewall: rule exists[/dim]")
+                console.print(
+                    f'[dim]If you created it before v0.11.2 it may not be scoped to "{WSL_ADAPTER_ALIAS}".[/dim]'
+                )
+                console.print(
+                    "[dim]See docs/WSL_SETUP.md (Removing the bridge) to check and replace it.[/dim]"
+                )
             console.print()
 
             try:
@@ -794,11 +811,72 @@ def login_switch(
         console.print(f"[green]✓[/green] Switched default profile to [cyan]{profile}[/cyan]")
 
 
+@auth_app.command("refresh")
+def auth_refresh(
+    profile: str = typer.Option(
+        None,
+        "--profile",
+        "-p",
+        help="Profile to refresh (default: the configured default profile).",
+    ),
+) -> None:
+    """Refresh a session non-interactively so Google reissues its cookies.
+
+    Runs a headless-browser pass against the saved Chrome profile, which makes
+    Google reissue the short-lived cookies (``*PSIDTS``) that keep a session
+    alive. Unlike ``nlm login``, this needs no user interaction, so schedulers
+    (cron/launchd) can keep an unattended session alive without an interactive
+    re-login. Exits non-zero if the refresh fails, so scripts can react.
+    """
+    import os
+
+    from notebooklm_tools.utils.config import get_config
+
+    if os.environ.get("NOTEBOOKLM_COOKIES"):
+        console.print(
+            "[yellow]![/yellow] NOTEBOOKLM_COOKIES is set and overrides saved "
+            "credentials, so a refresh won't take effect. Update that value "
+            "(e.g. in your MCP config) instead."
+        )
+        raise typer.Exit(1)
+
+    if os.environ.get("NOTEBOOKLM_DISABLE_HEADLESS_REFRESH") == "1":
+        console.print(
+            "[yellow]![/yellow] Headless refresh is disabled via "
+            "NOTEBOOKLM_DISABLE_HEADLESS_REFRESH. Unset it to run a refresh."
+        )
+        raise typer.Exit(1)
+
+    profile_name = profile or get_config().auth.default_profile
+
+    from notebooklm_tools.utils.auth_browser import run_headless_auth
+
+    with console.status(f"Refreshing session for profile '{profile_name}'..."):
+        try:
+            tokens = run_headless_auth(profile_name=profile_name)
+        except Exception as exc:
+            console.print(f"[red]✗[/red] Refresh failed: {exc}")
+            raise typer.Exit(1) from exc
+
+    if not tokens:
+        console.print(
+            f"[red]✗[/red] Could not refresh profile '{profile_name}'. The saved "
+            "Chrome profile may be missing or its login expired — run 'nlm login' "
+            "to re-authenticate."
+        )
+        raise typer.Exit(1)
+
+    console.print(f"[green]✓[/green] Session refreshed for profile '{profile_name}'.")
+
+
 # Register profile commands under login
 login_app.add_typer(profile_app, name="profile")
 
 # Register login app with nested profile commands
 app.add_typer(login_app, name="login")
+
+# Register non-interactive session maintenance commands
+app.add_typer(auth_app, name="auth", help="Session auth maintenance")
 
 # Register noun-first subcommands (existing structure)
 app.add_typer(notebook_app, name="notebook", help="Manage notebooks")
@@ -821,6 +899,7 @@ app.add_typer(batch_app, name="batch", help="Batch operations across notebooks")
 app.add_typer(cross_app, name="cross", help="Cross-notebook queries")
 app.add_typer(pipeline_app, name="pipeline", help="Run multi-step pipelines")
 app.add_typer(tag_app, name="tag", help="Manage notebook tags")
+app.add_typer(usage_app, name="usage", help="Show remaining plan usage and reset times")
 
 # Generation commands as top-level
 app.add_typer(audio_app, name="audio", help="Create audio overviews")
