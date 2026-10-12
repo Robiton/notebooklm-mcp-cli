@@ -133,6 +133,7 @@ class StatusResult(TypedDict):
     total: int
     completed: int
     in_progress: int
+    queued: int
     returned: int
     offset: int
     limit: int | None
@@ -841,6 +842,7 @@ def get_studio_status(
 
     completed = [a for a in artifacts if a.get("status") == "completed"]
     in_progress = [a for a in artifacts if a.get("status") == "in_progress"]
+    queued = [a for a in artifacts if a.get("status") == "queued"]
 
     selected = artifacts
     if artifact_id:
@@ -870,6 +872,7 @@ def get_studio_status(
         total=len(artifacts),
         completed=len(completed),
         in_progress=len(in_progress),
+        queued=len(queued),
         returned=len(page),
         offset=offset,
         limit=limit,

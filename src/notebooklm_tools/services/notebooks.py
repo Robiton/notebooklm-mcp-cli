@@ -12,6 +12,7 @@ import httpx
 
 from ..core.api_profile import get_api_profile
 from ..core.client import NotebookLMClient
+from ..utils.config import get_notebook_url
 from ._compat import TypedDict
 from .errors import CreationError, NotFoundError, ServiceError, ValidationError
 
@@ -89,6 +90,19 @@ class NotebookDeleteResult(TypedDict):
     message: str
 
 
+def notebook_url(client: NotebookLMClient, notebook_id: str) -> str:
+    """Build a notebook link for the host used by this authenticated client."""
+    # Fork: enterprise links come from the API profile (project/location aware).
+    api_profile = get_api_profile()
+    if api_profile.is_enterprise:
+        return api_profile.web_url(notebook_id)
+    profile_host = getattr(client, "_base_host", None)
+    return get_notebook_url(
+        notebook_id,
+        profile_host=profile_host if isinstance(profile_host, str) else None,
+    )
+
+
 def list_notebooks(
     client: NotebookLMClient,
     max_results: int = 100,
@@ -120,7 +134,7 @@ def list_notebooks(
                 "id": nb.id,
                 "title": nb.title,
                 "source_count": nb.source_count,
-                "url": nb.url,
+                "url": notebook_url(client, nb.id),
                 "ownership": nb.ownership,
                 "is_shared": nb.is_shared,
                 "is_shareable": nb.is_shareable,
@@ -193,7 +207,7 @@ def get_notebook(
                 "notebook_id": nb_id,
                 "title": title,
                 "source_count": len(sources),
-                "url": get_api_profile().web_url(nb_id),
+                "url": notebook_url(client, nb_id),
                 "sources": sources,
                 "emoji": emoji,
             }
@@ -204,7 +218,7 @@ def get_notebook(
             "notebook_id": nb.id,
             "title": getattr(nb, "title", "Untitled"),
             "source_count": getattr(nb, "source_count", 0),
-            "url": getattr(nb, "url", get_api_profile().web_url(nb.id)),
+            "url": notebook_url(client, nb.id),
             "sources": [],
             "emoji": getattr(nb, "emoji", None),
         }
@@ -274,7 +288,7 @@ def create_notebook(
         return {
             "notebook_id": nb.id,
             "title": nb.title,
-            "url": nb.url,
+            "url": notebook_url(client, nb.id),
             "message": f"Created notebook: {nb.title}",
         }
 

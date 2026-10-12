@@ -309,18 +309,31 @@ def normalize_cdp_http_url(cdp_url: str) -> str:
     return f"http://{raw.rstrip('/')}"
 
 
-def find_available_port(starting_from: int = 9222, max_attempts: int = 10) -> int:
-    """Find an available port for Chrome debugging.
+def find_available_port(
+    starting_from: int = 9222,
+    max_attempts: int = 10,
+    *,
+    allow_ephemeral_fallback: bool = True,
+) -> int:
+    """Find an available loopback port for Chrome debugging.
+
+    Scans the conventional CDP range first. If every candidate is unavailable,
+    optionally asks the OS for an ephemeral loopback port. The fallback matters
+    on Windows hosts where Hyper-V/WinNAT can reserve a large contiguous block
+    around 9222 even when no process is listening there.
 
     Args:
-        starting_from: Port to start scanning from
-        max_attempts: Number of ports to try
+        starting_from: Port to start scanning from.
+        max_attempts: Number of adjacent ports to try first.
+        allow_ephemeral_fallback: If True, use an OS-assigned loopback port when
+            the requested range is unavailable. Exact-port callers can disable
+            this and retain the historical RuntimeError behavior.
 
     Returns:
-        An available port number
+        An available port number.
 
     Raises:
-        RuntimeError: If no available ports found
+        RuntimeError: If no available port can be reserved.
     """
     import socket
 
@@ -332,6 +345,15 @@ def find_available_port(starting_from: int = 9222, max_attempts: int = 10) -> in
                 return port
         except OSError:
             continue
+
+    if allow_ephemeral_fallback:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("127.0.0.1", 0))
+                return int(s.getsockname()[1])
+        except OSError:
+            pass
+
     raise RuntimeError(
         f"No available ports in range {starting_from}-{starting_from + max_attempts - 1}. "
         "Close some applications and try again."
@@ -356,6 +378,7 @@ def _macos_browser_candidates() -> list[tuple[str, str]]:
         ("Comet", "Comet.app/Contents/MacOS/Comet"),
         ("Brave Browser", "Brave Browser.app/Contents/MacOS/Brave Browser"),
         ("Microsoft Edge", "Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
+        ("Microsoft Edge Beta", "Microsoft Edge Beta.app/Contents/MacOS/Microsoft Edge Beta"),
         ("Chromium", "Chromium.app/Contents/MacOS/Chromium"),
         ("Vivaldi", "Vivaldi.app/Contents/MacOS/Vivaldi"),
         ("Opera", "Opera.app/Contents/MacOS/Opera"),
@@ -377,6 +400,7 @@ _LINUX_BROWSER_CANDIDATES: list[tuple[str, str]] = [
     ("Brave Browser", "brave-browser"),
     ("Microsoft Edge", "microsoft-edge-stable"),
     ("Microsoft Edge", "microsoft-edge"),
+    ("Microsoft Edge Beta", "microsoft-edge-beta"),
     ("Vivaldi", "vivaldi-stable"),
     ("Vivaldi", "vivaldi"),
     ("Opera", "opera"),
@@ -400,6 +424,9 @@ def _windows_browser_candidates() -> list[tuple[str, str]]:
         ("Microsoft Edge", str(pf86 / r"Microsoft\Edge\Application\msedge.exe")),
         ("Microsoft Edge", str(pf / r"Microsoft\Edge\Application\msedge.exe")),
         ("Microsoft Edge", str(local / r"Microsoft\Edge\Application\msedge.exe")),
+        ("Microsoft Edge Beta", str(pf86 / r"Microsoft\Edge Beta\Application\msedge.exe")),
+        ("Microsoft Edge Beta", str(pf / r"Microsoft\Edge Beta\Application\msedge.exe")),
+        ("Microsoft Edge Beta", str(local / r"Microsoft\Edge Beta\Application\msedge.exe")),
         ("Brave Browser", str(pf / r"BraveSoftware\Brave-Browser\Application\brave.exe")),
         ("Brave Browser", str(local / r"BraveSoftware\Brave-Browser\Application\brave.exe")),
         ("Vivaldi", str(local / r"Vivaldi\Application\vivaldi.exe")),
@@ -428,6 +455,7 @@ _BROWSER_CONFIG_MAP: dict[str, list[str]] = {
     "dia": ["Dia"],
     "comet": ["Comet"],
     "edge": ["Microsoft Edge"],
+    "edge-beta": ["Microsoft Edge Beta"],
     "chromium": ["Chromium"],
     "vivaldi": ["Vivaldi"],
     "opera": ["Opera", "Opera GX"],
@@ -463,7 +491,7 @@ def _get_chromium_path(preferred: str | None = None) -> str | None:
       falls back to the full priority list if not found.
 
     Set via ``nlm config set auth.browser <name>`` or ``NLM_BROWSER`` env var.
-    Valid names: auto, chrome, arc, brave, dia, comet, edge, chromium, vivaldi, opera.
+    Valid names: auto, chrome, arc, brave, dia, comet, edge, edge-beta, chromium, vivaldi, opera.
     """
     global _detected_browser_name
     if preferred is None:
@@ -1491,6 +1519,45 @@ def _kill_stale_nlm_browsers() -> None:
                 _clear_port_map(int(port_str))
 
 
+def _clear_managed_profile_directory(profile_name: str, profile_dir: Path) -> None:
+    """Close a profile-owned browser and remove its managed user-data directory."""
+    existing_port, debugger_url = find_existing_nlm_chrome(
+        profile_name=profile_name,
+        include_headless=True,
+    )
+    if existing_port is not None and debugger_url:
+        closed = close_profile_owned_cdp_browser(_cdp_http_base(existing_port), profile_name)
+        if not closed:
+            remaining_port, remaining_url = find_existing_nlm_chrome(
+                profile_name=profile_name,
+                include_headless=True,
+            )
+            if remaining_port is not None and remaining_url:
+                raise AuthenticationError(
+                    message=f"Could not close browser profile '{profile_name}'",
+                    hint=(
+                        "Close the managed NotebookLM browser for this profile and run "
+                        "'nlm login --clear' again."
+                    ),
+                )
+
+    for _ in range(20):
+        if not profile_dir.exists():
+            return
+        shutil.rmtree(profile_dir, ignore_errors=True)
+        if not profile_dir.exists():
+            return
+        time.sleep(0.1)
+
+    raise AuthenticationError(
+        message=f"Could not clear browser profile '{profile_name}'",
+        hint=(
+            "Close the managed NotebookLM browser for this profile and run "
+            "'nlm login --clear' again."
+        ),
+    )
+
+
 def extract_cookies_via_cdp(
     port: int = CDP_DEFAULT_PORT,
     auto_launch: bool = True,
@@ -1518,8 +1585,6 @@ def extract_cookies_via_cdp(
         AuthenticationError: If extraction fails
     """
     if clear_profile:
-        import shutil
-
         chrome_path = get_chrome_path()
         if chrome_path:
             profile_dir = _get_profile_dir_for_launch(chrome_path, profile_name)
@@ -1527,8 +1592,7 @@ def extract_cookies_via_cdp(
             from notebooklm_tools.utils.config import get_chrome_profile_dir
 
             profile_dir = get_chrome_profile_dir(profile_name)
-        if profile_dir.exists():
-            shutil.rmtree(profile_dir, ignore_errors=True)
+        _clear_managed_profile_directory(profile_name, profile_dir)
 
     # Check if Chrome is running with debugging
     # First, try to find an existing instance on any port in our range
@@ -1704,6 +1768,8 @@ def extract_cookies_from_page(
     wait_for_login: bool = True,
     login_timeout: int = 300,
 ) -> dict[str, Any]:
+    from notebooklm_tools.core.auth import validate_cookies
+
     page = find_or_create_notebooklm_page_by_cdp_url(cdp_http_url)
     if not page:
         raise AuthenticationError(
@@ -1723,49 +1789,34 @@ def extract_cookies_from_page(
     if not _is_notebooklm_url(current_url):
         navigate_to_url(ws_url, get_notebooklm_url())
 
-    # Check login status
-    current_url = get_current_url(ws_url)
-
-    if not is_logged_in(current_url) and wait_for_login:
+    # Anonymous landing pages use the same host and have page metadata too.
+    # Only accept the app's CSRF token together with signed-in Google cookies.
+    start_time = time.time()
+    last_log_at = 0
+    if wait_for_login:
         _logger.warning("Waiting for sign-in in browser window (timeout: %ds)...", login_timeout)
-        start_time = time.time()
-        last_log_at = 0
-        while time.time() - start_time < login_timeout:
-            time.sleep(0.5)
-            try:
-                current_url = get_current_url(ws_url)
-                if is_logged_in(current_url):
+    while True:
+        try:
+            current_url = get_current_url(ws_url)
+            if is_logged_in(current_url):
+                html = get_page_html(ws_url)
+                cookies = get_page_cookies(ws_url)
+                csrf_token = extract_csrf_token(html)
+                if csrf_token and validate_cookies(cookies):
                     break
-            except Exception:
-                pass
-            elapsed = int(time.time() - start_time)
-            if elapsed - last_log_at >= 30:
-                last_log_at = elapsed
-                _logger.warning("Still waiting for sign-in... (%ds elapsed)", elapsed)
-
-        if not is_logged_in(current_url):
+        except Exception:
+            pass
+        elapsed = time.time() - start_time
+        if not wait_for_login or elapsed >= login_timeout:
             raise AuthenticationError(
-                message="Login timeout",
+                message="Login timeout" if wait_for_login else "Browser is not signed in",
                 hint="Please log in to NotebookLM in the connected browser window.",
             )
+        if int(elapsed) - last_log_at >= 30:
+            last_log_at = int(elapsed)
+            _logger.warning("Still waiting for sign-in... (%ds elapsed)", last_log_at)
+        time.sleep(0.5)
 
-    # Wait for NotebookLM to fully load (session tokens in DOM)
-    html, ready = _wait_for_page_ready(ws_url, timeout=30)
-    if not ready:
-        _logger.warning("Page loaded but session tokens not found in DOM after 30s")
-
-    # Extract cookies
-    cookies = get_page_cookies(ws_url)
-
-    if not cookies:
-        raise AuthenticationError(
-            message="No cookies extracted",
-            hint="Make sure you're fully logged in.",
-        )
-
-    # Get page HTML for CSRF, session ID, email, and build label
-    # html already fetched by _wait_for_page_ready
-    csrf_token = extract_csrf_token(html)
     session_id = extract_session_id(html)
     email = extract_email(html)
     build_label = extract_build_label(html)
@@ -1876,10 +1927,35 @@ def cleanup_chrome_profile_cache(profile_name: str = "default") -> int:
     return bytes_freed
 
 
+def _validate_headless_candidate(tokens: "Any", profile_name: str) -> bool:
+    """Prove extracted browser credentials work before replacing saved auth."""
+    from notebooklm_tools.core.client import NotebookLMClient
+
+    try:
+        with NotebookLMClient(
+            cookies=tokens.cookies,
+            csrf_token=tokens.csrf_token,
+            session_id=tokens.session_id,
+            build_label=tokens.build_label or "",
+            base_host=tokens.base_host or "",
+            profile_name=profile_name,
+            # Candidate validation must not persist token rotations before the
+            # candidate itself has been accepted and saved by run_headless_auth.
+            is_env_auth=True,
+        ) as client:
+            client.list_notebooks()
+        return True
+    except Exception:
+        return False
+
+
 def run_headless_auth(
     port: int = 9223,
     timeout: int = 30,
     profile_name: str = "default",
+    expected_revision: str | None = None,
+    force: bool | None = None,
+    raise_on_error: bool = False,
 ) -> "Any | None":
     """Run authentication in headless mode (no user interaction).
 
@@ -1892,15 +1968,42 @@ def run_headless_auth(
         port: Chrome DevTools port (use different port to avoid conflicts)
         timeout: Maximum time to wait for auth extraction
         profile_name: The profile name to use for Chrome
+        expected_revision: Optional expected revision for compare-and-save
+        force: If True, overwrite without revision check
+        raise_on_error: If True, surface safe browser infrastructure failures
+            instead of collapsing them to None.
 
     Returns:
         AuthTokens if successful, None if failed or no saved login
     """
     # Import here to avoid circular imports
     from notebooklm_tools.core.auth import AuthTokens, save_tokens_to_cache, validate_cookies
+    from notebooklm_tools.core.credential_store import CredentialStoreError
+    from notebooklm_tools.utils.config import get_auth_storage_mode
+
+    # Preflight store availability for protected profile before launching browser
+    if get_auth_storage_mode(profile_name) == "protected":
+        from notebooklm_tools.core.credential_store import (
+            BackendUnavailableError,
+            CredentialStore,
+        )
+
+        store = CredentialStore()
+        if not store.is_available():
+            raise BackendUnavailableError(
+                f"Cannot access credentials for profile '{profile_name}': "
+                "OS credential store is locked or unavailable.\n"
+                "Unlock your OS keystore / run this from your desktop session and retry. "
+                f"To stop using Protected mode for this profile, run 'nlm auth storage set file --profile {profile_name}' from your desktop session."
+            )
 
     # Check if profile exists with saved login
     if not has_chrome_profile(profile_name):
+        if raise_on_error:
+            raise AuthenticationError(
+                message=f"No saved browser profile is available for '{profile_name}'",
+                hint="Run 'nlm login' once in a desktop session to create and sign in the managed browser profile.",
+            )
         return None
 
     chrome_process: subprocess.Popen | None = None
@@ -1926,20 +2029,40 @@ def run_headless_auth(
             port = find_available_port(starting_from=port)
             chrome_process = launch_chrome_process(port, headless=True, profile_name=profile_name)
             if not chrome_process:
+                if raise_on_error:
+                    raise AuthenticationError(
+                        message="Failed to launch the headless authentication browser",
+                        hint="Run 'nlm login' in a desktop session to re-authenticate.",
+                    )
                 return None
 
             # Wait for Chrome debugger to be ready
             debugger_url = get_debugger_url(port, tries=5)
             if not debugger_url:
+                if raise_on_error:
+                    raise AuthenticationError(
+                        message=f"Cannot connect to the headless authentication browser on port {port}",
+                        hint="Run 'nlm login' in a desktop session to re-authenticate.",
+                    )
                 return None
 
         # Find or create NotebookLM page
         page = find_or_create_notebooklm_page(port)
         if not page:
+            if raise_on_error:
+                raise AuthenticationError(
+                    message="Could not open NotebookLM in the headless authentication browser",
+                    hint="Run 'nlm login' in a desktop session to refresh the managed browser profile.",
+                )
             return None
 
         ws_url = _normalize_ws_url(page.get("webSocketDebuggerUrl"))
         if not ws_url:
+            if raise_on_error:
+                raise AuthenticationError(
+                    message="NotebookLM page did not expose a usable DevTools websocket",
+                    hint="Run 'nlm login' in a desktop session to refresh the managed browser profile.",
+                )
             return None
 
         # Poll for login completion (navigation is async)
@@ -1956,18 +2079,33 @@ def run_headless_auth(
             time.sleep(1)
 
         if not logged_in:
-            # Not logged in - headless can't help
+            # Not logged in - headless can't help without a prior visible sign-in.
+            if raise_on_error:
+                raise AuthenticationError(
+                    message=f"Saved browser profile '{profile_name}' is not signed in to NotebookLM",
+                    hint="Run 'nlm login' in a desktop session once, then headless refresh can reuse that managed browser session.",
+                )
             return None
 
         # Wait for full page load
         html, ready = _wait_for_page_ready(ws_url, timeout=timeout)
         if not ready:
+            if raise_on_error:
+                raise AuthenticationError(
+                    message="NotebookLM did not finish loading in the headless authentication browser",
+                    hint="Run 'nlm login' in a desktop session to refresh the managed browser profile.",
+                )
             return None
 
         # Keep the raw list so per-domain values survive profile storage.
         cookies_list = get_page_cookies(ws_url)
 
         if not validate_cookies(cookies_list):
+            if raise_on_error:
+                raise AuthenticationError(
+                    message="Saved browser profile did not expose the required NotebookLM cookies",
+                    hint="Run 'nlm login' in a desktop session to refresh the managed browser profile.",
+                )
             return None
 
         # Get page HTML for CSRF extraction
@@ -1976,7 +2114,9 @@ def run_headless_auth(
         session_id = extract_session_id(html)
         base_host = urlparse(current_url).hostname or ""
 
-        # Create and save tokens
+        # Build a candidate first. Do not replace saved credentials until
+        # an authenticated NotebookLM RPC proves the extracted browser session
+        # works outside the browser context.
         tokens = AuthTokens(
             cookies=cookies_list,
             csrf_token=csrf_token or "",
@@ -1984,14 +2124,46 @@ def run_headless_auth(
             base_host=base_host,
             extracted_at=time.time(),
         )
-        save_tokens_to_cache(tokens, profile_name=profile_name)
+        if not _validate_headless_candidate(tokens, profile_name):
+            if raise_on_error:
+                raise AuthenticationError(
+                    message="NotebookLM rejected the credentials extracted from the saved browser profile",
+                    hint="Run 'nlm login' in a desktop session to refresh the managed browser profile.",
+                )
+            return None
+
+        save_kwargs: dict[str, Any] = {"profile_name": profile_name}
+        if expected_revision is not None:
+            save_kwargs["expected_revision"] = expected_revision
+        if force is not None:
+            save_kwargs["force"] = force
+        rev = save_tokens_to_cache(tokens, **save_kwargs)
+        tokens.revision = rev
 
         # Clean up cache to minimize profile size
         cleanup_chrome_profile_cache(profile_name)
 
         return tokens
 
-    except Exception:
+    except CredentialStoreError:
+        raise
+    except AuthenticationError:
+        if raise_on_error:
+            raise
+        return None
+    except RuntimeError as exc:
+        if raise_on_error:
+            raise AuthenticationError(
+                message=str(exc),
+                hint="Run 'nlm login' in a desktop session to re-authenticate.",
+            ) from exc
+        return None
+    except Exception as exc:
+        if raise_on_error:
+            raise AuthenticationError(
+                message=f"Headless browser refresh failed ({type(exc).__name__})",
+                hint="Run 'nlm login' in a desktop session to re-authenticate.",
+            ) from exc
         return None
 
     finally:

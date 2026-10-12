@@ -113,7 +113,7 @@ def _enterprise_profile(project_id: str, location: str = "global") -> APIProfile
         location=location,
         project_id=project_id,
         query_service="google.cloud.notebooklm.v1main.NotebookService",
-        bl_fallback="boq_cloud-ml-notebooklm-ui_20260324.07_p0",
+        bl_fallback="boq_cloud-ml-notebooklm-ui_20260816.08_p0",
         extra_query_params={"authuser": "0", "pageId": "none"},
         rpc_ids={
             # Notebook operations

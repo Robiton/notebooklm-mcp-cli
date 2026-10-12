@@ -82,7 +82,7 @@ def main() -> None:
 
     # Run the MCP server — explicit stdio passthrough is critical because
     # Claude Desktop communicates with MCP servers via stdin/stdout JSON-RPC.
-    cmd = [uvx, "--from", "notebooklm-mcp-cli", "notebooklm-mcp", *sys.argv[1:]]
+    cmd = [uvx, "--from", "notebooklm-enterprise-mcp", "notebooklm-mcp", *sys.argv[1:]]
     try:
         result = subprocess.run(
             cmd,
