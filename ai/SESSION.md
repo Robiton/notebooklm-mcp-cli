@@ -42,8 +42,11 @@ _Most recent session at the top._
 - Batch 1 PR #40: CI showed the red was not the header check alone. Upstream's new `release-gate.yml` was tag-pinned (zizmor 7 high), and its `uv run --dev` would have lacked ruff/pytest in the fork. Fixed both; also re-stamped `mcp/tools/auth.py`. Merged with a merge commit.
 - Batch 2 (v0.7.0): 20 conflicts. External bind refusal adopted (stricter than the fork's warning; an OAuth exemption was not added, so that is left to Brian). Docker/multi-user docs gain `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1`. GETTING_STARTED install fixed to the fork package. Duplicate `.epub` removed. `run_log.txt` (accidental upstream CI log) dropped. 928 tests pass; bind refusal/override and HTTP `tools/list` (42) smoke-tested.
 
+- Batch 2 merged as #41. CodeQL flagged upstream's live auth check (substring `accounts.google.com`); fixed with a hostname helper and regression test.
+- Batch 3 (v0.8.0): 19 conflicts. uv.lock re-locked (adds socksio). The upstream `--auto-import` option was lost in the conflicted signature and re-added. The new `AuthHealthChecker` repeats the substring check and now uses the helper. Upstream tests adapted: freshness test thread race (upstream fixes it later), file-source error (fork resolves the path first), config stub lacks `.enterprise`. Found a pre-existing fork bug: `nlm setup` uvx config ran upstream's package; fixed along with 3 install docs. 1015 tests pass.
+
 **Next steps:**
-- Batches 3–6 of the upstream sync (plan doc); pin any new upstream workflows each batch
+- Batches 4–6 of the upstream sync (plan doc); pin any new upstream workflows each batch
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
 - Optionally wire session hooks: `./setup.sh` writes `.claude/settings.json` hooks (currently a personal allowlist only)
 

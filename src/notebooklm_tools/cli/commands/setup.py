@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/cli/commands/setup.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1232
+# Purpose:  MCP server setup commands for AI tool clients.
+# Changelog:
+#   2026-10-12 v1.0.8 — uvx config installs the fork package (notebooklm-enterprise-mcp), not upstream's
 """MCP server setup commands for AI tool clients.
 
 Configures the notebooklm-mcp server in various AI tool config files,
@@ -727,7 +734,7 @@ def _setup_json() -> None:
     if config_type == "uvx":
         server_entry = {
             "command": "uvx",
-            "args": ["--from", "notebooklm-mcp-cli", "notebooklm-mcp"],
+            "args": ["--from", "notebooklm-enterprise-mcp", "notebooklm-mcp"],
         }
     else:
         if use_full_path:

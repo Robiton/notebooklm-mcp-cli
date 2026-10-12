@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/cli/commands/research.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0951
+# Version:  1.0.8.20261012.1233
 # Purpose:  Research CLI commands
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Research CLI commands."""
@@ -57,6 +58,12 @@ def start_research(
         "--force",
         "-f",
         help="Start new research even if one is already pending",
+    ),
+    auto_import: bool = typer.Option(
+        False,
+        "--auto-import",
+        "--wait-and-import",
+        help="Wait for completion and automatically import sources",
     ),
     profile: str | None = typer.Option(None, "--profile", "-p", help="Profile to use"),
 ) -> None:
@@ -124,9 +131,50 @@ def start_research(
         console.print(f"  Notebook ID: {notebook_id}")
         console.print(f"  Task ID: {result['task_id']}")
 
-        estimate = "~30 seconds" if mode == "fast" else "~5 minutes"
-        console.print(f"\n[dim]Estimated time: {estimate}[/dim]")
-        console.print(f"[dim]Run 'nlm research status {notebook_id}' to check progress.[/dim]")
+        if auto_import:
+            console.print("\n[dim]Waiting for research to complete...[/dim]")
+
+            # Use progress indicator from status command
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                progress.add_task("Gathering sources...", total=None)
+
+                with get_client(profile) as import_client:
+                    poll_res = research_service.poll_research(
+                        import_client,
+                        notebook_id,
+                        task_id=result["task_id"],
+                        poll_interval=30,
+                        max_wait=900,
+                    )
+
+            _display_research_status(poll_res, compact=True)
+
+            if poll_res["status"] == "completed":
+                console.print("\n[dim]Importing discovered sources...[/dim]")
+                with get_client(profile) as import_client:
+                    import_res = research_service.import_research(
+                        import_client, notebook_id, poll_res["task_id"]
+                    )
+                console.print(f"[green]✓[/green] {import_res['message']}")
+                for src in import_res.get("imported_sources", []):
+                    title = (
+                        src.get("title", "Unknown")
+                        if isinstance(src, dict)
+                        else getattr(src, "title", "Unknown")
+                    )
+                    console.print(f"  • {title}")
+            else:
+                console.print(
+                    "[yellow]Warning:[/yellow] Could not auto-import. Research may have timed out or failed."
+                )
+        else:
+            estimate = "~30 seconds" if mode == "fast" else "~5 minutes"
+            console.print(f"\n[dim]Estimated time: {estimate}[/dim]")
+            console.print(f"[dim]Run 'nlm research status {notebook_id}' to check progress.[/dim]")
     except (ServiceError, NLMError) as e:
         handle_error(e, json_output=locals().get("json_output", False))
 

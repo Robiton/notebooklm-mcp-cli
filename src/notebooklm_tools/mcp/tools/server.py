@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/server.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0952
+# Version:  1.0.8.20261012.1233
 # Purpose:  Server tools - Server info with auth status
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Server tools - Server info with auth status."""
@@ -80,26 +81,18 @@ def _compare_versions(current: str, latest: str) -> bool:
 
 
 def _check_auth_status() -> str:
-    """Map AuthCheckResult.reason to the stable status strings documented in server_info."""
+    """Use AuthHealthChecker to determine the stable auth status string.
+
+    The AuthHealthChecker runs a multi-probe strategy (homepage + API
+    fallback) with TTL caching and mtime-based invalidation, providing
+    more reliable results than a single homepage fetch. Results are
+    cached for 30 seconds and bypassed on auth-file changes, so this
+    is not strictly a "live" check on every call.
+    """
     try:
-        from notebooklm_tools.services.auth import check_auth
+        from notebooklm_tools.services.auth import get_auth_health_checker
 
-        res = check_auth(live=True)
-
-        if res.valid:
-            return "configured"
-        if res.reason == "no_tokens":
-            return "not_configured"
-        reason = res.reason or ""
-        if reason in ("expired", "stale_heuristic") or reason.startswith("load_error"):
-            return "stale"
-        # 401/403 are definitive credential rejections, not transient network issues.
-        if reason in ("http_401", "http_403"):
-            return "stale"
-        if reason.startswith("network_error") or reason.startswith("http_"):
-            return "unverified"
-        # Unknown reason — be conservative.
-        return "stale"
+        return str(get_auth_health_checker().check().status)
     except Exception:
         return "error"
 
@@ -114,7 +107,7 @@ def server_info() -> dict[str, Any]:
     auth_status is reported per mode. "enterprise" checks for a gcloud access
     token; "personal" checks that cached cookies exist on disk (no network call),
     so "authenticated" means credentials are present, not that they are still valid.
-    `_check_auth_status()` is upstream's live check (`nlm login --check`),
+    `_check_auth_status()` is upstream's AuthHealthChecker probe (cached 30s),
     kept for a later decision on whether personal mode should report it.
 
     Returns:

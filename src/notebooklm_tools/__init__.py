@@ -1,15 +1,18 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/__init__.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.1233
 # Purpose:  NotebookLM Tools - Unified CLI and MCP server for Google NotebookLM
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """NotebookLM Tools - Unified CLI and MCP server for Google NotebookLM."""
 
 from __future__ import annotations
 
 from typing import Any
+
+import notebooklm_tools.utils.env_sanitize as _env_sanitize  # noqa: F401
 
 __version__ = "1.0.8"
 

@@ -1,6 +1,6 @@
 # Upstream sync plan: v0.5.24 → v0.15.4
 
-**Date:** 2026-10-12 · **Status:** batch 1 merged (#40); batch 2 (v0.7.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
+**Date:** 2026-10-12 · **Status:** batches 1–2 merged (#40, #41); batch 3 (v0.8.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
 
 ## Where we are
 
@@ -125,6 +125,19 @@ conflicts.
   `notebooklm-enterprise-mcp`.
 - **Both sides added the same feature** (`.epub`) and the set ended up with a duplicate. Ruff B033
   caught it, so the per-batch ruff gate is doing its job.
+
+## Findings from batch 3
+
+- **A conflict can hide a dependency.** Upstream's `--auto-import` CLI option sat in the conflicted
+  region of `research.py` and was dropped with ours, while its use survived. Ruff F821 caught it.
+  Every batch: run ruff before tests.
+- **Upstream repeats patterns the fork has fixed.** The new `AuthHealthChecker` brought back the
+  `"accounts.google.com" in url` check. Every batch: `git grep -n '"accounts.google.com" in'`.
+- **Upstream tests assume upstream's config and package.** Stubs lacked `config.enterprise`, and a
+  test read `notebooklm-mcp-cli` metadata. Fix the test, not the fork.
+- **Upstream ignores `docs/plans/`** in `.gitignore`, which the fork tracks.
+- **Pre-existing fork bug found:** `nlm setup` uvx config ran `--from notebooklm-mcp-cli`
+  (upstream's package). Fixed, together with CLI_GUIDE, MCP_GUIDE and the AGENTS_SECTION template.
 
 ## Open decisions (Brian)
 
