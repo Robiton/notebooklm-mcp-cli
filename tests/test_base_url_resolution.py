@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/test_base_url_resolution.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1546
+# Version:  1.0.8.20261012.1829
 # Purpose:  Regression tests for NotebookLM base-URL host resolution (issue #269).
 # Changelog:
+#   2026-10-12 v1.0.8 — host assertion as a subset check (CodeQL false positive, alerts #19/#20)
 #   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Regression tests for NotebookLM base-URL host resolution (issue #269).
@@ -62,8 +63,8 @@ class TestGetBaseUrlPrecedence:
             get_base_url()
 
     def test_allowed_hosts_include_rebrand_host(self):
-        assert "notebook.google.com" in _ALLOWED_BASE_HOSTS
-        assert "notebooklm.google.com" in _ALLOWED_BASE_HOSTS
+        # Fork: a subset check, not `"host" in ...`, which CodeQL reads as URL substring matching.
+        assert {"notebook.google.com", "notebooklm.google.com"} <= set(_ALLOWED_BASE_HOSTS)
 
 
 class TestBaseClientHostRouting:
