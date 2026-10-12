@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_config_home_dir.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  test_config_home_dir.py
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 from __future__ import annotations
 
 import importlib
@@ -48,8 +55,8 @@ def test_config_module_reload_survives_missing_os_home(monkeypatch, tmp_path: Pa
 
         reloaded = importlib.reload(config)
 
-        assert reloaded.OLD_CHROME_PROFILES[0].is_relative_to(tmp_path)
-        assert reloaded.OLD_AUTH_LOCATIONS[0].is_relative_to(tmp_path)
+        assert reloaded.get_old_chrome_profiles()[0].is_relative_to(tmp_path)
+        assert reloaded.get_old_auth_locations()[0].is_relative_to(tmp_path)
 
     importlib.reload(config)
 

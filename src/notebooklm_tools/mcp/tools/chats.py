@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/chats.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  MCP tools for notebook chat sessions.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """MCP tools for notebook chat sessions."""
 
 from notebooklm_tools.mcp.tools._utils import ResultDict, error_result, logged_tool
@@ -78,5 +85,32 @@ def chat_export(
             "format": data["format"],
             "content": data["content"],
         }
+    except Exception as e:
+        return error_result(str(e))
+
+
+@logged_tool()
+def chat_save_to_note(
+    notebook_id: str,
+    conversation_id: str,
+    turn: int = 0,
+    title: str = "",
+) -> ResultDict:
+    """Save a chat (or one turn of it) as a Note in the notebook.
+
+    Args:
+        notebook_id: Notebook ID or title alias
+        conversation_id: Conversation ID (see chat_list)
+        turn: 1-indexed turn to save; 0 (default) saves the whole chat
+        title: Optional note title
+    """
+    try:
+        data = chats.save_chat_to_note(
+            notebook=notebook_id,
+            conversation_id=conversation_id,
+            turn_index=turn or None,
+            title=title or None,
+        )
+        return {"status": "success", **data}
     except Exception as e:
         return error_result(str(e))

@@ -61,6 +61,34 @@ profile is relaunched. On those accounts, set
 `NOTEBOOKLM_DISABLE_HEADLESS_REFRESH=1` to turn off the automatic self-heal and
 `nlm auth refresh`.
 
+### Browser Closes Before Sign-in or Reports False Success
+
+Older versions could save an anonymous `NID` cookie, close the browser before
+sign-in, and then report "Authentication valid" for an unusable session. A page
+at `notebook.google.com` or an HTTP 200 response does not prove sign-in.
+
+1. Upgrade to v0.15.3 or later.
+2. Retry login using the same profile, then verify it:
+
+   ```bash
+   nlm login --profile work
+   nlm login --check --profile work
+   ```
+
+A successful `--check` exits with code 0 and reports "Authentication valid".
+A failed or inconclusive check exits with code 2 and explains the failure.
+
+Builtin Chromium/CDP login waits up to 300 seconds for signed-in cookies and the
+app's CSRF token. On timeout it saves no anonymous credentials and leaves an
+existing saved login untouched. Profile deletion and invented token values are
+not recovery steps for this bug. Share only redacted diagnostics, never cookies
+or credential values.
+
+If the check is `unverified` because of a network timeout, check connectivity or
+try a read-only API call first. An API authentication rejection requires login.
+An externally managed CDP browser staying open after login is expected; builtin
+login closes the browser it launched.
+
 ### Browser Doesn't Launch
 
 **Symptoms:**
@@ -71,7 +99,7 @@ profile is relaunched. On those accounts, set
 **Solutions:**
 
 1. **Ensure a supported Chromium-based browser is installed:**
-   Supported browsers (in priority order): Google Chrome, Arc (macOS), Dia (macOS) Brave, Microsoft Edge, Chromium, Vivaldi, Opera.
+   Supported browsers (in priority order): Google Chrome, Arc (macOS), Dia (macOS) Brave, Microsoft Edge, Microsoft Edge Beta, Chromium, Vivaldi, Opera.
 
    ```bash
    which google-chrome || which brave-browser || which chromium
@@ -111,12 +139,15 @@ profile is relaunched. On those accounts, set
    nlm login --profile work
    ```
 
-3. **Delete corrupted profile:**
+3. **Retry an expired or unusable session with the same profile:**
 
    ```bash
-   nlm login profile delete <profile-name>
    nlm login --profile <profile-name>
+   nlm login --check --profile <profile-name>
    ```
+
+   If a profile is confirmed corrupted and cannot be repaired, ask before deleting
+   its saved login. A timeout or anonymous session alone does not justify deletion.
 
 4. **Switch default profile:**
 
@@ -124,10 +155,66 @@ profile is relaunched. On those accounts, set
    nlm login switch <profile-name>
    ```
 
+   From an MCP-only app, use the `profile` tool instead (`action="switch"`).
+
 5. **Check current session:**
    ```bash
    nlm login --check
    ```
+
+### Headless Refresh Failures (`nlm auth refresh`)
+
+**Symptoms & Actions:**
+
+- **`No saved browser profile is available for '<profile>'`**: Run `nlm login --profile <profile>` once in an interactive desktop session to create the managed browser profile.
+- **`Saved browser profile '<profile>' is not signed in to NotebookLM`**: The profile was signed out or Google session expired. Run `nlm login --profile <profile>` in an interactive session.
+- **`NotebookLM rejected the credentials extracted from the saved browser profile`**: Google rejected the refreshed cookies. Re-authenticate with `nlm login`.
+- **Port conflicts**: Headless authentication automatically falls back to an OS-assigned ephemeral port (port 0) if default ports (9222/9223) conflict or are occupied.
+
+### Credential Storage Issues (Protected Mode)
+
+**Repeated Keychain Prompts (macOS):**
+When prompted by macOS to allow access to the keychain, enter the Mac login password and click **Always Allow**. If the prompt went unanswered for 60 seconds, the command fails with "approve the Keychain popup and retry" and the popup stays open: dismiss it, rerun, and approve the new prompt. If you click "Allow", macOS will prompt on every separate command or process invocation.
+
+**Headless Linux / SSH / Docker ("OS credential store unavailable"):**
+The OS credential store requires a running D-Bus session with a Secret Service provider (e.g., `gnome-keyring`). In headless environments without D-Bus, keep your profile in plain-file mode:
+```bash
+nlm auth storage set file
+```
+Or supply session cookies via the `NOTEBOOKLM_COOKIES` environment variable.
+
+**Windows SSH Sessions (Error 1312):**
+Windows Credential Manager requires an interactive logon session and is not accessible from non-interactive SSH sessions (Error 1312). Run `nlm auth storage set file` from an interactive desktop PowerShell / CMD session.
+
+**Credential Storage Conflict:**
+If both an encrypted credentials envelope (`credentials.enc`) and legacy plaintext files (`auth.json`, `cookies.json`) exist, `nlm` raises a conflict:
+- Keep plaintext files and discard encrypted leftovers:
+  ```bash
+  nlm auth storage resolve file
+  ```
+- Keep encrypted credentials and discard legacy plaintext:
+  ```bash
+  nlm auth storage resolve protected
+  ```
+
+**Stuck or Corrupt Operation Marker:**
+If a migration was interrupted or aborted mid-flight:
+```bash
+nlm auth storage resolve --clear-marker --yes
+```
+
+**Inaccessible Ciphertext / Lost Keychain Item:**
+If the keychain entry was deleted or the ciphertext is damaged:
+```bash
+nlm auth storage resolve --discard-inaccessible --yes
+nlm login
+```
+
+**Downgrading to Older nlm Versions:**
+Older versions of `notebooklm-mcp-cli` cannot read `credentials.enc`. Before installing an older version, decrypt all protected profiles:
+```bash
+nlm auth storage set file
+```
 
 ---
 

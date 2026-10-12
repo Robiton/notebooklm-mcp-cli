@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/test_base_url_resolution.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1546
 # Purpose:  Regression tests for NotebookLM base-URL host resolution (issue #269).
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Regression tests for NotebookLM base-URL host resolution (issue #269).
 
@@ -31,6 +32,12 @@ class TestGetBaseUrlPrecedence:
     def test_profile_host_used_when_no_env_override(self, monkeypatch):
         monkeypatch.delenv("NOTEBOOKLM_BASE_URL", raising=False)
         assert get_base_url("notebook.google.com") == "https://notebook.google.com"
+
+    def test_notebook_url_uses_profile_host(self, monkeypatch):
+        monkeypatch.delenv("NOTEBOOKLM_BASE_URL", raising=False)
+        assert get_notebook_url("nb-1", profile_host="notebook.google.com") == (
+            "https://notebook.google.com/notebook/nb-1"
+        )
 
     def test_env_override_wins_over_profile_host(self, monkeypatch):
         monkeypatch.setenv("NOTEBOOKLM_BASE_URL", "https://notebooklm.cloud.google.com")

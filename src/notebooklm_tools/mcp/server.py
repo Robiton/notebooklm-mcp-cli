@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/server.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1438
+# Version:  1.0.8.20261012.1546
 # Purpose:  NotebookLM MCP Server - Modular Architecture
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
@@ -38,6 +39,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from notebooklm_tools import __version__
+
+from .tools._utils import start_mcp_background_probe
 
 _FALSY = frozenset({"false", "0", "no", "off"})
 
@@ -77,6 +80,11 @@ mcp = FastMCP(
 - Video generation is NOT available in enterprise mode — the REST API has no video endpoint. Direct users to the notebook UI (Studio panel → Video Overview) to generate video manually.
 - In enterprise mode: ONLY use studio_create for audio artifacts. Never attempt studio_status polling for enterprise.
 
+**Auth (personal mode):** If you get authentication errors, run `nlm login` via your Bash/terminal tool. This is the automated authentication method that handles everything. Only use save_auth_tokens as a fallback if the CLI fails.
+**Account Switching:** Call the `profile` tool (action=list, then action=switch with name=<profile>). The switch lasts until this MCP server restarts and may apply to other open chats if the app shares one server; add make_default=true only when the user asks to change their default account. `nlm login switch <profile>` in a terminal changes the saved default.
+**User notices:** If a tool result contains `user_notice`, relay it to the user once in one short line.
+**Active account:** If a tool result contains `active_profile_note`, tell the user which account is in use once per conversation.
+
 Consolidated tools:
 - source_add(source_type=url|text|drive|file): Add any source type
 - studio_create(artifact_type=audio|video|...): Create any artifact type
@@ -90,7 +98,12 @@ Consolidated tools:
 - note(action=create|list|update|delete): Manage notes in notebooks
 - label(action=auto|list|reorganize|create|rename|set_emoji|move_source|delete): Manage source labels
 - configure_mode(mode, project_id, location): Switch between personal and enterprise
-- podcast_create(text): Generate standalone podcast (enterprise only, no notebook needed)""",
+- podcast_create(text): Generate standalone podcast (enterprise only, no notebook needed)
+- profile(action=list|status|switch): List saved Google accounts and choose which one to use
+- alias(action=list|get|set|delete): Short names for notebook IDs; any notebook_id accepts an alias
+- chat_save_to_note: Save a chat (or one turn) as a Note
+- pipeline(action=run|list|create): Run or define multi-step workflows
+- server_info also lists saved profiles with their storage mode (plain or protected)""",
 )
 
 # MCP request/response logger
@@ -99,6 +112,7 @@ mcp_logger = logging.getLogger("notebooklm_tools.mcp")
 
 # Health check endpoint
 @mcp.custom_route("/health", methods=["GET"])
+@mcp.custom_route("/healthz", methods=["GET"])
 async def health_check(request: Request) -> JSONResponse:
     """Health check endpoint for load balancers and monitoring."""
     return JSONResponse(
@@ -164,6 +178,7 @@ def _register_tools() -> None:
     """Import and register all tools from the modular tools package."""
     # Import all tool modules to populate the registry
     from .tools import (  # noqa: F401
+        aliases,
         auth,
         batch,
         chat,
@@ -176,6 +191,7 @@ def _register_tools() -> None:
         notebooks,
         notes,
         pipeline,
+        profiles,
         research,
         sharing,
         smart_select,
@@ -340,6 +356,10 @@ Examples:
             mcp_path=resource_path,
         )
         oauth_middleware.append(middleware)
+
+    # Start the storage-notice probe only when the server actually runs, never on
+    # import: importing this module (tests, tool listing) must not touch the keystore.
+    start_mcp_background_probe()
 
     # Run server with appropriate transport
     # show_banner=False prevents Rich box-drawing output that can corrupt

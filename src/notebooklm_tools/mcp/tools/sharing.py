@@ -1,8 +1,15 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/sharing.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Sharing tools - Notebook sharing and collaboration.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Sharing tools - Notebook sharing and collaboration."""
 
 from ...services import ServiceError
 from ...services import sharing as sharing_service
-from ._utils import ResultDict, error_result, get_client, logged_tool
+from ._utils import ResultDict, error_result, get_client, logged_tool, service_error_result
 
 
 @logged_tool()
@@ -67,7 +74,7 @@ def notebook_share_invite(
         result = sharing_service.invite_collaborator(client, notebook_id, email, role)
         return {"status": "success", **result}
     except ServiceError as e:
-        return error_result(e.user_message, hint=e.hint)
+        return service_error_result(e)
     except Exception as e:
         return error_result(str(e))
 
@@ -99,6 +106,6 @@ def notebook_share_batch(
         result = sharing_service.invite_collaborators_bulk(client, notebook_id, recipients)
         return {"status": "success", **result}
     except ServiceError as e:
-        return error_result(e.user_message, hint=e.hint)
+        return service_error_result(e)
     except Exception as e:
         return error_result(str(e))

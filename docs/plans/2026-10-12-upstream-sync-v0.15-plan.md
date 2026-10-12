@@ -1,6 +1,6 @@
 # Upstream sync plan: v0.5.24 → v0.15.4
 
-**Date:** 2026-10-12 · **Status:** batches 1–4 merged (#40–#43); batch 5 (v0.12.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
+**Date:** 2026-10-12 · **Status:** batches 1–5 merged (#40–#44); batch 6 (v0.15.4, the last) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
 
 ## Where we are
 
@@ -188,10 +188,42 @@ conflicts.
 - **Workflows:** upstream only bumped action versions here (checkout v6/7, setup-uv, gh-release) and
   added `dependabot.yml`. The fork keeps its SHA-pinned workflows and its own dependabot config.
 
+## Findings from batch 6
+
+- **Credential store: adopted, with fork hardening.** Upstream's protected mode (`credentials.enc`,
+  AES-256-GCM, key in the OS keystore via a helper subprocess) replaced nothing: file mode
+  (`cookies.json`, 0600) is still the default for every existing profile and migration is explicit.
+  A security read found two medium issues, both fixed in the fork: the helper ran `python -m`
+  without `-I` (a planted package in the cwd could shadow the worker), and the MCP background probe
+  opened the keystore even in enterprise mode, where personal cookies are unused. Regression tests:
+  `tests/test_fork_credential_hardening.py`. Lows left for decision 1a.
+- **`get_client()` composition.** The fork's enterprise branch runs first and returns the
+  `EnterpriseAdapter`; upstream's keystore-aware personal path (env cookies, revision hot path,
+  compare-and-install) follows. Both personal constructions pass `api_profile`.
+- **Build label bug found by upstream's tests.** The merged `BaseClient` stored the profile fallback
+  in `_bl`, so a saved label was overwritten. The fallback is now applied in `_build_url` only.
+- **Package-name drift.** Upstream strings in new code (`nlm setup` entries, legacy detection) and
+  three older fork files (desktop launcher, CLI update check, AUTHENTICATION.md) named upstream's
+  PyPI package. All now say `notebooklm-enterprise-mcp`. Grep every sync for `notebooklm-mcp-cli` in
+  install/uvx/upgrade strings.
+- **`notebook_url`.** Upstream added a host-aware helper (personal `notebook.google.com` vs
+  NotebookLM). The fork takes it and short-circuits to the API profile in enterprise mode.
+- **Windows CI dropped.** Upstream's `windows-latest` matrix leg renamed the test job per OS, so the
+  `main` ruleset's required "Run tests" check never reported and the PR was blocked. The fork targets
+  a hosted MCP server and is developed on macOS (Brian, 2026-10-12), so the leg was removed and the
+  job is a single Linux "Run tests" again. Re-check this on every upstream sync.
+- **Tool count:** 56 (upstream's 53 plus fork-only tools). Docs, SKILL.md and the skill test updated.
+
 ## Open decisions (Brian)
 
-1. **Credential store (batch 6):** adopt upstream's OS-keyring storage for personal mode, or keep
-   `auth.json`? Recommendation: adopt, after a security read. A keyring is the stronger default.
+1. **Credential store (batch 6):** adopted with fork hardening (see batch 6 findings). Open: new
+   interactive desktop logins are offered protected mode with protected as the prompt default
+   (`cli/main.py` `default=1`). Keep, or make file mode the default (`default=2`) for strict opt-in?
+   Recommendation: keep; it only applies where a working keystore was detected.
+   1a. **Credential-store lows:** plaintext removed with `rmtree` (backups may keep copies); unsalted
+   hashes in operation markers; `ALLOW_REAL_KEYSTORE` / `NOTEBOOKLM_KEYSTORE_SERVICE_NAME` test
+   toggles honoured in production; the MCP "protect your login" notice is text an agent reads.
+   Recommendation: backlog for v1.5.
 2. **Rebrand wording:** follow upstream to "Gemini Notebook" in user-facing docs, or keep
    "NotebookLM"? The enterprise API is still Discovery Engine "NotebookLM Enterprise".
    Recommendation: follow upstream for personal mode and keep "NotebookLM Enterprise" for

@@ -97,7 +97,16 @@ All four reported clean. None of them could have distinguished the fix from the 
 ## Credential and secret storage
 
 - Never commit cookies, GCP tokens, or API keys to the repo — in any file
-- Personal auth stored in `~/.notebooklm-mcp-cli/profiles/<name>/auth.json` (chmod 0600)
+- Personal auth lives in `~/.notebooklm-mcp-cli/profiles/<name>/` (dir 0700), in one of two
+  storage modes per profile:
+  - **file** (default for existing profiles, headless/SSH/container/WSL sessions):
+    `cookies.json` + `metadata.json`, chmod 0600
+  - **protected** (opt-in; offered by default on new interactive desktop logins):
+    `credentials.enc`, AES-256-GCM, with only the per-profile key in the OS keystore
+    (macOS Keychain, Windows Credential Manager, Linux Secret Service/KWallet). Reads fail
+    closed; there is no plaintext fallback once a profile is protected
+- Keystore calls run in a subprocess (`core/credential_backend_worker.py`) started with
+  `python -I` so the working directory cannot shadow imports in the key-handling process
 - Enterprise auth via `gcloud` — token fetched at runtime, never stored by this project
 - `config.toml` stores mode, project_id, location — never tokens
 - Rotate any credential that is accidentally committed immediately — assume it is compromised
@@ -172,12 +181,14 @@ The full reusable gate template is `docs/RELEASE_SECURITY_REVIEW_GATE.md` in the
 - **Data processed:** the user's NotebookLM notebooks, sources, chat history and generated
   artifacts — whatever content the user has uploaded. No PHI or payment data is handled by
   design, but source content is arbitrary user data; never log it.
-- **Credentials:** personal-mode browser cookies in
-  `~/.notebooklm-mcp-cli/profiles/<name>/auth.json` (chmod 0600, dir 0700); enterprise mode
+- **Credentials:** personal-mode browser cookies per profile in
+  `~/.notebooklm-mcp-cli/profiles/<name>/`, plain files (0600, dir 0700) or protected
+  (AES-256-GCM file, key in the OS keystore); enterprise mode
   uses short-lived GCP OAuth tokens from `gcloud` / `NBLM_ACCESS_TOKEN`, never stored here.
 - **High-risk areas:** CDP cookie capture (`utils/cdp.py` — must stay scoped to NotebookLM
   domains and bound to 127.0.0.1), URL sources (SSRF block before any outbound request),
-  file uploads (sensitive-dir blocklist), downloads (`_safe_output_path`), enterprise REST
+  file uploads (sensitive-dir blocklist), downloads (`validate_output_path`, MCP writes
+  confined to one download root), the credential store and its worker subprocess, enterprise REST
   path construction (`_validate_id`), and the optional OAuth 2.1 remote-MCP mode.
 - **Compliance:** none formally applicable. Enterprise users inherit their GCP org's controls.
 

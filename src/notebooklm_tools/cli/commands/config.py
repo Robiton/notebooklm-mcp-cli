@@ -1,4 +1,13 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/cli/commands/config.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Configuration CLI commands.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Configuration CLI commands."""
+
+from typing import Any
 
 import typer
 from rich.syntax import Syntax
@@ -71,6 +80,16 @@ def set_config_value(
     """Set a configuration value."""
     config = get_config()
 
+    if (
+        key in ("auth.storage", "storage.mode", "auth.storage_mode")
+        or key.startswith("auth.storage")
+        or key.startswith("storage.")
+    ):
+        console.print(
+            "[red]Error:[/red] Storage mode cannot be set via 'nlm config set'. Use 'nlm auth storage set file'."
+        )
+        raise typer.Exit(1)
+
     parts = key.split(".")
     if len(parts) != 2:
         console.print("[red]Error:[/red] Invalid key format. Use section.key (e.g. output.format)")
@@ -97,6 +116,7 @@ def set_config_value(
 
     try:
         # Handle boolean conversion explicitly
+        converted_val: Any
         if target_type is bool:
             if value.lower() in ("true", "1", "yes", "on"):
                 converted_val = True

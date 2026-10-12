@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_auth_health.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for the AuthHealthChecker (multi-probe auth health check with caching).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for the AuthHealthChecker (multi-probe auth health check with caching).
 
 These tests pin:
@@ -22,6 +29,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import httpx
+import pytest
 
 from notebooklm_tools.core.auth import AuthManager
 from notebooklm_tools.services.auth import (
@@ -159,6 +167,31 @@ def _save_fake_profile(tmp_path, monkeypatch):
         },
         email="test@example.com",
     )
+
+
+@pytest.mark.parametrize(
+    "api_result, expected_status",
+    [
+        ((False, "ClientAuthenticationError: expired"), "stale"),
+        ((False, "network_error: ReadTimeout"), "unverified"),
+        ((True, None), "configured"),
+    ],
+)
+def test_public_homepage_does_not_prove_health(tmp_path, monkeypatch, api_result, expected_status):
+    _save_fake_profile(tmp_path, monkeypatch)
+    response = httpx.Response(
+        200,
+        request=httpx.Request("GET", "https://notebook.google.com/"),
+        text='{"FdrFJe":"123","cfb2h":"public"}',
+    )
+    with (
+        patch("notebooklm_tools.core.auth._fetch_notebooklm_homepage", return_value=response),
+        patch.object(AuthHealthChecker, "_probe_api", return_value=api_result),
+    ):
+        report = AuthHealthChecker().check(force=True)
+
+    assert report.status == expected_status
+    assert report.valid is (expected_status == "configured")
 
 
 class TestCheckEndToEnd:
@@ -325,6 +358,33 @@ def _enterable_client_mock(MockClient):
 
 
 class TestCredentialsAreUsable:
+    def test_explicit_profile_routes_to_profile_scoped_checker(self, monkeypatch):
+        seen: dict[str, str | None] = {}
+        report = AuthHealthReport(
+            valid=True,
+            status="configured",
+            probes=[],
+            profile="work",
+            checked_at=0.0,
+        )
+
+        def fake_get_checker(profile=None):
+            seen["profile"] = profile
+            return type("C", (), {"check": lambda self, **kw: report})()
+
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.get_auth_health_checker",
+            fake_get_checker,
+        )
+        from notebooklm_tools.services.auth import credentials_are_usable
+
+        usable, status, detail = credentials_are_usable(profile="work")
+
+        assert usable is True
+        assert status == "configured"
+        assert detail is None
+        assert seen["profile"] == "work"
+
     def test_returns_configured_when_health_checker_passes(self, monkeypatch):
         report = AuthHealthReport(
             valid=True,
@@ -335,7 +395,7 @@ class TestCredentialsAreUsable:
         )
         monkeypatch.setattr(
             "notebooklm_tools.services.auth.get_auth_health_checker",
-            lambda: type("C", (), {"check": lambda self, **kw: report})(),
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
         )
         usable, status, detail = __import__(
             "notebooklm_tools.services.auth", fromlist=["credentials_are_usable"]
@@ -343,6 +403,180 @@ class TestCredentialsAreUsable:
         assert usable is True
         assert status == "configured"
         assert detail is None
+
+    def test_force_configured_requires_api_confirmation(self, monkeypatch):
+        report = AuthHealthReport(
+            valid=True,
+            status="configured",
+            probes=[],
+            profile="default",
+            checked_at=0.0,
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.get_auth_health_checker",
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
+        )
+        seen = []
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.confirm_auth_via_api",
+            lambda **kw: seen.append(kw) or (True, None),
+        )
+        from notebooklm_tools.services.auth import credentials_are_usable
+
+        assert credentials_are_usable(force=True) == (True, "configured", None)
+        assert seen == [{"profile": "default"}]
+
+    def test_force_configured_rejects_rpc_auth_failure(self, monkeypatch):
+        report = AuthHealthReport(
+            valid=True,
+            status="configured",
+            probes=[],
+            profile="default",
+            checked_at=0.0,
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.get_auth_health_checker",
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.confirm_auth_via_api",
+            lambda **kw: (False, "ClientAuthenticationError: expired"),
+        )
+        from notebooklm_tools.services.auth import credentials_are_usable
+
+        usable, status, detail = credentials_are_usable(force=True)
+        assert usable is False
+        assert status == "stale"
+        assert detail == "ClientAuthenticationError: expired"
+
+    def test_force_configured_network_failure_is_unverified(self, monkeypatch):
+        report = AuthHealthReport(
+            valid=True,
+            status="configured",
+            probes=[],
+            profile="default",
+            checked_at=0.0,
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.get_auth_health_checker",
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.confirm_auth_via_api",
+            lambda **kw: (False, "network_error: ReadTimeout: slow"),
+        )
+        from notebooklm_tools.services.auth import credentials_are_usable
+
+        usable, status, detail = credentials_are_usable(force=True)
+        assert usable is False
+        assert status == "unverified"
+        assert detail.startswith("network_error:")
+
+    def test_force_configured_http_500_is_unverified(self, monkeypatch):
+        from types import SimpleNamespace
+
+        import httpx
+
+        report = AuthHealthReport(
+            valid=True,
+            status="configured",
+            probes=[],
+            profile="default",
+            checked_at=0.0,
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.get_auth_health_checker",
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
+        )
+
+        class Client500:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def list_notebooks(self):
+                req = httpx.Request("POST", "https://notebooklm.google.com/")
+                resp = httpx.Response(500, request=req)
+                raise httpx.HTTPStatusError("Server error", request=req, response=resp)
+
+        monkeypatch.setattr(
+            "notebooklm_tools.core.client.NotebookLMClient", lambda **kw: Client500()
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.core.auth.AuthManager.profile_exists", lambda self: True
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.core.auth.AuthManager.load_profile",
+            lambda self: SimpleNamespace(
+                cookies={"SID": "s"},
+                csrf_token="c",
+                session_id="1",
+                build_label="b",
+                base_host="",
+                name="default",
+            ),
+        )
+        from notebooklm_tools.services.auth import credentials_are_usable
+
+        usable, status, detail = credentials_are_usable(force=True)
+        assert usable is False
+        assert status == "unverified"
+        assert "500" in (detail or "")
+
+    def test_force_configured_http_429_is_unverified(self, monkeypatch):
+        from types import SimpleNamespace
+
+        import httpx
+
+        report = AuthHealthReport(
+            valid=True,
+            status="configured",
+            probes=[],
+            profile="default",
+            checked_at=0.0,
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.services.auth.get_auth_health_checker",
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
+        )
+
+        class Client429:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def list_notebooks(self):
+                req = httpx.Request("POST", "https://notebooklm.google.com/")
+                resp = httpx.Response(429, request=req)
+                raise httpx.HTTPStatusError("Rate limit", request=req, response=resp)
+
+        monkeypatch.setattr(
+            "notebooklm_tools.core.client.NotebookLMClient", lambda **kw: Client429()
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.core.auth.AuthManager.profile_exists", lambda self: True
+        )
+        monkeypatch.setattr(
+            "notebooklm_tools.core.auth.AuthManager.load_profile",
+            lambda self: SimpleNamespace(
+                cookies={"SID": "s"},
+                csrf_token="c",
+                session_id="1",
+                build_label="b",
+                base_host="",
+                name="default",
+            ),
+        )
+        from notebooklm_tools.services.auth import credentials_are_usable
+
+        usable, status, detail = credentials_are_usable(force=True)
+        assert usable is False
+        assert status == "unverified"
+        assert "429" in (detail or "")
 
     def test_falls_back_to_api_when_health_checker_reports_stale(self, monkeypatch):
         report = AuthHealthReport(
@@ -354,7 +588,7 @@ class TestCredentialsAreUsable:
         )
         monkeypatch.setattr(
             "notebooklm_tools.services.auth.get_auth_health_checker",
-            lambda: type("C", (), {"check": lambda self, **kw: report})(),
+            lambda profile=None: type("C", (), {"check": lambda self, **kw: report})(),
         )
         monkeypatch.setattr(
             "notebooklm_tools.services.auth.confirm_auth_via_api",
@@ -554,6 +788,14 @@ class TestSingleton:
 
     def test_singleton_is_auth_health_checker(self):
         assert isinstance(get_auth_health_checker(), AuthHealthChecker)
+
+    def test_explicit_profiles_receive_independent_cached_checkers(self):
+        work = get_auth_health_checker(profile="work")
+        personal = get_auth_health_checker(profile="personal")
+
+        assert work is get_auth_health_checker(profile="work")
+        assert personal is get_auth_health_checker(profile="personal")
+        assert work is not personal
 
 
 # ---------------------------------------------------------------------------

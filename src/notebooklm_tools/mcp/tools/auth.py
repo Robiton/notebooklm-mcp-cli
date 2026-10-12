@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/auth.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1546
 # Purpose:  MCP tools for personal-mode authentication (refresh, save tokens)
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
@@ -15,6 +16,9 @@ import os
 import time
 import urllib.parse
 from http.cookies import SimpleCookie
+
+from notebooklm_tools.core.credential_store import CredentialStoreError
+from notebooklm_tools.core.exceptions import AuthenticationError
 
 from ._utils import (
     ESSENTIAL_COOKIES,
@@ -52,51 +56,90 @@ def refresh_auth() -> ResultDict:
         from notebooklm_tools.services.auth import load_cached_tokens
 
         cached = load_cached_tokens()
+        stale_cached: tuple[str, str | None] | None = None
+        headless_failure: AuthenticationError | None = None
         if cached:
-            # Honesty check FIRST: reloading tokens from disk is NOT a successful
-            # re-auth if those tokens are already dead. Validate live before
-            # creating any client, otherwise agents loop on doomed studio calls
-            # (and we leave a client object initialized with bad tokens behind).
+            # A disk reload is only success if the credentials still work. If
+            # they are stale, keep going: the saved browser profile may still be
+            # able to mint fresh credentials via the headless recovery path.
             from notebooklm_tools.services.auth import credentials_are_usable
 
             usable, status, detail = credentials_are_usable(force=True)
-            if not usable:
-                return error_result(
-                    "Auth tokens were reloaded from disk but are no longer valid "
-                    f"(reason: {status}). A disk reload cannot revive expired "
-                    "credentials — run `nlm login` in a terminal to re-authenticate.",
-                    status="expired",
-                    reason=status,
-                    details=detail,
-                )
-            reset_client()
-            get_client()
-            return {
-                "status": "success",
-                "message": "Auth tokens reloaded from disk cache and validated.",
-            }
-
-        # Try headless auth if the configured default Chrome profile exists
-        try:
-            from notebooklm_tools.utils.auth_browser import run_headless_auth
-            from notebooklm_tools.utils.config import get_config
-
-            profile_name = get_config().auth.default_profile
-            tokens = run_headless_auth(profile_name=profile_name)
-            if tokens:
+            if usable:
                 reset_client()
                 get_client()
                 return {
                     "status": "success",
-                    "message": "Auth tokens refreshed via headless Chrome.",
+                    "message": "Auth tokens reloaded from disk cache and validated.",
                 }
-        except Exception:
-            pass
+            stale_cached = (status, detail)
+
+        # Try headless auth if the configured default Chrome profile exists.
+        # Skipped when the user opted out (e.g. Workspace accounts whose session
+        # is revoked when the saved browser profile is relaunched, issue #330).
+        headless_disabled = os.environ.get("NOTEBOOKLM_DISABLE_HEADLESS_REFRESH") == "1"
+        if not headless_disabled:
+            try:
+                from notebooklm_tools.utils.auth_browser import run_headless_auth
+                from notebooklm_tools.utils.config import get_config
+
+                profile_name = get_config().auth.default_profile
+                tokens = run_headless_auth(
+                    profile_name=profile_name,
+                    raise_on_error=True,
+                )
+                if tokens:
+                    reset_client()
+                    get_client()
+                    return {
+                        "status": "success",
+                        "message": "Auth tokens refreshed via headless Chrome.",
+                    }
+            except CredentialStoreError:
+                raise
+            except AuthenticationError as exc:
+                headless_failure = exc
+            except Exception as exc:
+                headless_failure = AuthenticationError(
+                    message=f"Headless browser refresh failed ({type(exc).__name__})",
+                    hint="Run 'nlm login' in a desktop session to re-authenticate.",
+                )
+
+        if stale_cached is not None:
+            status, detail = stale_cached
+            headless_details: dict[str, str] = {}
+            if headless_failure is not None:
+                reason_text = f"automatic browser refresh failed: {headless_failure.message}"
+                headless_details["headless_error"] = headless_failure.message
+                if headless_failure.hint:
+                    headless_details["headless_hint"] = headless_failure.hint
+            else:
+                reason_text = (
+                    "automatic browser refresh is disabled (NOTEBOOKLM_DISABLE_HEADLESS_REFRESH=1)"
+                    if headless_disabled
+                    else "the saved browser profile could not refresh it automatically"
+                )
+            return error_result(
+                f"Cached auth is no longer valid and {reason_text}. "
+                "Run `nlm login` in a terminal to re-authenticate.",
+                status="expired",
+                reason=status,
+                details=detail,
+                **headless_details,
+            )
 
         return {
             "status": "error",
             "error": "No cached tokens found. Run 'nlm login' to authenticate.",
         }
+    except CredentialStoreError as exc:
+        return error_result(
+            str(exc),
+            hint=(
+                "OS credential store is locked or unavailable. "
+                "Unlock your OS keystore / run this from your desktop session and retry."
+            ),
+        )
     except Exception as e:
         return error_result(str(e))
 
@@ -127,6 +170,11 @@ def save_auth_tokens(
             AuthTokens,
             get_cache_path,
             save_tokens_to_cache,
+        )
+        from notebooklm_tools.utils.config import (
+            get_auth_storage_mode,
+            get_config,
+            get_profile_dir,
         )
 
         # Parse cookie string to dict. Cookie headers are valid with or
@@ -184,6 +232,12 @@ def save_auth_tokens(
         # Reset client so next call uses fresh tokens
         reset_client()
 
+        target_profile = get_config().auth.default_profile
+        if get_auth_storage_mode(target_profile) == "protected":
+            saved_path = get_profile_dir(target_profile, create=False) / "credentials.enc"
+        else:
+            saved_path = get_cache_path()
+
         # Build status message
         if csrf_token and session_id:
             token_msg = "CSRF token and session ID extracted from network request - no page fetch needed! ⚡"  # scaffold:not-a-secret
@@ -197,9 +251,17 @@ def save_auth_tokens(
         return {
             "status": "success",
             "message": f"Saved {len(cookie_dict)} essential cookies (filtered from {len(all_cookies)}). {token_msg}",
-            "cache_path": str(get_cache_path()),
+            "cache_path": str(saved_path),
             "extracted_csrf": bool(csrf_token),
             "extracted_session_id": bool(session_id),
         }
+    except CredentialStoreError as exc:
+        return error_result(
+            str(exc),
+            hint=(
+                "OS credential store is locked or unavailable. "
+                "Unlock your OS keystore / run this from your desktop session and retry."
+            ),
+        )
     except Exception as e:
         return error_result(str(e))

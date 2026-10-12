@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/cli/test_skill_workflows.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1439
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for bundled cross-MCP workflow contracts.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for bundled cross-MCP workflow contracts."""
 
@@ -39,7 +40,7 @@ def test_bundled_skill_documents_interactive_report_workflow():
 
     # Skill routes to the workflow and reflects the current MCP surface.
     assert "Workflow 17" in skill
-    assert "50 tools" in skill
+    assert "56 tools" in skill
     assert "--format Interactive" in skill
 
     # The workflow covers every stage an agent performs end to end.

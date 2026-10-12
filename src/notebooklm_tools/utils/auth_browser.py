@@ -1,8 +1,16 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/utils/auth_browser.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Browser/backend selection for interactive and headless authentication.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Browser/backend selection for interactive and headless authentication."""
 
 import json
 from typing import Any
 
+from notebooklm_tools.core.credential_store import CredentialStoreError
 from notebooklm_tools.core.exceptions import AuthenticationError
 from notebooklm_tools.utils.config import get_config, get_profile_dir
 
@@ -14,6 +22,7 @@ CHROMIUM_BROWSER_KEYS = {
     "dia",
     "comet",
     "edge",
+    "edge-beta",
     "chromium",
     "vivaldi",
     "opera",
@@ -23,7 +32,8 @@ FIREFOX_BROWSER_KEY = "firefox"
 
 def _normalize_browser(preferred: str | None = None) -> str:
     if preferred is None:
-        preferred = get_config().auth.browser
+        auth_cfg = getattr(get_config(), "auth", None)
+        preferred = getattr(auth_cfg, "browser", "auto") if auth_cfg else "auto"
     return (preferred or "auto").lower().strip()
 
 
@@ -130,8 +140,19 @@ def _get_saved_browser_backend(profile_name: str) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
-def run_headless_auth(profile_name: str = "default", timeout: int = 30) -> Any | None:
-    """Try headless auth using the profile's saved backend, then reasonable fallbacks."""
+def run_headless_auth(
+    profile_name: str = "default",
+    timeout: int = 30,
+    expected_revision: str | None = None,
+    force: bool | None = None,
+    raise_on_error: bool = False,
+) -> Any | None:
+    """Try headless auth using the profile's saved backend, then reasonable fallbacks.
+
+    ``raise_on_error`` is for explicit refresh commands that need an actionable
+    infrastructure failure. Automatic RPC recovery keeps the historical
+    best-effort ``None`` behavior.
+    """
     preferred_backend = _get_saved_browser_backend(profile_name)
     attempts: list[str] = []
 
@@ -145,21 +166,46 @@ def run_headless_auth(profile_name: str = "default", timeout: int = 30) -> Any |
     if "chromium_cdp" not in attempts:
         attempts.append("chromium_cdp")
 
+    first_failure: AuthenticationError | None = None
     for backend in attempts:
-        if backend == "chromium_cdp":
-            from notebooklm_tools.utils.cdp import run_headless_auth as run_headless_chromium_auth
+        try:
+            if backend == "chromium_cdp":
+                from notebooklm_tools.utils.cdp import (
+                    run_headless_auth as run_headless_chromium_auth,
+                )
 
-            tokens = run_headless_chromium_auth(timeout=timeout, profile_name=profile_name)
-            if tokens:
-                return tokens
+                tokens = run_headless_chromium_auth(
+                    timeout=timeout,
+                    profile_name=profile_name,
+                    expected_revision=expected_revision,
+                    force=force,
+                    raise_on_error=raise_on_error,
+                )
+                if tokens:
+                    return tokens
+                continue
+            if backend == "firefox_profile":
+                from notebooklm_tools.utils.firefox import (
+                    run_headless_auth as run_headless_firefox_auth,
+                )
+
+                tokens = run_headless_firefox_auth(
+                    timeout=timeout,
+                    profile_name=profile_name,
+                    expected_revision=expected_revision,
+                    force=force,
+                    raise_on_error=raise_on_error,
+                )
+                if tokens:
+                    return tokens
+        except CredentialStoreError:
+            raise
+        except AuthenticationError as exc:
+            # Keep the preferred backend's failure; fallbacks must not hide it.
+            if first_failure is None:
+                first_failure = exc
             continue
-        if backend == "firefox_profile":
-            from notebooklm_tools.utils.firefox import (
-                run_headless_auth as run_headless_firefox_auth,
-            )
 
-            tokens = run_headless_firefox_auth(timeout=timeout, profile_name=profile_name)
-            if tokens:
-                return tokens
-
+    if raise_on_error and first_failure is not None:
+        raise first_failure
     return None

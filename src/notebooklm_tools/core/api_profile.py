@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/api_profile.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  API profiles for personal and enterprise NotebookLM.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """API profiles for personal and enterprise NotebookLM.
 
 Enterprise NotebookLM (notebooklm.cloud.google.com) uses a completely different
@@ -113,7 +120,7 @@ def _enterprise_profile(project_id: str, location: str = "global") -> APIProfile
         location=location,
         project_id=project_id,
         query_service="google.cloud.notebooklm.v1main.NotebookService",
-        bl_fallback="boq_cloud-ml-notebooklm-ui_20260324.07_p0",
+        bl_fallback="boq_cloud-ml-notebooklm-ui_20260816.08_p0",
         extra_query_params={"authuser": "0", "pageId": "none"},
         rpc_ids={
             # Notebook operations

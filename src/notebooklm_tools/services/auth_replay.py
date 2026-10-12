@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/auth_replay.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Auth replay diagnostics for NotebookLM credentials.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Auth replay diagnostics for NotebookLM credentials."""
 
 from __future__ import annotations
@@ -135,10 +142,19 @@ def _probe_rotated_httpx_replay(manager: Any, profile: Any, *, timeout: float) -
     cookies = parser._get_httpx_cookies()
     parser.close()
 
+    prof_name = getattr(profile, "name", None) or getattr(manager, "profile_name", "default")
+    from notebooklm_tools.utils.config import get_auth_storage_mode
+
+    if get_auth_storage_mode(prof_name) == "protected":
+        p_dir = getattr(manager, "profile_dir", None)
+        storage_path = (p_dir / "credentials.enc") if p_dir else None
+    else:
+        storage_path = getattr(manager, "cookies_file", None)
+
     with _httpx.Client(cookies=cookies, timeout=timeout) as client:
         rotation = rotate_google_cookies(
             client,
-            storage_path=getattr(manager, "cookies_file", None),
+            storage_path=storage_path,
             timeout=timeout,
             force=True,
         )

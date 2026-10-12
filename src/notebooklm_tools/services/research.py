@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/research.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1233
+# Version:  1.0.8.20261012.1546
 # Purpose:  Research service — shared business logic for research start, poll, and import
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
@@ -21,6 +22,13 @@ from .errors import ServiceError, ValidationError
 
 VALID_SOURCES = ("web", "drive")
 VALID_MODES = ("fast", "deep")
+
+# A research task that was just started can be briefly invisible to the poll RPC
+# (issue #346). While blocking on a known task_id, an empty poll is retried for up
+# to this many seconds before we conclude the task really does not exist.
+NO_RESEARCH_GRACE_SECONDS = 90
+# Delay between those retries (capped by poll_interval so callers can ask for faster).
+NO_RESEARCH_RETRY_INTERVAL = 5
 
 _CITATION_MARKER_RE = re.compile(r"\[([0-9][0-9\s,;\-\u2013\u2014]*)\]")
 _BIBLIOGRAPHY_LINE_RE = re.compile(r"^\s*(\d+)\.\s+(.+)$", re.MULTILINE)
@@ -296,6 +304,7 @@ def poll_research(
     poll_interval: int = 30,
     max_wait: int = 0,
     auto_import: bool = False,
+    no_research_grace: float = NO_RESEARCH_GRACE_SECONDS,
 ) -> ResearchStatusResult:
     """Poll research progress, optionally blocking until complete or timeout.
 
@@ -309,6 +318,11 @@ def poll_research(
         max_wait: Max seconds to wait (default: 0 = single check).
             When > 0, polls repeatedly until status is "completed" or
             the timeout is reached.
+        auto_import: Import the sources automatically once research completes.
+        no_research_grace: Seconds to keep retrying when the poll comes back empty
+            for a known task_id (a task started moments ago may not be visible
+            yet). Only applies while blocking (max_wait > 0) with a task_id, and
+            never extends past max_wait. 0 disables the grace period.
 
     Returns:
         ResearchStatusResult with current status. Note that the returned `sources`
@@ -317,7 +331,9 @@ def poll_research(
     Raises:
         ServiceError: If the poll fails
     """
-    deadline = time.monotonic() + max_wait if max_wait > 0 else 0
+    blocking = max_wait > 0
+    started = time.monotonic() if blocking else 0
+    deadline = started + max_wait if blocking else 0
 
     while True:
         try:
@@ -328,6 +344,21 @@ def poll_research(
             )
         except Exception as e:
             raise ServiceError(f"Failed to poll research: {e}") from e
+
+        # Right after `research start`, the task may not be visible to the poll RPC
+        # yet. Retry for a short, bounded grace period instead of giving up (#346).
+        if (
+            blocking
+            and task_id
+            and no_research_grace > 0
+            and (not result or result.get("status") == "no_research")
+        ):
+            now = time.monotonic()
+            budget = min(deadline - now, started + no_research_grace - now)
+            if budget > 0:
+                retry_interval = min(NO_RESEARCH_RETRY_INTERVAL, max(poll_interval, 1))
+                time.sleep(min(retry_interval, budget))
+                continue
 
         if not result:
             return {

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/errors.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Service layer errors and exceptions.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Service layer errors and exceptions."""
 
 
@@ -62,6 +69,12 @@ class NotFoundError(ServiceError):
 
 class CreationError(ServiceError):
     """Raised when a creation operation fails (e.g. fail-fast check)."""
+
+    pass
+
+
+class ConflictError(ServiceError):
+    """Raised when a resource already exists or an operation conflicts with current state."""
 
     pass
 

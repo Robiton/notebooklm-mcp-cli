@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/downloads.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1438
+# Version:  1.0.8.20261012.1546
 # Purpose:  Downloads service — shared validation and routing for artifact downloads
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
@@ -442,10 +443,10 @@ async def _download_once_async(
             raise ServiceError(
                 f"Failed to download {artifact_type}: {e}",
                 user_message=(
-                    f"{artifact_type.title()} is complete, but its download is still propagating. "
-                    "Try again shortly."
+                    f"{artifact_type.title()} is complete, but its media may still be "
+                    "propagating or may be unavailable."
                 ),
-                hint="Retry the download after a short delay.",
+                hint="Retry later; if the 404 persists, verify artifact access.",
                 debug_code="artifact_not_ready",
             ) from e
         raise ServiceError(
@@ -498,7 +499,8 @@ async def download_async(
         progress_callback: Called with (current, total) for progress tracking
         slide_deck_format: For slide_deck only: "pdf" (default) or "pptx"
         wait: Poll while the artifact download is still propagating
-        wait_timeout: Maximum seconds to wait when ``wait`` is enabled
+        wait_timeout: Service polling budget when ``wait`` is enabled; internal
+            CDN retries and the file transfer can extend total wall time
         poll_interval: Seconds between readiness checks
 
     Returns:
