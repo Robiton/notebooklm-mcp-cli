@@ -147,6 +147,92 @@ RESULT_TYPES = CodeMapper(
 )
 
 # =============================================================================
+# Official local file-upload admission contract
+# =============================================================================
+# This registry controls local eligibility only. NotebookLM may still reject or
+# fail to process corrupt, misleading, inaccessible, or reference-only files.
+SUPPORTED_FILE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".pdf",
+        ".txt",
+        ".md",
+        ".docx",
+        ".csv",
+        ".pptx",
+        ".epub",
+        ".avif",
+        ".bmp",
+        ".gif",
+        ".heic",
+        ".heif",
+        ".ico",
+        ".jp2",
+        ".jpe",
+        ".jpeg",
+        ".jpg",
+        ".png",
+        ".tif",
+        ".tiff",
+        ".webp",
+        ".3g2",
+        ".3gp",
+        ".aac",
+        ".aif",
+        ".aifc",
+        ".aiff",
+        ".amr",
+        ".au",
+        ".avi",
+        ".cda",
+        ".m4a",
+        ".mid",
+        ".mp3",
+        ".mp4",
+        ".mpeg",
+        ".ogg",
+        ".opus",
+        ".ra",
+        ".ram",
+        ".snd",
+        ".wav",
+        ".wma",
+    }
+)
+
+# Media sources can transiently report an upstream processing error immediately
+# after upload. This is a processing classification, not a second admission list.
+TRANSIENT_MEDIA_FILE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".3g2",
+        ".3gp",
+        ".aac",
+        ".aif",
+        ".aifc",
+        ".aiff",
+        ".amr",
+        ".au",
+        ".avi",
+        ".cda",
+        ".m4a",
+        ".mid",
+        ".mp3",
+        ".mp4",
+        ".mpeg",
+        ".ogg",
+        ".opus",
+        ".ra",
+        ".ram",
+        ".snd",
+        ".wav",
+        ".wma",
+    }
+)
+
+if len(SUPPORTED_FILE_EXTENSIONS) != 43:  # pragma: no cover - import-time invariant
+    raise RuntimeError("NotebookLM official file extension contract must contain 43 entries.")
+
+
+# =============================================================================
 # Source Types (Notebook Content)
 # =============================================================================
 SOURCE_TYPE_GOOGLE_DOCS = 1
@@ -187,6 +273,7 @@ STUDIO_TYPE_FLASHCARDS = 4  # Also Quiz
 STUDIO_TYPE_INFOGRAPHIC = 7
 STUDIO_TYPE_SLIDE_DECK = 8
 STUDIO_TYPE_DATA_TABLE = 9
+STUDIO_TYPE_DATA_TABLE_XLSX = 10
 
 STUDIO_TYPES = CodeMapper(
     {
@@ -197,6 +284,7 @@ STUDIO_TYPES = CodeMapper(
         "infographic": STUDIO_TYPE_INFOGRAPHIC,
         "slide_deck": STUDIO_TYPE_SLIDE_DECK,
         "data_table": STUDIO_TYPE_DATA_TABLE,
+        "data_table_xlsx": STUDIO_TYPE_DATA_TABLE_XLSX,
     }
 )
 

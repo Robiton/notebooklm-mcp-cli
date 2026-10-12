@@ -39,6 +39,7 @@ def _make_notebook(**kwargs):
         "is_shareable": True,
         "created_at": "2024-01-01",
         "modified_at": "2024-01-02",
+        "emoji": "📚",
     }
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
@@ -97,6 +98,7 @@ class TestGetNotebook:
                     [["src-2"], "Source B"],
                 ],
                 "nb-123",  # id
+                "🧠",  # emoji
             ]
         ]
 
@@ -107,6 +109,7 @@ class TestGetNotebook:
         assert result["source_count"] == 2
         assert result["sources"][0]["id"] == "src-1"
         assert result["sources"][1]["title"] == "Source B"
+        assert result["emoji"] == "🧠"
 
     def test_dataclass_fallback(self, mock_client):
         mock_client.get_notebook.return_value = _make_notebook(id="nb-42", title="Fallback")
@@ -115,6 +118,7 @@ class TestGetNotebook:
 
         assert result["notebook_id"] == "nb-42"
         assert result["title"] == "Fallback"
+        assert result["emoji"] == "📚"
 
     def test_none_raises_not_found(self, mock_client):
         mock_client.get_notebook.return_value = None

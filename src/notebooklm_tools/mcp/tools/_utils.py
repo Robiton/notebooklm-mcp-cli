@@ -21,12 +21,15 @@ from notebooklm_tools.core.api_profile import get_api_profile
 from notebooklm_tools.core.client import NotebookLMClient
 from notebooklm_tools.core.utils import extract_cookies_from_chrome_export
 from notebooklm_tools.services.auth import load_cached_tokens
+from notebooklm_tools.services.errors import ServiceError
 
 # MCP request/response logger
 mcp_logger = logging.getLogger("notebooklm_tools.mcp")
 
 # Parameters that must never appear in log output
-_SENSITIVE_PARAMS = frozenset({"cookies", "csrf_token", "session_id", "request_body"})
+_SENSITIVE_PARAMS = frozenset(
+    {"cookies", "csrf_token", "session_id", "request_body", "request_url"}
+)
 P = ParamSpec("P")
 R = TypeVar("R")
 T = TypeVar("T")
@@ -52,6 +55,15 @@ def error_result(
     if hint:
         result["hint"] = hint
     result.update(extra)
+    return result
+
+
+def service_error_result(error: ServiceError, *, status: str = "error") -> ResultDict:
+    """Serialize a ServiceError without breaking the existing MCP error shape."""
+    result = error_result(error.user_message, hint=error.hint, status=status)
+    details = error.details()
+    if details:
+        result["error_details"] = details
     return result
 
 
@@ -135,6 +147,7 @@ def get_client():
         csrf_token = ""
         session_id = ""
         build_label = ""
+        base_host = ""
 
         if cookie_header:
             # Use environment variables
@@ -147,6 +160,7 @@ def get_client():
                 csrf_token = cached.csrf_token
                 session_id = cached.session_id
                 build_label = cached.build_label or ""
+                base_host = cached.base_host or ""
             else:
                 raise ValueError(
                     "No authentication found. Either:\n"
@@ -160,6 +174,7 @@ def get_client():
             session_id=session_id,
             build_label=build_label,
             api_profile=get_api_profile(),
+            base_host=base_host,
         )
     return _client
 
