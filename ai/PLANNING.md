@@ -138,11 +138,12 @@ Pre-flight:
 - [ ] `.venv/bin/ruff check . && .venv/bin/ruff format --check .` — clean (use pinned ruff, not `uvx ruff`)
 - [ ] `uvx pip-audit` — no unresolved CRITICAL/HIGH CVEs
 
-Version bump (all 4 locations must match):
+Version bump (all 5 locations must match — CI `version-check.yml` enforces this):
 - [ ] `pyproject.toml` → `version = "X.Y.Z"`
 - [ ] `src/notebooklm_tools/__init__.py` → `__version__ = "X.Y.Z"`
 - [ ] `src/notebooklm_tools/data/SKILL.md` → `version: "X.Y.Z"`
 - [ ] `version` file at repo root → `X.Y.Z`
+- [ ] `uv.lock` → run `uv lock` after bumping `pyproject.toml` (records the project's own version)
 
 Documentation:
 - [ ] `CHANGELOG.md` — new version entry under the fork header (Keep a Changelog format)
