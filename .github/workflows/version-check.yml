@@ -8,6 +8,7 @@ on:
       - 'src/notebooklm_tools/__init__.py'
       - 'src/notebooklm_tools/data/SKILL.md'
       - 'version'
+      - 'uv.lock'
   pull_request:
     branches: [main, enterprise-url-support]
   release:
@@ -43,7 +44,11 @@ jobs:
           echo "📦 pyproject.toml:  $TOML_VERSION"
           echo "🐍 __init__.py:     $INIT_VERSION"
           echo "🤖 SKILL.md:        $SKILL_VERSION"
+          # Extract this project's own entry from uv.lock (the line after its name)
+          LOCK_VERSION=$(grep -A1 '^name = "notebooklm-enterprise-mcp"$' uv.lock | sed -n 's/^version = "\(.*\)"/\1/p')
+
           echo "📄 version file:    $FILE_VERSION"
+          echo "🔒 uv.lock:         $LOCK_VERSION"
 
           FAILED=0
 
@@ -65,16 +70,23 @@ jobs:
             FAILED=1
           fi
 
+          if [ "$TOML_VERSION" != "$LOCK_VERSION" ]; then
+            echo ""
+            echo "❌ MISMATCH: pyproject.toml ($TOML_VERSION) ≠ uv.lock ($LOCK_VERSION) — run 'uv lock'"
+            FAILED=1
+          fi
+
           if [ "$FAILED" -eq 1 ]; then
             echo ""
             echo "🛑 Version alignment check FAILED."
-            echo "   All four files must declare the same version before releasing."
+            echo "   All five files must declare the same version before releasing."
             echo ""
             echo "   Files to update:"
             echo "     - pyproject.toml                      → version = \"X.Y.Z\""
             echo "     - src/notebooklm_tools/__init__.py    → __version__ = \"X.Y.Z\""
             echo "     - src/notebooklm_tools/data/SKILL.md  → version: \"X.Y.Z\""
             echo "     - version                             → X.Y.Z"
+            echo "     - uv.lock                             → run 'uv lock'"
             exit 1
           fi
 
