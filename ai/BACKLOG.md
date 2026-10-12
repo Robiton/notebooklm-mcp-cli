@@ -29,10 +29,10 @@ _(nothing active)_
 ### Upstream sync v0.5.24 → v0.15.4 (plan: docs/plans/2026-10-12-upstream-sync-v0.15-plan.md)
 
 - [x] **Batch 1 — baseline merge + v0.6.0** — Merged as #40 (merge commit) 2026-10-12. Fixed a live bug (async query MCP tools always errored), took WSL2, version check covers AGENTS_SECTION + manifest, upstream `release-gate.yml` SHA-pinned and moved to `--extra dev` | Priority: High | Owner: Claude Code | Due: —
-- [ ] **Batch 2 — v0.6.1–v0.7.0** (79 commits, 20 conflicts) — PR open. External HTTP/SSE bind now refused without `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1` (applies with OAuth too); 928 tests pass | Priority: High | Owner: Claude Code | Due: —
+- [x] **Batch 2 — v0.6.1–v0.7.0** — Merged as #41 2026-10-12. External bind refusal adopted; CodeQL high in upstream's live auth check fixed (hostname match) | Priority: High | Owner: Claude Code | Due: —
 - [ ] Decide: should an OAuth-protected HTTP server be exempt from the external-bind refusal (today it needs `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1` like any other)? | Priority: Med | Owner: Brian | Due: —
 - [ ] Decide: wire upstream's live auth check (`_check_auth_status`, same as `nlm login --check`) into `server_info`'s personal-mode status? Today personal reports cookie presence only | Priority: Low | Owner: Brian | Due: —
-- [ ] Batch 3 — v0.7.1–v0.8.0 (44 commits) | Priority: High | Owner: Claude Code | Due: —
+- [ ] **Batch 3 — v0.7.1–v0.8.0** (52 commits, 19 conflicts) — PR open. Also fixes `nlm setup` uvx config installing upstream's package (pre-existing). 1015 tests pass | Priority: High | Owner: Claude Code | Due: —
 - [ ] Batch 4 — v0.8.1–v0.10.0 (110 commits) | Priority: High | Owner: Claude Code | Due: —
 - [ ] Batch 5 — v0.10.1–v0.12.0 (32 commits) | Priority: High | Owner: Claude Code | Due: —
 - [ ] Batch 6 — v0.12.1–v0.15.4 (105 commits; OS credential store — security review + decision) | Priority: High | Owner: Claude Code | Due: —
