@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/core/auth.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1351
 # Purpose:  Authentication helper for NotebookLM MCP CLI
 # Changelog:
+#   2026-10-12 v1.0.8 — hostname-based checks for CodeQL URL-substring alerts (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — live auth check matches the sign-in redirect by hostname, not substring (CodeQL)
@@ -754,9 +755,10 @@ def _fetch_notebooklm_homepage(
 
     loc = get_enterprise_location()
     prefix = ""
-    if "vertexaisearch.cloud.google.com" in url:
+    host = (urlparse(url).hostname or "").lower()
+    if host == "vertexaisearch.cloud.google.com":
         prefix = f"/notebooklm/{loc}"
-    elif "cloud.google.com" in url:
+    elif host.endswith(".cloud.google.com"):
         prefix = f"/{loc}"
 
     project_id = get_enterprise_project_id()

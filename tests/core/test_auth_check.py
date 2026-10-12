@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/core/test_auth_check.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1351
 # Purpose:  Tests for the unified auth validity check (check_auth)
 # Changelog:
+#   2026-10-12 v1.0.8 — hostname-based checks for CodeQL URL-substring alerts (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — tests: login redirect detected by hostname, not query-string substring
 """Test-driven development for the elegant unified auth validity check.
@@ -309,3 +310,25 @@ class TestIntegrationWithExistingCode:
         # After the elegant change, _validate_saved_profile becomes a thin presenter
         # around check_auth(live=True) + nice printing.
         assert True  # placeholder until we do the CLI side cleanup
+
+
+class TestHomepageFetchPrefix:
+    """The enterprise path prefix is chosen by hostname, not by a URL substring (CodeQL)."""
+
+    def _fetched_url(self, base_url, monkeypatch):
+        monkeypatch.setenv("NOTEBOOKLM_LOCATION", "us")
+        monkeypatch.delenv("NOTEBOOKLM_PROJECT_ID", raising=False)
+        from notebooklm_tools.core.auth import _fetch_notebooklm_homepage
+
+        with patch("httpx.Client") as MockClient:
+            client = MockClient.return_value.__enter__.return_value
+            _fetch_notebooklm_homepage({"SID": "x"}, base_url=base_url)
+            return client.get.call_args.args[0]
+
+    def test_cloud_host_gets_location_prefix(self, monkeypatch):
+        url = self._fetched_url("https://notebooklm.cloud.google.com", monkeypatch)
+        assert url == "https://notebooklm.cloud.google.com/us/"
+
+    def test_cloud_mention_outside_host_gets_no_prefix(self, monkeypatch):
+        url = self._fetched_url("https://notebooklm.google.com/x/cloud.google.com", monkeypatch)
+        assert url == "https://notebooklm.google.com/x/cloud.google.com/"

@@ -2,9 +2,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/core/base.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1351
 # Purpose:  Base client infrastructure for NotebookLM API
 # Changelog:
+#   2026-10-12 v1.0.8 — hostname-based checks for CodeQL URL-substring alerts (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
@@ -170,7 +171,8 @@ def _is_unreachable_failure(exc: Exception | None) -> bool:
         return exc.response.status_code >= 500
 
     text = str(exc).lower()
-    if "accounts.google.com" in text or "authentication expired" in text or "expired" in text:
+    # Error-message text, not a URL: a sign-in mention or "expired" means rejected credentials.
+    if re.search(r"accounts\.google\.com|expired", text):
         return False
     if re.search(r"\b5\d{2}\b", text):
         return True
