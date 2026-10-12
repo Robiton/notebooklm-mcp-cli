@@ -32,7 +32,8 @@ _Most recent session at the top._
 
 **Follow-up (same session):**
 - CI fixes on the PR: pinned scanners installed in scaffold-check.yml; all workflow actions pinned to commit SHAs; uv cache off in publish.yml (zizmor). Merged as #34.
-- `uv.lock` churn root cause: the v1.0.8 bump never re-ran `uv lock` (lock said 1.0.7). Synced the version line only (kept `revision = 3`; newer local uv writes 5). `version-check.yml` now also compares `uv.lock`; release checklist has a `uv lock` step.
+- `uv.lock` churn root cause: the v1.0.8 bump never re-ran `uv lock` (lock said 1.0.7). Synced the version line only (kept `revision = 3`; newer local uv writes 5). `version-check.yml` now also compares `uv.lock`; release checklist has a `uv lock` step. Merged as #35.
+- Dependabot: 56 open alerts (2 critical, 18 high), all transitive except pytest. Targeted `uv lock --upgrade-package` on the 14 flagged packages (lock now `revision = 5`). Notable: starlette 0.50→1.7, mcp 1.25→1.30, cryptography 46→50, authlib 1.6→1.8 (adds joserfc). 750 tests pass, `nlm --help` OK, HTTP MCP `initialize` OK, pip-audit clean.
 
 **Next steps:**
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)

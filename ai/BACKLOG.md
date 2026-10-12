@@ -21,7 +21,7 @@ _(nothing active)_
 - [ ] Declare a version-stamp baseline in AGENTS.md (`<!-- notebooklm:version-stamp-baseline X -->`) — `release_status.sh` reports GAP until then | Priority: Low | Owner: Brian | Due: —
 - [ ] Install local scanners so gates stop reporting DID NOT RUN: `brew install osv-scanner actionlint zizmor` | Priority: Low | Owner: Brian | Due: —
 - [ ] **Keep CI scanner pins current** — `scaffold-check.yml` has a LOCAL install step (shellcheck 0.11.0, actionlint 1.7.7, zizmor 1.30.1, osv-scanner 2.6.0, SHA-256 verified) because this repo runs on GitHub-hosted runners only. Scaffold upgrades will sidecar this file — re-apply the step and match pins to `tools/*` constants | Priority: Low | Owner: Brian | Due: —
-- [ ] **Open Dependabot alerts** — 1 critical + 3 high (PyJWT, urllib3) on main as of 2026-10-12; bump in a separate PR | Priority: High | Owner: Brian | Due: —
+- [x] **Open Dependabot alerts** — Completed 2026-10-12. 56 open alerts (2 critical, 18 high) across 14 packages cleared by targeted `uv lock --upgrade-package`; pip-audit clean, 750 tests pass. Note starlette 0.50 → 1.7 (major) via mcp/fastmcp | Priority: High | Owner: Claude Code | Due: —
 - [ ] Wire session hooks into `.claude/settings.json` (`./setup.sh`) — SessionStart/Stop/PreCompact journal | Priority: Low | Owner: Brian | Due: —
 - [x] Resolve stray `uv.lock` churn — Completed 2026-10-12. Root cause: v1.0.8 bump never ran `uv lock`, so the lock still recorded 1.0.7. Synced, and `version-check.yml` + PLANNING release checklist now cover `uv.lock` | Priority: Low | Owner: Claude Code | Due: —
 
