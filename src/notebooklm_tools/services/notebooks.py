@@ -1,9 +1,8 @@
 """Notebooks service — shared business logic for notebook CRUD and metadata operations."""
 
-from typing import TypedDict
-
 from ..core.api_profile import get_api_profile
 from ..core.client import NotebookLMClient
+from ._compat import TypedDict
 from .errors import CreationError, NotFoundError, ServiceError, ValidationError
 
 
