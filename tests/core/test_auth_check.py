@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_auth_check.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1011
+# Purpose:  Tests for the unified auth validity check (check_auth)
+# Changelog:
+#   2026-10-12 v1.0.8 — tests: login redirect detected by hostname, not query-string substring
 """Test-driven development for the elegant unified auth validity check.
 
 The goal is a single source of truth:
@@ -112,6 +119,35 @@ class TestCheckAuthAPI:
             assert result.valid is False
             assert result.reason == "expired"
             assert result.live is True
+
+    def test_check_auth_live_true_ignores_login_host_in_query(self, tmp_path, monkeypatch):
+        """A NotebookLM URL that merely mentions accounts.google.com is not a login redirect."""
+        monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
+
+        mgr = AuthManager("default")
+        mgr.save_profile(cookies={"SID": "ok", "HSID": "ok"}, email="test@example.com")
+
+        with patch("httpx.Client") as MockClient:
+            client = MockClient.return_value.__enter__.return_value
+            req = httpx.Request(
+                "GET",
+                "https://notebooklm.google.com/?original_referer=https://accounts.google.com%23",
+            )
+            client.get.return_value = httpx.Response(200, request=req, text="<html></html>")
+
+            result = check_auth(live=True)
+
+            assert result.reason != "expired"
+
+    def test_is_google_login_url_matches_host_only(self):
+        from notebooklm_tools.core.auth import _is_google_login_url
+
+        assert _is_google_login_url("https://accounts.google.com/ServiceLogin")
+        assert _is_google_login_url("https://ACCOUNTS.google.com/v3/signin")
+        assert not _is_google_login_url(
+            "https://notebooklm.google.com/?r=https://accounts.google.com"
+        )
+        assert not _is_google_login_url("https://accounts.google.com.evil.example/")
 
     def test_auth_manager_has_check_validity(self, tmp_path, monkeypatch):
         """AuthManager should expose a convenient .check_validity() method."""

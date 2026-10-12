@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/auth.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1010
+# Purpose:  Authentication helper for NotebookLM MCP CLI
+# Changelog:
+#   2026-10-12 v1.0.8 — live auth check matches the sign-in redirect by hostname, not substring (CodeQL)
 """Authentication helper for NotebookLM MCP CLI.
 
 Uses Chrome DevTools MCP to extract auth tokens from an authenticated browser session.
@@ -14,6 +21,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from notebooklm_tools.utils.config import get_base_url
 
@@ -588,6 +596,20 @@ class AuthCheckResult:
     details: dict[str, Any] | None = None  # e.g. extracted csrf on success
 
 
+def _is_google_login_url(url: str) -> bool:
+    """True if the URL's host is Google sign-in.
+
+    Checks the parsed hostname, not a substring: NotebookLM URLs can carry
+    ``?original_referer=https://accounts.google.com`` after sign-in, and a
+    substring match would report a valid session as expired.
+    """
+    try:
+        host = (urlparse(url).hostname or "").lower()
+    except ValueError:
+        return False
+    return host == "accounts.google.com" or host.endswith(".accounts.google.com")
+
+
 def _fetch_notebooklm_homepage(
     cookies: dict[str, str] | list[dict],
     *,
@@ -696,7 +718,7 @@ def check_auth(
 
         final_url = str(resp.url)
 
-        if "accounts.google.com" in final_url:
+        if _is_google_login_url(final_url):
             return AuthCheckResult(
                 valid=False,
                 reason="expired",

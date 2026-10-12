@@ -43,6 +43,9 @@ Upstream is now merged by release band rather than cherry-picked (plan:
   chunk; Netscape cookie-file parsing for `--manual` login; Windows CDP login reliability and tab
   reuse; snap-installed browsers; cross-domain artifact download headers; false-negative errors on
   `source_add` / `research_import`.
+- **Fork fix:** upstream's new live auth check treated any URL containing `accounts.google.com`
+  as expired (including NotebookLM's `?original_referer=` after sign-in). It now matches the hostname
+  (CodeQL `py/incomplete-url-substring-sanitization`; still present upstream at v0.15.4).
 - **Fork:** `server_info` keeps the fork's per-mode auth status. Upstream's live check
   (`_check_auth_status`) is merged but not wired in yet.
 
