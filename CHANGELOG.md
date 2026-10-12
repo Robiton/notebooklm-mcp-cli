@@ -68,6 +68,33 @@ Upstream is now merged by release band rather than cherry-picked (plan:
   Two upstream tests were adapted: the Drive freshness test (thread-order race; upstream fixes it the
   same way later) and the file-source error test (the fork resolves the path before upload).
 
+### Upstream v0.8.1 – v0.10.0 (batch 4)
+
+- **Added:** chat sessions (`chat_list` / `chat_get` / `chat_export`, `nlm chat`); native notebook
+  collections; `nlm download all` (bulk, `--all-notebooks`, `--skip-existing`); bounded source and
+  download readiness polling; opt-in MCP tool groups (`NOTEBOOKLM_DISABLED_GROUPS` /
+  `NOTEBOOKLM_DISABLED_TOOLS` / `NOTEBOOKLM_ENABLED_TOOLS`); `server_info` reports MCP capability
+  visibility; experimental CDP RPC transport; Firefox and Dia browser login; configurable rate-limit
+  retries (`NOTEBOOKLM_RATE_LIMIT_MAX_RETRIES`); `docs/WSL_SETUP.md`.
+- **Personal accounts on `notebook.google.com`:** the client now routes to the host the account
+  signed in on (Google's Gemini Notebook rollout), and `nlm setup` registers the MCP server as
+  `gemini-notebook-mcp`, removing the legacy `notebooklm-mcp` / `notebooklm` entries.
+- **Security:** opt-in `NOTEBOOKLM_DOWNLOAD_DIR` confines downloads to one directory (on top of the
+  fork's home/cwd/temp allowlist and sensitive-path blocklist); opt-in file path allowlist for file
+  uploads.
+- **Fixed:** WSL mirrored networking; Claude Desktop third-party config; Windows home resolution;
+  mind map artifact classification; xlsx data table downloads; unreachable backend no longer
+  reported as expired auth; serialized list parameters accepted by MCP tools.
+- **Fork:** upstream's own Enterprise support (batchexecute against `notebooklm.cloud.google.com`,
+  selected by `NOTEBOOKLM_BASE_URL`) is folded into the fork's API profile: enterprise is still
+  chosen by `enterprise.mode`, and upstream's routing helpers read the profile. Following upstream's
+  captured enterprise traffic, the enterprise batchexecute route now lists notebooks with
+  project/location-scoped params and uploads under `/{location}/upload/_/`. The Vertex AI Search host
+  is not supported. MCP tools in enterprise mode still use the Discovery Engine REST API.
+  New tool groups `mode` (`configure_mode`) and `podcast` (`podcast_create`, `podcast_download`).
+- **Fork fix:** `server_info` raised `NameError` since batch 1 (the PyPI update check was dropped in
+  the merge). Restored; upstream's new capability test covers it.
+
 ---
 
 ## [1.0.8] - 2026-04-14 — Backlog sweep

@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/auth.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1233
+# Version:  1.0.8.20261012.1333
 # Purpose:  MCP tools for personal-mode authentication (refresh, save tokens)
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — merged upstream v0.6.0 changes (sync batch 1)
@@ -13,6 +14,7 @@
 import os
 import time
 import urllib.parse
+from http.cookies import SimpleCookie
 
 from ._utils import (
     ESSENTIAL_COOKIES,
@@ -127,12 +129,20 @@ def save_auth_tokens(
             save_tokens_to_cache,
         )
 
-        # Parse cookie string to dict
-        all_cookies = {}
-        for part in cookies.split("; "):
-            if "=" in part:
-                key, value = part.split("=", 1)
-                all_cookies[key.strip()] = value
+        # Parse cookie string to dict. Cookie headers are valid with or
+        # without spaces after semicolons, so do not split only on '; '.
+        try:
+            parsed_cookie = SimpleCookie()
+            parsed_cookie.load(cookies)
+            all_cookies = {key: morsel.value for key, morsel in parsed_cookie.items()}
+        except Exception:
+            all_cookies = {}
+        if not all_cookies:
+            all_cookies = {}
+            for part in cookies.split(";"):
+                if "=" in part:
+                    key, value = part.split("=", 1)
+                    all_cookies[key.strip()] = value.strip()
 
         # Validate required cookies
         required = ["SID", "HSID", "SSID", "APISID", "SAPISID"]
@@ -147,20 +157,19 @@ def save_auth_tokens(
         cookie_dict = {k: v for k, v in all_cookies.items() if k in ESSENTIAL_COOKIES}
 
         # Try to extract CSRF token from request body if provided
-        if not csrf_token and request_body and "at=" in request_body:
-            at_part = request_body.split("at=")[1].split("&")[0]
-            csrf_token = urllib.parse.unquote(at_part)
+        if not csrf_token and request_body:
+            body_params = urllib.parse.parse_qs(request_body, keep_blank_values=True)
+            csrf_token = body_params.get("at", [""])[0]
 
-        # Try to extract session ID from request URL if provided
-        if not session_id and request_url and "f.sid=" in request_url:
-            sid_part = request_url.split("f.sid=")[1].split("&")[0]
-            session_id = urllib.parse.unquote(sid_part)
-
-        # Try to extract build label from request URL if provided
+        # Try to extract session ID and build label from request URL if provided
         build_label = ""
-        if request_url and "bl=" in request_url:
-            bl_part = request_url.split("bl=")[1].split("&")[0]
-            build_label = urllib.parse.unquote(bl_part)
+        if request_url:
+            parsed_url = urllib.parse.urlparse(request_url)
+            query = parsed_url.query or request_url
+            url_params = urllib.parse.parse_qs(query, keep_blank_values=True)
+            if not session_id:
+                session_id = url_params.get("f.sid", [""])[0]
+            build_label = url_params.get("bl", [""])[0]
 
         # Create and save tokens
         tokens = AuthTokens(

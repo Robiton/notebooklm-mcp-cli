@@ -1,14 +1,17 @@
-# NotebookLM MCP - Comprehensive Test Plan
+# Gemini Notebook (formerly Google NotebookLM) MCP - Comprehensive Test Plan
 
-**Purpose:** Verify all **30 consolidated MCP tools** work correctly.
+**Purpose:** Verify all **43 MCP tools** work correctly.
 
-**Version:** 2.4 (Updated 2026-06-20 - synchronized current MCP surface)
+**Version:** 2.6 (Updated 2026-08-03 - synchronized current MCP surface)
 
-**Changes from v2.1:**
-- Current tool count: 39 tools (including consolidated notes, labels, async query, batch, pipeline, tags, and server_info)
+**Changes from v2.4:**
+- Current tool count: 43 tools — added `chat_list`, `chat_get`, `chat_export` (list/view/export notebook chat sessions)
 
-**Changes from v1:**
-- Tools consolidated: 45+ → 29 (-36%)
+**Historical changes from v2.1:**
+- The test plan previously covered 39 tools, including consolidated notes, labels, async query, batch, pipeline, tags, and server_info.
+
+**Historical changes from v1:**
+- Tools were consolidated from 45+ to 29 (-36%) before the current 43-tool surface.
 - `source_add(source_type=...)` replaces 4 source tools
 - `studio_create(artifact_type=...)` replaces 9 creation tools
 - `download_artifact(artifact_type=...)` replaces 9 download tools
@@ -56,13 +59,15 @@ Refresh authentication tokens for NotebookLM.
 ### Test 1.2 - Interactive Login (Primary)
 **Tool:** `save_auth_tokens` (Fallback)
 **CLI:** `nlm login` (Launches Chrome for automated extraction)
+**WSL2 CLI:** `nlm login --wsl` (Supports NAT and mirrored networking modes)
 
 **Prompt:**
 ```
 I need to authenticate with NotebookLM.
 ```
 
-**Expected:** Chrome opens, logs in, and tokens are saved.
+**Expected:** Chrome opens, logs in, and tokens are saved. On WSL2, Windows Chrome opens and
+the CDP connection succeeds in both NAT and mirrored networking modes.
 
 ---
 
@@ -76,6 +81,28 @@ List all my NotebookLM notebooks.
 ```
 
 **Expected:** List of notebooks with counts (owned, shared).
+
+---
+
+### Test 1.3E - Enterprise List and Query
+
+Before running this test, set `NOTEBOOKLM_BASE_URL`, `NOTEBOOKLM_PROJECT_ID`,
+and `NOTEBOOKLM_LOCATION` for a Gemini Notebook Enterprise deployment. The
+project setting is required; the location defaults to `global`. Authenticate
+the profile and make it the default profile used by MCP:
+
+```bash
+nlm login --profile enterprise
+nlm login switch enterprise
+nlm notebook list
+nlm notebook query <enterprise-notebook-id> "Summarize the sources" --new-conversation
+```
+
+**Expected:** Login opens the configured regional project URL, list returns
+Enterprise notebooks, and the query uses the Enterprise streamed endpoint.
+This test is not complete until it is run against an Enterprise deployment with
+a redacted request/response capture; the automated suite only verifies routing
+and payload contracts.
 
 ---
 
@@ -269,6 +296,28 @@ Ask notebook [notebook_id]: "What is artificial intelligence?"
 ```
 
 **Expected:** AI answer with conversation_id.
+
+---
+
+### Test 3.2a - Query Timeout and Async Fallback
+**Tool:** `notebook_query`, `notebook_query_start`, `notebook_query_status`
+**CLI:** `nlm query [notebook_id] "Summarize all sources" --timeout 45`
+
+**Prompt:**
+```
+Ask notebook [notebook_id] a source-heavy question with timeout=45.
+If it times out, retry with timeout=180. Also verify the async workflow:
+notebook_query_start(..., timeout=180), then poll notebook_query_status(query_id).
+```
+
+**Expected:**
+- A timed-out synchronous query returns a structured error with
+  `debug_code=query_deadline_exceeded`, a retryable flag, and a hint to use a
+  longer timeout.
+- The retry with `timeout=180` can complete when the notebook needs more than
+  the default 120-second budget.
+- The async workflow returns a `query_id` immediately and reaches `completed`
+  or a structured `error` status when polled.
 
 ---
 
@@ -565,8 +614,15 @@ Check studio content generation status for notebook [notebook_id].
 ```
 
 **Expected:**
-- List of artifacts with status (in_progress/completed) and URLs.
-- **Verify:** Artifact from Test 5.1b shows `custom_instructions: "Explain this to a 5 year old"`.
+- Default MCP response contains at most 20 artifacts and only lean status fields.
+- `pagination` contains `returned`, `offset`, `limit`, and `has_more`.
+- Polling with `artifact_id` returns only the selected artifact.
+- Calling with `include_details=True` exposes rich fields and the artifact from
+  Test 5.1b shows `custom_instructions: "Explain this to a 5 year old"`.
+- `nlm studio status [notebook_id] --json` remains a plain list containing both
+  `id` and `artifact_id`.
+- `nlm studio status [notebook_id] --json --mcp-compatible` returns the MCP envelope.
+- `nlm video list [notebook_id] --json` returns only video artifacts.
 
 ---
 
@@ -681,6 +737,56 @@ Download slide deck from notebook [notebook_id]:
 ```
 
 **Expected:** Slides downloaded as PDF.
+
+---
+
+### Test 6.6 - Download Data Table Excel Export
+**Tool:** `download_artifact`
+
+**Prompt:**
+```
+Download the Excel data-table export from notebook [notebook_id]:
+- artifact_type: data_table_xlsx
+- output_path: /tmp/data-table.xlsx
+```
+
+**Expected:** The completed type-10 artifact is downloaded byte-for-byte as XLSX.
+
+---
+
+### Test 6.7 - Download All Artifacts
+**Tool:** `download_all_artifacts`
+**CLI:** `nlm download all [notebook_id] --output-dir /tmp/exports`
+
+**Prompt:**
+```
+Download all completed artifacts from notebook [notebook_id]:
+- output_dir: /tmp/exports
+```
+
+**Expected:** A subdirectory named after the notebook title created under the
+output dir, containing every completed artifact named after its title
+(report → .md, mind_map → .json, video → .mp4, slide_deck → .pdf, ...).
+In-progress/failed artifacts are listed as skipped; result reports
+downloaded/failed/skipped counts. Also test `--types video,report` filtering.
+
+---
+
+### Test 6.7 - Sweep All Notebooks (Incremental)
+**Tool:** `download_all_artifacts` with `all_notebooks=True, skip_existing=True`
+**CLI:** `nlm download all --all-notebooks --skip-existing --output-dir /tmp/exports`
+
+**Prompt:**
+```
+Download all artifacts from every notebook into /tmp/exports, skipping
+files that already exist.
+```
+
+**Expected:** One subdirectory per notebook. On a second run with
+`skip_existing`, previously downloaded artifacts are reported as skipped
+("already downloaded") and only new artifacts are fetched. A failure on one
+notebook doesn't stop the sweep; result includes per-notebook counts and
+`errored_notebooks`.
 
 ---
 
@@ -906,7 +1012,7 @@ Delete note [note_id] in notebook [notebook_id]:
 
 **Prompt:**
 ```
-Get NotebookLM MCP server version and check for updates.
+Get Gemini Notebook MCP server version and check for updates.
 ```
 
 **Expected:**
@@ -917,7 +1023,7 @@ Get NotebookLM MCP server version and check for updates.
 
 ---
 
-## Summary: 29 Consolidated Tools
+## Summary: 31 Consolidated Tools
 
 | Category | Tools | Count |
 |----------|-------|-------|
@@ -927,12 +1033,12 @@ Get NotebookLM MCP server version and check for updates.
 | **Sharing** | `notebook_share_status`, `notebook_share_public`, `notebook_share_invite` | 3 |
 | **Research** | `research_start`, `research_status`, `research_import` | 3 |
 | **Studio** | `studio_create`, `studio_status`, `studio_delete`, `studio_revise` | 4 |
-| **Downloads** | `download_artifact` | 1 |
+| **Downloads** | `download_artifact`, `download_all_artifacts` | 2 |
 | **Exports** | `export_artifact` | 1 |
 | **Chat** | `notebook_query`, `chat_configure` | 2 |
 | **Notes** | `note` (unified: list, create, update, delete) | 1 |
 | **Server** | `server_info` | 1 |
-| **Total** | | **30** |
+| **Total** | | **31** |
 
 ---
 

@@ -32,11 +32,12 @@ _(nothing active)_
 - [x] **Batch 2 — v0.6.1–v0.7.0** — Merged as #41 2026-10-12. External bind refusal adopted; CodeQL high in upstream's live auth check fixed (hostname match) | Priority: High | Owner: Claude Code | Due: —
 - [ ] Decide: should an OAuth-protected HTTP server be exempt from the external-bind refusal (today it needs `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1` like any other)? | Priority: Med | Owner: Brian | Due: —
 - [ ] Decide: wire upstream's live auth check (`_check_auth_status`, same as `nlm login --check`) into `server_info`'s personal-mode status? Today personal reports cookie presence only | Priority: Low | Owner: Brian | Due: —
-- [ ] **Batch 3 — v0.7.1–v0.8.0** (52 commits, 19 conflicts) — PR open. Also fixes `nlm setup` uvx config installing upstream's package (pre-existing). 1015 tests pass | Priority: High | Owner: Claude Code | Due: —
-- [ ] Batch 4 — v0.8.1–v0.10.0 (110 commits) | Priority: High | Owner: Claude Code | Due: —
+- [x] **Batch 3 — v0.7.1–v0.8.0** (52 commits, 19 conflicts) — Merged as #42 2026-10-12. Also fixes `nlm setup` uvx config installing upstream's package (pre-existing). 1015 tests pass | Priority: High | Owner: Claude Code | Due: —
+- [ ] **Batch 4 — v0.8.1–v0.10.0** (110 commits, 33 conflicts) — PR open. Upstream's own Enterprise support folded into the fork's APIProfile; restores `server_info` (NameError since batch 1). 1475 tests pass | Priority: High | Owner: Claude Code | Due: —
+- [ ] **Live-test the enterprise batchexecute (CLI) path after batch 4** — notebook listing params and upload path now follow upstream's captured enterprise traffic; upstream live-verified `notebook.cloud.google.com` / `global` with its own code, but the fork's CLI path (fork profile) has not been run against a live Enterprise deployment | Priority: High | Owner: Brian | Due: —
 - [ ] Batch 5 — v0.10.1–v0.12.0 (32 commits) | Priority: High | Owner: Claude Code | Due: —
 - [ ] Batch 6 — v0.12.1–v0.15.4 (105 commits; OS credential store — security review + decision) | Priority: High | Owner: Claude Code | Due: —
-- [ ] Decide: rebrand wording ("Gemini Notebook") and fork release version after sync (1.1.0?) | Priority: Med | Owner: Brian | Due: —
+- [ ] Decide: rebrand wording ("Gemini Notebook") and README positioning now that upstream also supports Enterprise. Release target after sync: v1.5 (plan to follow) | Priority: Med | Owner: Brian | Due: —
 - [ ] Close issue #26 (upstream drift) when batch 6 merges | Priority: Low | Owner: Claude Code | Due: —
 
 ### Research tasks

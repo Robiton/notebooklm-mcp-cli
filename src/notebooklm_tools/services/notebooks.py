@@ -1,11 +1,14 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/notebooks.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.1333
 # Purpose:  Notebooks service — shared business logic for notebook CRUD and metadata operations
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Notebooks service — shared business logic for notebook CRUD and metadata operations."""
+
+import httpx
 
 from ..core.api_profile import get_api_profile
 from ..core.client import NotebookLMClient
@@ -25,6 +28,7 @@ class NotebookInfo(TypedDict):
     is_shareable: bool
     created_at: str | None
     modified_at: str | None
+    emoji: str | None
 
 
 class NotebookListResult(TypedDict):
@@ -52,6 +56,7 @@ class NotebookDetailResult(TypedDict):
     source_count: int
     url: str
     sources: list[SourceInfo]
+    emoji: str | None
 
 
 class NotebookSummaryResult(TypedDict):
@@ -121,6 +126,7 @@ def list_notebooks(
                 "is_shareable": nb.is_shareable,
                 "created_at": nb.created_at,
                 "modified_at": nb.modified_at,
+                "emoji": getattr(nb, "emoji", None),
             }
             for nb in notebooks[:max_results]
         ],
@@ -134,6 +140,7 @@ def list_notebooks(
 def get_notebook(
     client: NotebookLMClient,
     notebook_id: str,
+    timeout: float | None = None,
 ) -> NotebookDetailResult:
     """Get notebook details including source list.
 
@@ -152,7 +159,10 @@ def get_notebook(
         ServiceError: If the API call fails
     """
     try:
-        nb = client.get_notebook(notebook_id)
+        kwargs = {"timeout": timeout} if timeout is not None else {}
+        nb = client.get_notebook(notebook_id, **kwargs)
+    except httpx.TimeoutException:
+        raise
     except Exception as e:
         raise ServiceError(f"Failed to get notebook: {e}") from e
 
@@ -170,6 +180,7 @@ def get_notebook(
             title = data[0] if isinstance(data[0], str) else "Untitled"
             sources_data = data[1] if len(data) > 1 and isinstance(data[1], list) else []
             nb_id = data[2] if len(data) > 2 else notebook_id
+            emoji = data[3] if len(data) > 3 and isinstance(data[3], str) else None
 
             sources: list[SourceInfo] = []
             for src in sources_data:
@@ -184,6 +195,7 @@ def get_notebook(
                 "source_count": len(sources),
                 "url": get_api_profile().web_url(nb_id),
                 "sources": sources,
+                "emoji": emoji,
             }
 
     # Fallback: if nb is a dataclass-like object with attrs (e.g. from list_notebooks)
@@ -194,6 +206,7 @@ def get_notebook(
             "source_count": getattr(nb, "source_count", 0),
             "url": getattr(nb, "url", get_api_profile().web_url(nb.id)),
             "sources": [],
+            "emoji": getattr(nb, "emoji", None),
         }
 
     # Last-resort fallback
