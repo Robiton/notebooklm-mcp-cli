@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_debug_page_permissions.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Regression test for the debug_page.html dump permissions.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Regression test for the debug_page.html dump permissions.
 
 Covers GHSA-747w-q55c-m74m: the dump was written with the process umask and

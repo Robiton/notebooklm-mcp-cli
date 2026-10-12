@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_usage_profiles.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Named usage checks load only the requested account and release its client.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Named usage checks load only the requested account and release its client."""
 
 from unittest.mock import patch

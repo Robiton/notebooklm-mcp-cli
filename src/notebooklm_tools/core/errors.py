@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/errors.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Exception classes for NotebookLM API artifacts and client errors.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 # src/notebooklm_tools/core/errors.py
 """Exception classes for NotebookLM API artifacts and client errors.
 

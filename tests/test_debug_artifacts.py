@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_debug_artifacts.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  test_debug_artifacts.py
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 import importlib.util
 import subprocess
 from pathlib import Path

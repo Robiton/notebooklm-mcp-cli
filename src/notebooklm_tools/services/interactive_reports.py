@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/interactive_reports.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Interactive report services: reads, element settings, planning and generation.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Interactive report services: reads, element settings, planning and generation.
 
 cli/ and mcp/ call these (directly or via the re-exports in services.studio);

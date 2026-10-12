@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     scripts/inject_cookies_and_inspect.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1438
+# Purpose:  Script to launch Chrome, inject saved cookies, and inspect DOM.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """
 Script to launch Chrome, inject saved cookies, and inspect DOM.
 """
