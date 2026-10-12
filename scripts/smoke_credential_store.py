@@ -154,10 +154,11 @@ def step1_lifecycle(temp_dir: Path, service_name: str) -> bool:
     # 3. Read back credentials and verify decryption
     loaded = auth.load_profile(force_reload=True)
     if loaded.cookies != initial_cookies:
-        log_fail(f"Decrypted cookies mismatch: got {loaded.cookies}, expected {initial_cookies}")
+        # Fork: never print credential values, even test ones (CodeQL py/clear-text-logging).
+        log_fail("Decrypted cookies do not match the saved cookies")
         return False
     if loaded.csrf_token != "dummy_csrf_token_abc":
-        log_fail(f"Decrypted csrf_token mismatch: got {loaded.csrf_token}")
+        log_fail("Decrypted csrf_token does not match the saved token")
         return False
     log_pass("Credentials read and decrypted successfully from credentials.enc")
 
@@ -330,7 +331,7 @@ def step3_concurrent_processes(temp_dir: Path, service_name: str) -> bool:
     loaded = auth.load_profile(force_reload=True)
     marker = loaded.cookies.get("worker_marker")
     if marker not in ("PROC_1", "PROC_2"):
-        log_fail(f"Corrupted or unexpected worker marker in cookies: {loaded.cookies}")
+        log_fail(f"Corrupted or unexpected worker marker in cookies: {sorted(loaded.cookies)}")
         return False
 
     log_pass(
