@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_file_upload.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1233
+# Purpose:  Tests for MCP file upload functionality via consolidated source_add.
+# Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 """Tests for MCP file upload functionality via consolidated source_add."""
 
 import tempfile

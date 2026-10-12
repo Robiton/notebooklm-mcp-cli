@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/core/auth.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1010
+# Version:  1.0.8.20261012.1233
 # Purpose:  Authentication helper for NotebookLM MCP CLI
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — live auth check matches the sign-in redirect by hostname, not substring (CodeQL)
 """Authentication helper for NotebookLM MCP CLI.
 

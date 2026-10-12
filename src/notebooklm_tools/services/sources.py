@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/sources.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.1233
 # Purpose:  Sources service — shared validation and logic for source management
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Sources service — shared validation and logic for source management."""
 

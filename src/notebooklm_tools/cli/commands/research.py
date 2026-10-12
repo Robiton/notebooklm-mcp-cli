@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/cli/commands/research.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0951
+# Version:  1.0.8.20261012.1233
 # Purpose:  Research CLI commands
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Research CLI commands."""
