@@ -1,12 +1,20 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/downloads.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Downloads service — shared validation and routing for artifact downloads
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Downloads service — shared validation and routing for artifact downloads."""
 
 import inspect
 import tempfile
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 
 from ..core.client import NotebookLMClient
+from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
 
 VALID_ARTIFACT_TYPES = (

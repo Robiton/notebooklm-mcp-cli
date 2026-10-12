@@ -1,16 +1,22 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/cli/commands/research.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Research CLI commands
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Research CLI commands."""
 
 import typer
-from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from notebooklm_tools.cli.utils import get_client, handle_error
+from notebooklm_tools.cli.utils import get_client, handle_error, make_console
 from notebooklm_tools.core.alias import get_alias_manager
 from notebooklm_tools.core.exceptions import NLMError
 from notebooklm_tools.services import ServiceError
 from notebooklm_tools.services import research as research_service
 
-console = Console()
+console = make_console()
 app = typer.Typer(
     help="Research and discover sources",
     rich_markup_mode="rich",

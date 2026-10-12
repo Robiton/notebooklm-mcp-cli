@@ -17,7 +17,7 @@ _(nothing active)_
 
 - [x] **Merge scaffold upgrade PR** — Completed 2026-10-12. Merged as Robiton#34 (4ee7ad6) with all checks green | Priority: High | Owner: Brian | Due: —
 - [ ] **CHANGELOG gate mismatch** — `tools/changelog.sh --check` (preflight) wants a tag-generated CHANGELOG.md; ours is hand-maintained with fork + upstream history. Decide: scaffold opt-out (raise on Robiton/ai-project-scaffold) vs. move upstream history to an archive and adopt generated changelog **Findings 2026-10-12:** `changelog.sh --write` would replace the 970-line hand-written CHANGELOG with 168 lines: one commit subject per tag, with the upstream v0.5.x tags interleaved among the fork's releases, and our tags are lightweight (no annotated messages). Scaffold has no opt-out; filed Robiton/ai-project-scaffold#380 asking for a declared one (like `scaffold:header-baseline`). Recommendation: keep the hand-written file and accept the known preflight FAIL until #380 lands, then add the marker | Priority: Med | Owner: Brian | Due: —
-- [ ] **Header rule vs. upstream files** — CI now fails any PR editing a `.py` file without a scaffold header. Decide whether upstream-derived `src/` files get headers on edit (cherry-pick conflict surface) or need a declared exemption (scaffold has none today) **Findings 2026-10-12:** by design the only exemption is the history baseline; any touched file needs a header (`header_check.sh` has no per-path exemption). Cost for cherry-picks is a top-of-file block upstream never edits, so conflicts there are unlikely. Recommendation: accept the rule (add headers as upstream files are edited), revisit only if a sync actually conflicts | Priority: Med | Owner: Brian | Due: —
+- [ ] **Header rule vs. upstream files** — **Recommendation reversed 2026-10-12:** a sync merge touches every upstream file it changes (121 header FAILs in batch 1, 271 `.py` files over the full v0.15 sync); stamping fork headers on upstream code is false provenance and churn. Filed Robiton/ai-project-scaffold#385 for a declared path exemption. Until it ships, `scaffold-check` is expected red on upstream-sync PRs (not a required check); fork-authored files still get headers | Priority: Med | Owner: Brian | Due: —
 - [ ] Declare a version-stamp baseline in AGENTS.md (`<!-- notebooklm:version-stamp-baseline X -->`) — `release_status.sh` reports GAP until then | Priority: Low | Owner: Brian | Due: —
 - [ ] Install local scanners so gates stop reporting DID NOT RUN: `brew install osv-scanner actionlint zizmor` | Priority: Low | Owner: Brian | Due: —
 - [ ] **Keep CI scanner pins current** — `scaffold-check.yml` has a LOCAL install step (shellcheck 0.11.0, actionlint 1.7.7, zizmor 1.30.1, osv-scanner 2.6.0, SHA-256 verified) because this repo runs on GitHub-hosted runners only. Scaffold upgrades will sidecar this file — re-apply the step and match pins to `tools/*` constants. Upstream fix requested in Robiton/ai-project-scaffold#382; drop the local step once it ships | Priority: Low | Owner: Brian | Due: —
@@ -25,6 +25,17 @@ _(nothing active)_
 - [ ] **Watch scaffold issues filed from this upgrade** — on the next `tools/scaffold_upgrade.sh`, check whether these shipped and drop the matching local workarounds: #380 CHANGELOG opt-out (add marker), #381 guarded `git remote add` flagged (could re-expand the one-liner in `upstream-check.yml`), #382 scanner install in scaffold-check.yml (drop LOCAL ADDITION), #383 pre-0.4.0 adoption has no base (none needed now), #384 vendored `tools/*.py` vs project ruff (could drop `extend-exclude`) | Priority: Low | Owner: Brian | Due: —
 - [ ] Wire session hooks into `.claude/settings.json` (`./setup.sh`) — SessionStart/Stop/PreCompact journal | Priority: Low | Owner: Brian | Due: —
 - [x] Resolve stray `uv.lock` churn — Completed 2026-10-12. Root cause: v1.0.8 bump never ran `uv lock`, so the lock still recorded 1.0.7. Synced, and `version-check.yml` + PLANNING release checklist now cover `uv.lock` | Priority: Low | Owner: Claude Code | Due: —
+
+### Upstream sync v0.5.24 → v0.15.4 (plan: docs/plans/2026-10-12-upstream-sync-v0.15-plan.md)
+
+- [ ] **Batch 1 — baseline merge + v0.6.0** — PR open; fixes live bug (async query MCP tools always errored), takes WSL2, version check covers AGENTS_SECTION + manifest | Priority: High | Owner: Claude Code | Due: —
+- [ ] Batch 2 — v0.6.1–v0.7.0 (71 commits) | Priority: High | Owner: Claude Code | Due: —
+- [ ] Batch 3 — v0.7.1–v0.8.0 (44 commits) | Priority: High | Owner: Claude Code | Due: —
+- [ ] Batch 4 — v0.8.1–v0.10.0 (110 commits) | Priority: High | Owner: Claude Code | Due: —
+- [ ] Batch 5 — v0.10.1–v0.12.0 (32 commits) | Priority: High | Owner: Claude Code | Due: —
+- [ ] Batch 6 — v0.12.1–v0.15.4 (105 commits; OS credential store — security review + decision) | Priority: High | Owner: Claude Code | Due: —
+- [ ] Decide: rebrand wording ("Gemini Notebook") and fork release version after sync (1.1.0?) | Priority: Med | Owner: Brian | Due: —
+- [ ] Close issue #26 (upstream drift) when batch 6 merges | Priority: Low | Owner: Claude Code | Due: —
 
 ### Research tasks
 

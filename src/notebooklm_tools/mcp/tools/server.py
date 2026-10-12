@@ -1,7 +1,15 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/server.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Server tools - Server info with auth status
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Server tools - Server info with auth status."""
 
 import json
 import subprocess
+import time
 import urllib.request
 from typing import Any, cast
 
@@ -42,8 +50,8 @@ def _check_personal_auth() -> str:
 def _get_latest_pypi_version() -> str | None:
     """Fetch the latest version from PyPI."""
     try:
-        url = "https://pypi.org/pypi/notebooklm-mcp-cli/json"
-        req = urllib.request.Request(url, headers={"User-Agent": "notebooklm-mcp-cli"})
+        url = "https://pypi.org/pypi/notebooklm-enterprise-mcp/json"
+        req = urllib.request.Request(url, headers={"User-Agent": "notebooklm-enterprise-mcp"})
         with urllib.request.urlopen(req, timeout=2) as response:
             data = cast(dict[str, Any], json.loads(response.read().decode()))
             info = data.get("info")
@@ -70,12 +78,45 @@ def _compare_versions(current: str, latest: str) -> bool:
         return False
 
 
+def _check_auth_status() -> str:
+    """Check local auth token state (no network call).
+
+    Returns one of:
+        configured  — tokens present and < 7 days old
+        stale       — tokens present but > 7 days old
+        not_configured — no tokens found
+        error       — failed to check
+    """
+    try:
+        from notebooklm_tools.core.auth import load_cached_tokens
+
+        cached = load_cached_tokens()
+        if not cached or not cached.cookies:
+            return "not_configured"
+        age_hours = (time.time() - cached.extracted_at) / 3600
+        return "stale" if age_hours > 168 else "configured"
+    except Exception:
+        return "error"
+
+
 @logged_tool()
 def server_info() -> dict[str, Any]:
-    """Get server version, mode, and auth status.
+    """Get server version, mode, auth status, and check for updates.
+
+    AI assistants: If update_available is True, inform the user that a new
+    version is available and suggest updating with the provided command.
+
+    Note: auth_status is a LOCAL check (token presence and age on disk).
+    It does NOT make a live Google API call. A "configured" status means
+    tokens exist and are recent — not that they are guaranteed valid.
 
     Returns:
-        dict with version, configuration, and auth status for both modes.
+        dict with version info, configuration, and auth status for both modes:
+        - version: Current installed version
+        - latest_version: Latest version on PyPI (or None if check failed)
+        - update_available: True if a newer version exists
+        - auth_status: per-mode status (configured | stale | not_configured | error)
+        - update_command: Command to run to update
     """
     from notebooklm_tools.utils.config import get_config
 
@@ -94,6 +135,10 @@ def server_info() -> dict[str, Any]:
             "enterprise": _check_enterprise_auth(),
             "personal": _check_personal_auth(),
         },
+        "latest_version": latest,
+        "update_available": update_available,
+        "update_command": "uv tool upgrade notebooklm-enterprise-mcp",
+        "pip_update_command": "pip install --upgrade notebooklm-enterprise-mcp",
     }
 
     if mode == "enterprise":

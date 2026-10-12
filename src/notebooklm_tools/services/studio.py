@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/studio.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Studio service — artifact creation, status, rename, delete
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Studio service — artifact creation, status, rename, delete.
 
 Centralizes:
@@ -13,11 +20,12 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any
 
 from notebooklm_tools.core import constants
 from notebooklm_tools.core.errors import RPCError
 
+from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
 
 logger = logging.getLogger(__name__)

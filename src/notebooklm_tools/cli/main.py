@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/cli/main.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Main CLI application for NotebookLM Tools
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Main CLI application for NotebookLM Tools."""
 
 import contextlib
@@ -14,6 +21,7 @@ from notebooklm_tools.cli.commands.cross import app as cross_app
 from notebooklm_tools.cli.commands.doctor import app as doctor_app
 from notebooklm_tools.cli.commands.download import app as download_app
 from notebooklm_tools.cli.commands.export import app as export_app
+from notebooklm_tools.cli.commands.label import app as label_app
 from notebooklm_tools.cli.commands.note import app as note_app
 from notebooklm_tools.cli.commands.notebook import app as notebook_app
 from notebooklm_tools.cli.commands.pipeline import app as pipeline_app
@@ -132,6 +140,11 @@ def login_callback(
         "--clear",
         help="Delete the localized Chrome profile data before logging in, to switch Google accounts",
     ),
+    wsl: bool = typer.Option(
+        False,
+        "--wsl",
+        help="Launch Windows Chrome from WSL (fixes terminal corruption on WSL2)",
+    ),
 ) -> None:
     """
     Authenticate with NotebookLM.
@@ -141,6 +154,7 @@ def login_callback(
     Use --check to validate existing credentials.
     Use --provider openclaw --cdp-url <url> to read auth from an existing
     OpenClaw-managed browser CDP endpoint.
+    Use --wsl on WSL2 to launch Windows Chrome and avoid terminal corruption.
 
     To switch active accounts, run `nlm login switch <profile>`.
     """
@@ -242,7 +256,111 @@ def login_callback(
         # user explicitly passes their own --cdp-url value.
         _BUILTIN_CDP_DEFAULT = "http://127.0.0.1:18800"
 
-        if provider == "openclaw" or (provider == "builtin" and cdp_url != _BUILTIN_CDP_DEFAULT):
+        if wsl:
+            # WSL mode: Launch Windows Chrome from WSL to avoid terminal corruption
+            from notebooklm_tools.utils.wsl import (
+                check_firewall_rule,
+                get_windows_host_ip,
+                is_wsl,
+                launch_windows_chrome,
+                terminate_windows_chrome,
+                wait_for_cdp,
+            )
+
+            if not is_wsl():
+                console.print(
+                    "[yellow]Warning:[/yellow] --wsl flag used but not in WSL environment. Ignoring."
+                )
+            else:
+                from notebooklm_tools.utils.wsl import DEFAULT_WSL_CDP_PORT
+
+                wsl_port = DEFAULT_WSL_CDP_PORT
+                # Chrome binds to localhost only (newer Chrome ignores
+                # --remote-debugging-address=0.0.0.0), so we launch it
+                # on a different port and rely on a netsh portproxy rule
+                # (listenport=wsl_port -> connectport=chrome_port) to
+                # bridge WSL traffic to localhost.
+                chrome_port = wsl_port + 1
+                windows_ip = get_windows_host_ip()
+
+                if not windows_ip:
+                    console.print("[red]Error:[/red] Could not determine Windows host IP.")
+                    console.print("[dim]Hint: Check /etc/resolv.conf in WSL[/dim]")
+                    raise typer.Exit(1)
+
+                wsl_cdp_url = f"http://{windows_ip}:{wsl_port}"
+
+                console.print("[bold]WSL2 detected - launching Windows Chrome[/bold]")
+                console.print(
+                    f"[dim]Windows host: {windows_ip}:{wsl_port} (proxy) -> localhost:{chrome_port} (Chrome)[/dim]"
+                )
+                console.print("[dim]Chrome binds to localhost; netsh portproxy bridges WSL[/dim]")
+
+                # Check Windows Firewall
+
+                if not check_firewall_rule(wsl_port):
+                    console.print("\n[yellow]Windows Firewall Setup Required[/yellow]")
+                    console.print(
+                        f"\nA firewall rule is needed to allow WSL to connect to Windows Chrome on port {wsl_port}."
+                    )
+                    console.print(
+                        "\n[bold]Step 1:[/bold] Open [cyan]Windows PowerShell as Administrator[/cyan] and run:"
+                    )
+                    console.print(
+                        f'\n  New-NetFirewallRule -DisplayName "NotebookLM-CDP-{wsl_port}" -Direction Inbound -Action Allow -Protocol TCP -LocalPort {wsl_port} -RemoteAddress LocalSubnet\n'
+                    )
+                    console.print(
+                        "[bold]Step 2:[/bold] After running the command above, press [bold]Enter[/bold] here to continue..."
+                    )
+
+                    # Simple wait for Enter
+                    input()
+
+                    # Re-check if rule was created
+                    if check_firewall_rule(wsl_port):
+                        console.print("[green]✓[/green] Firewall rule detected!")
+                    else:
+                        console.print(
+                            "[yellow]Warning:[/yellow] Rule not yet detected, but will attempt to continue..."
+                        )
+                    console.print()
+                else:
+                    console.print("[dim]Windows Firewall: rule exists[/dim]")
+                console.print()
+
+                try:
+                    chrome_process = launch_windows_chrome(chrome_port)
+                    console.print(f"[dim]Chrome PID: {chrome_process.pid}[/dim]")
+                except RuntimeError as e:
+                    console.print(f"[red]Error:[/red] {e}")
+                    console.print("[dim]Hint: Ensure Chrome is installed on Windows side[/dim]")
+                    raise typer.Exit(1) from e
+
+                console.print("[dim]Waiting for Chrome DevTools Protocol...[/dim]")
+                if not wait_for_cdp(wsl_cdp_url, timeout=30):
+                    console.print("[red]Error:[/red] Chrome did not start within 30 seconds.")
+                    console.print("\n[yellow]Troubleshooting:[/yellow]")
+                    console.print("  1. Ensure the Windows Firewall rule was created (step above)")
+                    console.print("  2. If Chrome is still running, close it and retry")
+                    console.print("  3. Or use manual mode: nlm login --manual --file <path>")
+                    terminate_windows_chrome(chrome_process)
+                    raise typer.Exit(1)
+
+                console.print("[green]✓[/green] Chrome ready, connecting...\n")
+
+                try:
+                    result = extract_cookies_via_existing_cdp(
+                        cdp_url=wsl_cdp_url,
+                        wait_for_login=True,
+                        login_timeout=300,
+                    )
+                finally:
+                    # Always terminate Windows Chrome
+                    terminate_windows_chrome(chrome_process)
+
+                launched_local_chrome = True
+
+        elif provider == "openclaw" or (provider == "builtin" and cdp_url != _BUILTIN_CDP_DEFAULT):
             # External CDP path: connect to an already-running browser.
             # Triggered by --provider openclaw OR when the user explicitly
             # passes a --cdp-url (indicating they have a running Chrome).
@@ -553,6 +671,7 @@ app.add_typer(login_app, name="login")
 
 # Register noun-first subcommands (existing structure)
 app.add_typer(notebook_app, name="notebook", help="Manage notebooks")
+app.add_typer(label_app, name="label", help="Manage source labels")
 app.add_typer(note_app, name="note", help="Manage notes")
 app.add_typer(source_app, name="source", help="Manage sources")
 app.add_typer(chat_app, name="chat", help="Configure chat settings")
@@ -662,6 +781,10 @@ def main(
 def cli_main():
     """Main CLI entry point with error handling."""
     import sys
+
+    from notebooklm_tools.utils.io_encoding import configure_stdio_utf8_on_windows
+
+    configure_stdio_utf8_on_windows()
 
     try:
         app()
