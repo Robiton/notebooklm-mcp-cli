@@ -1,6 +1,6 @@
 # Upstream sync plan: v0.5.24 → v0.15.4
 
-**Date:** 2026-10-12 · **Status:** batches 1–2 merged (#40, #41); batch 3 (v0.8.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
+**Date:** 2026-10-12 · **Status:** batches 1–3 merged (#40–#42); batch 4 (v0.10.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
 
 ## Where we are
 
@@ -138,6 +138,30 @@ conflicts.
 - **Upstream ignores `docs/plans/`** in `.gitignore`, which the fork tracks.
 - **Pre-existing fork bug found:** `nlm setup` uvx config ran `--from notebooklm-mcp-cli`
   (upstream's package). Fixed, together with CLI_GUIDE, MCP_GUIDE and the AGENTS_SECTION template.
+
+## Findings from batch 4
+
+- **Upstream built its own Enterprise support.** v0.9.x/v0.10.0 add batchexecute against
+  `notebooklm.cloud.google.com`, selected when `NOTEBOOKLM_BASE_URL` points at a cloud host. The fork
+  already had a batchexecute enterprise route (`APIProfile`, selected by `enterprise.mode`) plus the
+  REST client for MCP. Resolution: one source of truth. `BaseClient._is_enterprise()`, the location
+  prefix and the query endpoint now read the fork's profile, so upstream's new enterprise branches
+  (notebook listing, chat) follow the fork's mode. Upstream's Vertex AI Search host is not supported.
+  Upstream's enterprise structures come from a contributor capture, not a live run; the fork's
+  had no recorded verification either. Listing params and the upload path now follow the capture.
+  **Needs a live Enterprise test of the CLI path** (BACKLOG).
+- **Personal accounts on `notebook.google.com`** (upstream #269): kept. The client routes to the
+  host the account signed in on; `nlm setup` registers `gemini-notebook-mcp`.
+- **`git checkout --ours` discards clean upstream hunks too.** On a file with only a version
+  conflict (SKILL.md had 291 changed lines upstream), take ours per hunk (`hunk.py`), not per file.
+  Whole-file ours is only right for files the fork owns outright (README, CONTRIBUTING, AGENTS.md,
+  CLAUDE.md, CHANGELOG, workflows).
+- **Batch 1 regression found:** the batch 1 merge dropped `server_info`'s PyPI check, leaving
+  `latest` undefined (`NameError` on every call). No fork test called `server_info`; upstream's new
+  capability test did. Fixed here.
+- **Rebrand reaches identity strings.** Server name, titles and package metadata stay the fork's
+  pending decision 2; doc body text that merged cleanly carries "Gemini Notebook". One upstream
+  test asserting the server name is skipped with a pointer to the decision.
 
 ## Open decisions (Brian)
 
