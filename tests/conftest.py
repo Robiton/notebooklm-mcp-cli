@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/conftest.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1333
+# Purpose:  Shared test fixtures — personal mode, isolated storage, no cookie rotation.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Shared test fixtures — personal mode, isolated storage, no cookie rotation."""
 
 import os

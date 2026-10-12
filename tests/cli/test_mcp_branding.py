@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_mcp_branding.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1333
+# Purpose:  Tests for the Gemini Notebook MCP branding contract.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Tests for the Gemini Notebook MCP branding contract."""
 
 from pathlib import Path
