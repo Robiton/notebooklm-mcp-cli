@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/cli/test_mcp_branding.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for the Gemini Notebook MCP branding contract.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Tests for the Gemini Notebook MCP branding contract."""
 
@@ -12,10 +13,10 @@ from pathlib import Path
 import pytest
 
 from notebooklm_tools.cli.commands.setup import (
-    MCP_SERVER_CMD,
     MCP_SERVER_NAME,
     _add_mcp_server,
     _add_vscode_mcp_server,
+    _default_server_command,
 )
 from notebooklm_tools.mcp.server import mcp
 
@@ -26,7 +27,7 @@ def test_json_mcp_setup_uses_gemini_notebook_server_name():
     _add_mcp_server(config)
 
     assert MCP_SERVER_NAME == "gemini-notebook-mcp"
-    assert config["mcpServers"][MCP_SERVER_NAME]["command"] == MCP_SERVER_CMD
+    assert config["mcpServers"][MCP_SERVER_NAME]["command"] == _default_server_command()
 
 
 def test_vscode_mcp_setup_uses_gemini_notebook_server_name():

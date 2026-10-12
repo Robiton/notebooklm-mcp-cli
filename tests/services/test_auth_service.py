@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_auth_service.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for the services.auth re-export shim.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for the services.auth re-export shim.
 
 The shim exists to satisfy the layering rule (cli/ and mcp/ must not import
@@ -30,9 +37,11 @@ def test_shim_reexports_expected_auth_symbols():
             "confirm_auth_via_api",
             "credentials_are_usable",
             "diagnose_auth_replay",
+            "ensure_profile_ready",
             "get_active_auth_mtime",
             "get_auth_health_checker",
             "get_cache_path",
+            "get_notebook_count",
             "load_cached_tokens",
             "save_tokens_to_cache",
             "validate_cookies",

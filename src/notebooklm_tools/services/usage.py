@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/usage.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1439
+# Version:  1.0.8.20261012.1546
 # Purpose:  Usage service — plan allowance windows and subscription tier.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Usage service — plan allowance windows and subscription tier.
 
@@ -114,23 +115,21 @@ def get_usage(client: NotebookLMClient) -> dict:
             hint="If this is an authentication error, run 'nlm auth refresh' or 'nlm login'.",
         ) from e
 
+    try:
+        tier = client.get_entitlement_tier()
+    except Exception:
+        tier = None
+
     if not raw_windows:
+        plan = f" (plan: {tier})" if tier else ""
         raise ServiceError(
             "Usage response contained no windows",
-            user_message=(
-                "Gemini Notebook returned no usage information. "
-                "Usage data may be unavailable for Enterprise/Workspace accounts."
-            ),
+            user_message=f"Gemini Notebook returned no usage information{plan}.",
             hint=(
                 "For CLI troubleshooting, run 'nlm --debug usage'. "
                 "For MCP, start the server with 'notebooklm-mcp --debug'."
             ),
         )
-
-    try:
-        tier = client.get_entitlement_tier()
-    except Exception:
-        tier = None
 
     windows = [_shape_window(w) for w in raw_windows]
     windows.sort(

@@ -52,6 +52,10 @@
     {
       "name": "research_start",
       "description": "Research topics via web or Drive"
+    },
+    {
+      "name": "profile",
+      "description": "List and switch between your saved Google accounts"
     }
   ],
   "tools_generated": true,

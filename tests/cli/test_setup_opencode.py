@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_setup_opencode.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for OpenCode client support in `nlm setup add/remove/list`.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for OpenCode client support in `nlm setup add/remove/list`.
 
 Verifies that the OpenCode integration correctly handles the different
@@ -13,6 +20,7 @@ from notebooklm_tools.cli.commands.setup import (
     MCP_SERVER_CMD,
     MCP_SERVER_NAME,
     OPENCODE_MCP_TIMEOUT_MS,
+    _default_server_command,
     _detect_tool,
     _is_already_configured,
     _opencode_config_path,
@@ -60,7 +68,7 @@ class TestSetupOpenCode:
         assert "notebooklm" not in config["mcp"]
         entry = config["mcp"][MCP_SERVER_NAME]
         assert entry["type"] == "local"
-        assert entry["command"] == [MCP_SERVER_CMD]
+        assert entry["command"] == [_default_server_command()]
         assert entry["enabled"] is True
         assert entry["timeout"] == OPENCODE_MCP_TIMEOUT_MS
 
@@ -122,7 +130,7 @@ class TestSetupOpenCode:
         config = json.loads(config_path.read_text())
         command = config["mcp"][MCP_SERVER_NAME]["command"]
         assert isinstance(command, list)
-        assert command == [MCP_SERVER_CMD]
+        assert command == [_default_server_command()]
 
 
 class TestIsAlreadyConfigured:

@@ -1,7 +1,15 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/sharing.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Sharing service — shared business logic for notebook sharing and collaboration.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Sharing service — shared business logic for notebook sharing and collaboration."""
 
 from ..core.client import NotebookLMClient
 from ..core.data_types import Collaborator, ShareStatus
+from ..core.errors import RPCError
 from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
 
@@ -68,6 +76,24 @@ def _collaborator_to_dict(c: Collaborator) -> CollaboratorInfo:
         "is_pending": c.is_pending,
         "display_name": c.display_name,
     }
+
+
+def _invitation_rpc_error(error: RPCError, *, bulk: bool) -> ServiceError:
+    if error.error_code == 7:
+        return ServiceError(
+            f"Google denied {'bulk ' if bulk else ''}invitation: {error}",
+            user_message="Google denied the invitation (permission denied).",
+            hint=(
+                "The cause may be notebook ownership, account or domain sharing restrictions, "
+                "or recipient eligibility. Check the notebook's sharing settings and the "
+                "recipient address; Google did not identify the specific restriction."
+            ),
+            category="permission_denied",
+            provider_code=7,
+            retryable=False,
+            suggested_action="review_sharing_settings",
+        )
+    return ServiceError(f"Failed to invite {'collaborators' if bulk else 'collaborator'}: {error}")
 
 
 def get_share_status(client: NotebookLMClient, notebook_id: str) -> ShareStatusResult:
@@ -179,6 +205,8 @@ def invite_collaborator(
         )
     except ServiceError:
         raise
+    except RPCError as e:
+        raise _invitation_rpc_error(e, bulk=False) from e
     except Exception as e:
         raise ServiceError(f"Failed to invite collaborator: {e}") from e
 
@@ -242,5 +270,7 @@ def invite_collaborators_bulk(
         )
     except ServiceError:
         raise
+    except RPCError as e:
+        raise _invitation_rpc_error(e, bulk=True) from e
     except Exception as e:
         raise ServiceError(f"Failed to invite collaborators: {e}") from e

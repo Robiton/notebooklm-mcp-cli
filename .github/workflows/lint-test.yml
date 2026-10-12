@@ -27,6 +27,8 @@ jobs:
       - name: Run ruff format check
         run: uv run --extra dev ruff format --check .
 
+  # Fork: Linux only. Upstream added a Windows leg in v0.15.4; the fork targets a hosted
+  # MCP server (not end-user devices) and is developed on macOS, so it was dropped.
   test:
     name: Run tests
     runs-on: ubuntu-latest
@@ -40,3 +42,4 @@ jobs:
 
       - name: Run tests with pytest
         run: uv run --extra dev --with pytest-github-actions-annotate-failures pytest -v --tb=short -m "not e2e"
+

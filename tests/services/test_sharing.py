@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_sharing.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for services.sharing module.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for services.sharing module."""
 
 from dataclasses import dataclass
@@ -5,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from notebooklm_tools.core.errors import RPCError
 from notebooklm_tools.services.errors import ServiceError, ValidationError
 from notebooklm_tools.services.sharing import (
     get_share_status,
@@ -164,6 +172,22 @@ class TestInviteCollaborator:
         with pytest.raises(ServiceError, match="Failed to invite"):
             invite_collaborator(mock_client, "nb-123", "alice@example.com", "viewer")
 
+    def test_permission_denied_explains_uncertain_cause(self, mock_client):
+        mock_client.add_collaborator.side_effect = RPCError(
+            "API error (code 7): type.googleapis.com/google.rpc.ErrorInfo",
+            error_code=7,
+            detail_type="type.googleapis.com/google.rpc.ErrorInfo",
+        )
+
+        with pytest.raises(ServiceError) as exc_info:
+            invite_collaborator(mock_client, "nb-123", "alice@example.com", "viewer")
+
+        error = exc_info.value
+        assert "Google denied the invitation" in error.user_message
+        assert "permission" in error.user_message.lower()
+        assert "may" in error.hint.lower()
+        assert "public link" not in error.hint.lower()
+
 
 class TestBulkInviteCollaborators:
     """Test invite_collaborators_bulk service function."""
@@ -221,3 +245,16 @@ class TestBulkInviteCollaborators:
         recipients = [{"email": "alice@example.com", "role": "viewer"}]
         with pytest.raises(ServiceError, match="Failed to invite collaborators"):
             invite_collaborators_bulk(mock_client, "nb-123", recipients)
+
+    def test_permission_denied_explains_uncertain_cause(self, mock_client):
+        mock_client.add_collaborators_bulk.side_effect = RPCError(
+            "API error (code 7): type.googleapis.com/google.rpc.ErrorInfo", error_code=7
+        )
+
+        with pytest.raises(ServiceError) as exc_info:
+            invite_collaborators_bulk(
+                mock_client, "nb-123", [{"email": "alice@example.com", "role": "viewer"}]
+            )
+
+        assert "Google denied the invitation" in exc_info.value.user_message
+        assert exc_info.value.provider_code == 7

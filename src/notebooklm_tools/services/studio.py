@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/studio.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1438
+# Version:  1.0.8.20261012.1546
 # Purpose:  Studio service — artifact creation, status, rename, delete
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
@@ -133,6 +134,7 @@ class StatusResult(TypedDict):
     total: int
     completed: int
     in_progress: int
+    queued: int
     returned: int
     offset: int
     limit: int | None
@@ -841,6 +843,7 @@ def get_studio_status(
 
     completed = [a for a in artifacts if a.get("status") == "completed"]
     in_progress = [a for a in artifacts if a.get("status") == "in_progress"]
+    queued = [a for a in artifacts if a.get("status") == "queued"]
 
     selected = artifacts
     if artifact_id:
@@ -870,6 +873,7 @@ def get_studio_status(
         total=len(artifacts),
         completed=len(completed),
         in_progress=len(in_progress),
+        queued=len(queued),
         returned=len(page),
         offset=offset,
         limit=limit,

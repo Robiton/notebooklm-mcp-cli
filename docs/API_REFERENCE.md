@@ -1747,7 +1747,7 @@ Each source in the notebook response has this structure:
   [source_id],           # UUID for the source
   "Source Title",        # Display title
   [                      # Metadata array
-    drive_doc_info,      # [0] null OR [doc_id, version_hash] for Drive/Gemini sources
+    drive_doc_info,      # [0] [doc_id, version_hash] for Docs/Slides/Sheets
     byte_count,          # [1] content size (0 for Drive, actual size for pasted text)
     [timestamp, nanos],  # [2] creation timestamp
     [version_uuid, [timestamp, nanos]],  # [3] last sync info
@@ -1755,18 +1755,36 @@ Each source in the notebook response has this structure:
     null,                # [5]
     null,                # [6]
     null,                # [7]
-    content_bytes        # [8] actual byte count (for Drive sources after sync)
+    content_bytes,       # [8] actual byte count (for Drive sources after sync)
+    drive_file_info      # [9] [drive_id, version, mime_type, ""] for type-14 Drive-picker files
   ],
   [null, 2]              # Footer constant
 ]
 ```
 
 ### Source Types (metadata position 4)
+
+The metadata example above shows a Drive source. For URL-bearing responses,
+web sources (type 5) carry `[url]` at `metadata[7]`; YouTube sources (type 9)
+carry `[url, video_id, channel]` at `metadata[5]` and normally leave
+`metadata[7]` empty. The shared URL extractor checks position 7 first, then
+falls back to position 5 only for YouTube. These are response metadata slots,
+not the positions used in the add-source request payload.
+
 | Type | Meaning | Drive Doc Info | Can Sync |
 |------|---------|----------------|----------|
 | 1 | **Google Docs** (Documents, including Gemini Notes) | `[doc_id, version_hash]` | **Yes** |
 | 2 | **Google Slides/Sheets** (Presentations & Spreadsheets) | `[doc_id, version_hash]` | **Yes** |
 | 4 | Pasted text | `null` | No |
+| 14 | Drive-picker file (PDF, text, Markdown, Word, PowerPoint, etc.) | `[drive_id, version, mime_type, ""]` at `metadata[9]` | **Yes, when a Drive ID is present** |
+
+Type 14 is also used for directly uploaded files. Those have no Drive metadata at
+`metadata[9]` and are not syncable. The Drive ID must be present before a type-14
+source is listed by `source_list_drive` or marked `can_sync: true`. This flag means
+the source is eligible for a manual sync attempt; an individual RPC can still fail
+(one stale type-14 PDF returned Google RPC code 13, while a separate PDF sync
+succeeded). Google announced automatic Drive syncing for Docs, Sheets, and Slides,
+but did not specify type-14 files in that update.
 
 ---
 
@@ -1837,6 +1855,12 @@ The MCP needs these cookies (automatically filtered from the full cookie header)
    - Subsequent requests reuse cached tokens
    - No fetching needed
    - Cache updates automatically when tokens are refreshed
+
+`SNlM0e` is the CSRF field. `FdrFJe` is a session ID and `cfb2h` is a build
+label; neither proves sign-in or substitutes for a CSRF token. Unrelated
+`at=` text in page markup is not a token either. Interactive CDP login requires
+the actual CSRF field together with the required signed-in cookies. Live
+validation of a homepage without CSRF falls back to a notebook API check.
 
 ---
 

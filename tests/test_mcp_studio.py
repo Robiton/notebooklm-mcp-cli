@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/test_mcp_studio.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1438
+# Version:  1.0.8.20261012.1546
 # Purpose:  Unit tests for MCP studio tools.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Unit tests for MCP studio tools."""
@@ -20,6 +21,7 @@ def _status_result(artifacts):
         "total": 64,
         "completed": 60,
         "in_progress": 4,
+        "queued": 2,
         "returned": len(artifacts),
         "offset": 0,
         "limit": 20,
@@ -36,13 +38,9 @@ def test_studio_status_is_lean_and_bounded_by_default():
     with (
         patch("notebooklm_tools.mcp.tools.studio.get_client", return_value=mock_client),
         patch(
-            "notebooklm_tools.mcp.tools.studio.get_api_profile",
-            return_value=MagicMock(
-                web_url=MagicMock(
-                    return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
-                )
-            ),
-        ) as get_api_profile,
+            "notebooklm_tools.mcp.tools.studio.notebooks_service.notebook_url",
+            return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123",
+        ) as get_notebook_url,
         patch(
             "notebooklm_tools.mcp.tools.studio.studio_service.get_studio_status",
             return_value=service_result,
@@ -68,7 +66,8 @@ def test_studio_status_is_lean_and_bounded_by_default():
     assert result["notebook_url"] == (
         "https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
     )
-    get_api_profile.return_value.web_url.assert_called_once_with("nb-1")
+    assert result["summary"]["queued"] == 2
+    get_notebook_url.assert_called_once_with(mock_client, "nb-1")
 
 
 def test_studio_status_can_request_one_detailed_artifact():
@@ -137,13 +136,9 @@ def test_studio_create_uses_configured_notebook_url():
     with (
         patch("notebooklm_tools.mcp.tools.studio.get_client", return_value=mock_client),
         patch(
-            "notebooklm_tools.mcp.tools.studio.get_api_profile",
-            return_value=MagicMock(
-                web_url=MagicMock(
-                    return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
-                )
-            ),
-        ) as get_api_profile,
+            "notebooklm_tools.mcp.tools.studio.notebooks_service.notebook_url",
+            return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123",
+        ) as get_notebook_url,
         patch(
             "notebooklm_tools.mcp.tools.studio._studio_auth_is_valid",
             return_value=(True, None, None),
@@ -163,7 +158,7 @@ def test_studio_create_uses_configured_notebook_url():
     assert result["notebook_url"] == (
         "https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
     )
-    get_api_profile.return_value.web_url.assert_called_once_with("nb-1")
+    get_notebook_url.assert_called_once_with(mock_client, "nb-1")
 
 
 def test_studio_revise_preserves_hint_on_service_error():
@@ -201,13 +196,9 @@ def test_studio_revise_uses_configured_notebook_url():
     with (
         patch("notebooklm_tools.mcp.tools.studio.get_client", return_value=mock_client),
         patch(
-            "notebooklm_tools.mcp.tools.studio.get_api_profile",
-            return_value=MagicMock(
-                web_url=MagicMock(
-                    return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
-                )
-            ),
-        ) as get_api_profile,
+            "notebooklm_tools.mcp.tools.studio.notebooks_service.notebook_url",
+            return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123",
+        ) as get_notebook_url,
         patch(
             "notebooklm_tools.mcp.tools.studio.studio_service.revise_artifact",
             return_value={"artifact_id": "art-2"},
@@ -224,7 +215,7 @@ def test_studio_revise_uses_configured_notebook_url():
     assert result["notebook_url"] == (
         "https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
     )
-    get_api_profile.return_value.web_url.assert_called_once_with("nb-1")
+    get_notebook_url.assert_called_once_with(mock_client, "nb-1")
 
 
 _MCP = "notebooklm_tools.mcp.tools.studio"
@@ -240,9 +231,7 @@ def test_report_get_keeps_success_envelope():
     service = {"artifact_id": "rep", "status": "completed", "parse_status": "ok", "elements": []}
     with (
         patch(f"{_MCP}.get_client", return_value=MagicMock()),
-        patch(
-            f"{_MCP}.get_api_profile", return_value=MagicMock(web_url=MagicMock(return_value="url"))
-        ),
+        patch(f"{_MCP}.notebooks_service.notebook_url", return_value="url"),
         patch(f"{_MCP}.studio_service.get_report", return_value=service),
     ):
         result = studio.report(notebook_id="nb", artifact_id="rep", action="get")
@@ -254,9 +243,7 @@ def test_report_get_keeps_success_envelope():
 def test_report_elements_passes_wait_and_content():
     with (
         patch(f"{_MCP}.get_client", return_value=MagicMock()),
-        patch(
-            f"{_MCP}.get_api_profile", return_value=MagicMock(web_url=MagicMock(return_value="url"))
-        ),
+        patch(f"{_MCP}.notebooks_service.notebook_url", return_value="url"),
         patch(
             f"{_MCP}.studio_service.list_report_elements",
             return_value={"elements": [], "timed_out": False, "review_label": "L"},
@@ -326,9 +313,7 @@ def test_report_generate_runs_on_confirm_and_keeps_success_envelope():
     }
     with (
         patch(f"{_MCP}.get_client", return_value=MagicMock()),
-        patch(
-            f"{_MCP}.get_api_profile", return_value=MagicMock(web_url=MagicMock(return_value="url"))
-        ),
+        patch(f"{_MCP}.notebooks_service.notebook_url", return_value="url"),
         patch(f"{_MCP}.studio_service.generate_report_elements", return_value=batch),
     ):
         result = studio.report(

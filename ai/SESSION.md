@@ -51,8 +51,12 @@ _Most recent session at the top._
 - Batch 4 merged as #43.
 - Batch 5 (v0.12.0): 20 conflicts. Download validation took upstream's containment design (MCP writes confined to one root) and kept the fork's home/cwd/temp allowlist for CLI writes. `download_all` now validates the output dir before network calls (an upstream test only passed by accident). The new `report` tool and CLI studio status use the API profile for notebook URLs. Fork workflows, dependabot and SECURITY.md kept. Mistake caught: `pytest | tail` in an `&&` chain let a commit through with 1 failing test; fixed and amended before push. 1747 tests pass.
 
+- Batch 5 merged as #44.
+- Batch 6 (v0.15.4, last band, 105 commits). Upstream's protected credential store (AES-256-GCM `credentials.enc`, key in the OS keystore) was adopted after a security read. Existing profiles stay in file mode; new desktop logins are offered protected (prompt default). Fork hardening: helper subprocess runs `python -I` (cwd module hijack); the MCP keystore probe and "protect your login" notice are skipped in enterprise mode. Regression tests in `tests/test_fork_credential_hardening.py`. `get_client()` puts the enterprise branch first, then upstream's keystore-aware personal path. Upstream's tests found a merge bug: the profile build-label fallback overwrote a saved label (fallback now applied in `_build_url`). Package-name drift fixed (desktop launcher, CLI update check, `nlm setup` entries, AUTHENTICATION.md). `server_info` rebuilt on upstream's version with the fork's per-mode auth and update commands; personal protected-mode status checks `credentials.enc` exists without unlocking. Upstream's Windows CI leg dropped: it renamed the required "Run tests" check (PR blocked) and the fork targets a hosted MCP, developed on macOS. CI fixes: perf test stubbed the fork's gcloud call; smoke script no longer prints credential values (CodeQL). 56 MCP tools (counts updated). `ai/SECURITY.md` credential section rewritten. 2500 tests pass.
+
 **Next steps:**
-- Batch 6 of the upstream sync (plan doc); pin any new upstream workflows each batch
+- Merge batch 6, close issue #26 (upstream drift), then plan fork v1.5
+- Brian decisions: credential-store prompt default; credential-store lows (BACKLOG); rebrand wording; download folder name; OAuth bind exemption; live auth in `server_info`; live enterprise CLI test
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
 - Optionally wire session hooks: `./setup.sh` writes `.claude/settings.json` hooks (currently a personal allowlist only)
 

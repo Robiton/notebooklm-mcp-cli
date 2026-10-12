@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/pipeline.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Pipeline tools — consolidated tool for multi-step notebook workflows.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Pipeline tools — consolidated tool for multi-step notebook workflows."""
 
 from ...services import pipeline as pipeline_service
@@ -11,18 +18,24 @@ def pipeline(
     notebook_id: str | None = None,
     pipeline_name: str | None = None,
     input_url: str = "",
+    description: str = "",
+    steps: list[dict] | None = None,
 ) -> ResultDict:
     """Manage and execute multi-step notebook pipelines.
 
     Actions:
     - run: Execute a pipeline on a notebook
     - list: List all available pipelines (builtin and user-defined)
+    - create: Save a user-defined pipeline (pipeline_name + steps; each step is
+      {"action": <tool name>, "params": {...}})
 
     Args:
-        action: Operation to perform (run, list)
+        action: Operation to perform (run, list, create)
         notebook_id: Target notebook UUID (required for action=run)
         pipeline_name: Pipeline name (required for action=run, e.g. "ingest-and-podcast")
         input_url: URL variable for pipelines that need it (replaces $INPUT_URL)
+        description: Pipeline description (for action=create)
+        steps: Step definitions (required for action=create)
     """
     try:
         if action == "run":
@@ -45,8 +58,16 @@ def pipeline(
                 "count": len(pipelines),
             }
 
+        elif action == "create":
+            if not pipeline_name:
+                return error_result("pipeline_name is required for action=create")
+            if not steps:
+                return error_result("steps is required for action=create")
+            result = pipeline_service.pipeline_create(pipeline_name, description, steps)
+            return {"status": "success", **result}
+
         else:
-            return error_result(f"Unknown action: {action}. Use: run, list")
+            return error_result(f"Unknown action: {action}. Use: run, list, create")
 
     except ServiceError as e:
         return error_result(e.user_message, hint=e.hint)

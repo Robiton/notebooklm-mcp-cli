@@ -1,15 +1,17 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/services/test_sources.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for services.sources module
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Tests for services.sources module."""
 
 import os
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -137,8 +139,9 @@ class TestAddSource:
 
         add_source(mock_client, "nb-1", "file", file_path="/outside/doc.pdf")
 
+        # Fork: the path is resolved before upload (gains a drive letter on Windows).
         mock_client.add_file.assert_called_once_with(
-            "nb-1", "/outside/doc.pdf", wait=False, wait_timeout=120.0
+            "nb-1", str(Path("/outside/doc.pdf").resolve()), wait=False, wait_timeout=120.0
         )
 
     def test_add_file_source_rejects_path_outside_configured_allowlist(
@@ -346,6 +349,27 @@ class TestListDriveSources:
         assert result["drive_count"] == 1
         assert len(result["other_sources"]) == 1
         assert result["drive_sources"][0]["id"] == "s2"
+
+    def test_drive_file_metadata_marks_type_14_source_syncable(self, mock_client):
+        mock_client.get_notebook_sources_with_types.return_value = [
+            {
+                "id": "type14-file",
+                "title": "drive.pdf",
+                "source_type_name": "pdf",
+                "drive_doc_id": "drive-file-id",
+                "can_sync": True,
+                "status": 2,
+            }
+        ]
+        mock_client.check_source_freshness.return_value = False
+
+        result = list_drive_sources(mock_client, "nb-1")
+
+        assert result["drive_count"] == 1
+        assert result["other_sources"] == []
+        assert result["drive_sources"][0]["stale"] is True
+        assert result["drive_sources"][0]["can_sync"] is True
+        mock_client.check_source_freshness.assert_called_once_with("type14-file")
 
     def test_preserves_processing_status(self, mock_client):
         mock_client.get_notebook_sources_with_types.return_value = [

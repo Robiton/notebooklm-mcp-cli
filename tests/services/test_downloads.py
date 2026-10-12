@@ -1,12 +1,14 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/services/test_downloads.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1439
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for services.downloads module.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for services.downloads module."""
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -243,7 +245,9 @@ class TestDownloadAsync:
         with pytest.raises(ServiceError) as exc_info:
             await download_async(mock_client, "nb-1", "audio", "/tmp/out.m4a")
 
-        assert "still propagating" in exc_info.value.user_message
+        assert "may still be propagating" in exc_info.value.user_message
+        assert "unavailable" in exc_info.value.user_message
+        assert "verify artifact access" in exc_info.value.hint
 
     @pytest.mark.asyncio
     async def test_falsy_path_raises_service_error(self, mock_client):
@@ -594,7 +598,7 @@ class TestDownloadAll:
 
         result = await download_all(bulk_client, "nb-1", str(tmp_path))
 
-        names = sorted(item["path"].rsplit("/", 1)[-1] for item in result["items"])
+        names = sorted(Path(item["path"]).name for item in result["items"])
         assert names == ["same.xlsx", "same_2.xlsx"]
 
     @pytest.mark.asyncio

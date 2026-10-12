@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Project:  notebooklm-mcp-cli
+# File:     desktop-extension/run_server.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Robust launcher for the Gemini Notebook MCP Server in Claude Desktop.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Robust launcher for the Gemini Notebook MCP Server in Claude Desktop.
 
 Claude Desktop on macOS runs with a restricted PATH, so `uvx` may not be
@@ -82,7 +89,7 @@ def main() -> None:
 
     # Run the MCP server — explicit stdio passthrough is critical because
     # Claude Desktop communicates with MCP servers via stdin/stdout JSON-RPC.
-    cmd = [uvx, "--from", "notebooklm-mcp-cli", "notebooklm-mcp", *sys.argv[1:]]
+    cmd = [uvx, "--from", "notebooklm-enterprise-mcp", "notebooklm-mcp", *sys.argv[1:]]
     try:
         result = subprocess.run(
             cmd,

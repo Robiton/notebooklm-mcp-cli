@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/core/test_cdp_transport.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1343
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for the experimental CDP RPC transport.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: upstream test with fake credentials marked for the secret scan (sync batch 4)
 """Tests for the experimental CDP RPC transport."""
 
@@ -19,6 +20,26 @@ def _batchexecute_response(rpc_id: str, result: object) -> str:
     return ")]}'\n42\n" + json.dumps(
         [["wrb.fr", rpc_id, json.dumps(result, separators=(",", ":"))]]
     )
+
+
+def test_cdp_transport_preserves_saved_csrf_fallback(monkeypatch):
+    from notebooklm_tools.core.cdp_transport import get_cdp_page_context
+    from notebooklm_tools.utils import cdp
+
+    monkeypatch.setattr(cdp, "has_chrome_profile", lambda profile: True)
+    monkeypatch.setattr(cdp, "find_existing_nlm_chrome", lambda **kwargs: (9230, "ws://browser"))
+    monkeypatch.setattr(
+        cdp,
+        "find_or_create_notebooklm_page",
+        lambda port: {"webSocketDebuggerUrl": "ws://page"},
+    )
+    monkeypatch.setattr(cdp, "get_current_url", lambda ws: "https://notebook.google.com/")
+    monkeypatch.setattr(cdp, "get_page_html", lambda ws: '{"FdrFJe":"123","cfb2h":"build"}')
+
+    context = get_cdp_page_context(profile_name="work", csrf_fallback="saved-csrf", timeout=1)
+
+    assert context.csrf_token == "saved-csrf"
+    assert context.session_id == "123"
 
 
 def test_call_rpc_uses_cdp_transport_when_enabled(monkeypatch):
@@ -119,7 +140,7 @@ def test_query_uses_cdp_transport_for_streamed_endpoint(monkeypatch):
         )
 
     def prepare_cdp_transport(self, timeout):
-        assert 0 < timeout <= 99.0
+        assert 0 < timeout <= 99.0 + 1e-9
         self.csrf_token = "live-csrf"  # scaffold:not-a-secret (test fixture)
         self._session_id = "live-session"
         self._bl = "live-build"
@@ -164,7 +185,7 @@ def test_query_uses_cdp_transport_for_streamed_endpoint(monkeypatch):
     assert query_params["bl"] == ["live-build"]
     body_params = urllib.parse.parse_qs(str(captured["body"]))
     assert body_params["at"] == ["live-csrf"]
-    assert 0 < captured["timeout"] <= 99.0
+    assert 0 < captured["timeout"] <= 99.0 + 1e-9
 
 
 def test_cdp_fetch_passes_long_response_timeout(monkeypatch):

@@ -1,15 +1,17 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/cli/test_setup_claude_desktop.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1439
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for Claude Desktop support in ``nlm setup add/remove/list``.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for Claude Desktop support in ``nlm setup add/remove/list``."""
 
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -373,8 +375,8 @@ class TestSetupClaudeDesktop:
                 return_value="/usr/local/bin/notebooklm-mcp",
             ),
             patch(
-                "notebooklm_tools.cli.commands.setup.Prompt.ask",
-                return_value="3",
+                "notebooklm_tools.cli.commands.setup.questionary.select",
+                return_value=SimpleNamespace(ask=lambda: "both"),
             ) as prompt,
         ):
             result = _setup_claude_desktop()
