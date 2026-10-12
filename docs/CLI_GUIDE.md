@@ -6,10 +6,10 @@ Complete command reference for the `nlm` command-line interface.
 
 ```bash
 # Using uv (recommended)
-uv tool install notebooklm-mcp-cli
+uv tool install notebooklm-enterprise-mcp
 
 # Using pip
-pip install notebooklm-mcp-cli
+pip install notebooklm-enterprise-mcp
 ```
 
 ## Authentication

@@ -68,7 +68,7 @@ For complete command reference, troubleshooting, and workflows, install the full
 
 ```bash
 # Install via uv
-uv tool install notebooklm-mcp-cli
+uv tool install notebooklm-enterprise-mcp
 
 # Then install/update skill for your AI tool
 nlm skill install <tool>  # Install (claude-code, agents, opencode, etc)
