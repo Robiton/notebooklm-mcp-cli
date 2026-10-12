@@ -78,6 +78,7 @@ def _status_result():
         "total": 2,
         "completed": 2,
         "in_progress": 0,
+        "queued": 0,
         "returned": 2,
         "offset": 0,
         "limit": 20,
@@ -93,15 +94,15 @@ def test_studio_status_can_emit_mcp_compatible_json(runner):
     with (
         patch("notebooklm_tools.cli.commands.studio.get_alias_manager", return_value=alias_manager),
         patch("notebooklm_tools.cli.commands.studio.get_client", return_value=client),
-        patch("notebooklm_tools.cli.commands.studio.get_api_profile") as get_api_profile,
+        patch(
+            "notebooklm_tools.cli.commands.studio.notebooks_service.notebook_url",
+            return_value="https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123",
+        ) as get_notebook_url,
         patch(
             "notebooklm_tools.cli.commands.studio.studio_service.get_studio_status",
             return_value=_status_result(),
         ) as get_status,
     ):
-        get_api_profile.return_value.web_url.return_value = (
-            "https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
-        )
         result = runner.invoke(
             app,
             ["status", "nb-1", "--json", "--mcp-compatible"],
@@ -114,6 +115,7 @@ def test_studio_status_can_emit_mcp_compatible_json(runner):
     assert payload["notebook_url"] == (
         "https://notebook.cloud.google.com/eu/notebook/nb-1?project=project-123"
     )
+    assert payload["summary"]["queued"] == 0
     assert payload["pagination"] == {
         "returned": 2,
         "offset": 0,
@@ -128,7 +130,7 @@ def test_studio_status_can_emit_mcp_compatible_json(runner):
         limit=20,
         offset=0,
     )
-    get_api_profile.return_value.web_url.assert_called_once_with("nb-1")
+    get_notebook_url.assert_called_once_with(client, "nb-1")
 
 
 def test_video_list_only_emits_video_artifacts(runner):
