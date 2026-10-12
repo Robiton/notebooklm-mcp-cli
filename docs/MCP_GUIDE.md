@@ -1,6 +1,6 @@
 # MCP Guide
 
-Complete reference for the Gemini Notebook (formerly Google NotebookLM) MCP server — **53 tools** for AI assistants.
+Complete reference for the Gemini Notebook (formerly Google NotebookLM) MCP server — **56 tools** for AI assistants.
 
 ## Installation
 
@@ -438,7 +438,7 @@ pipeline(action="run", notebook_id="abc", pipeline_name="ingest-and-podcast", in
 
 ## Context Window Tips
 
-This MCP has **53 tools** which consume context. Best practices:
+This MCP has **56 tools** which consume context. Best practices:
 
 - **Disable when not using**: In Claude Code, use `@gemini-notebook-mcp` to toggle
 - **Hide tools you don't need**: See [Selective tool exposure](#selective-tool-exposure) below to expose only a subset

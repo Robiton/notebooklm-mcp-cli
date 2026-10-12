@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] — Upstream sync v0.5.25 → v0.15.4 (in progress)
+## [Unreleased] — Upstream sync v0.5.25 → v0.15.4
 
 Upstream is now merged by release band rather than cherry-picked (plan:
 `docs/plans/2026-10-12-upstream-sync-v0.15-plan.md`). Full detail for each upstream release is in
@@ -115,6 +115,32 @@ Upstream is now merged by release band rather than cherry-picked (plan:
   build notebook URLs from the API profile, so enterprise links are correct. New tool group `usage`
   (53 tools in total). The fork keeps its own SHA-pinned workflows, `dependabot.yml` and
   `SECURITY.md`; upstream's action version bumps are left to the fork's dependabot.
+
+### Upstream v0.12.1 – v0.15.4 (batch 6)
+
+- **Added:** protected credential storage (`nlm auth storage`, `nlm login --storage
+  protected|file`): `credentials.enc`, AES-256-GCM, key in the OS keystore. File mode
+  (`cookies.json`, 0600) stays the default for existing profiles, and nothing migrates unless asked.
+  New logins in a desktop terminal are asked which to use, and the prompt defaults to protected.
+  Headless, SSH, container and WSL sessions use file mode. Also: the guided `nlm setup` wizard; MCP
+  `profile` and `alias` tools (aliases work for any `notebook_id`); `chat_save_to_note` and
+  `pipeline` `create`; saved profiles and the active account in `server_info`; `/healthz`; Edge
+  Beta logins.
+- **Fixed:** fresh logins closing the browser before sign-in; broken sessions reported as valid;
+  YouTube source URLs; `research start --auto-import` racing the task; Windows credential file
+  locks; concurrent alias/tag writes and artifact temp files; bounded async query concurrency.
+- **CI:** upstream's `windows-latest` test leg is merged into `lint-test.yml`, keeping the fork's
+  SHA-pinned actions.
+- **Fork hardening:** the credential-store helper subprocess runs `python -I -m …`, so a package
+  planted in the working directory can't be imported in place of the worker. In enterprise mode the
+  MCP credential probe never opens the OS keystore, and the "protect your login" notice is not
+  attached to tool results. Enterprise `server_info` checks gcloud; personal mode reports protected
+  storage from the presence of `credentials.enc` without unlocking it.
+- **Fork fixes:** a saved build label is kept; the profile's fallback label (personal or
+  enterprise) is applied when the request URL is built, not stored over it. The desktop extension
+  launcher, the CLI update check, `nlm setup` MCP entries and the auth docs pointed at upstream's
+  PyPI package; all now use `notebooklm-enterprise-mcp`. Notebook URLs in personal mode take upstream's host-aware
+  `notebook_url`; enterprise mode uses the API profile. 56 MCP tools in total.
 
 ---
 
