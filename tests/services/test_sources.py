@@ -11,6 +11,7 @@
 """Tests for services.sources module."""
 
 import os
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -138,8 +139,9 @@ class TestAddSource:
 
         add_source(mock_client, "nb-1", "file", file_path="/outside/doc.pdf")
 
+        # Fork: the path is resolved before upload (gains a drive letter on Windows).
         mock_client.add_file.assert_called_once_with(
-            "nb-1", "/outside/doc.pdf", wait=False, wait_timeout=120.0
+            "nb-1", str(Path("/outside/doc.pdf").resolve()), wait=False, wait_timeout=120.0
         )
 
     def test_add_file_source_rejects_path_outside_configured_allowlist(

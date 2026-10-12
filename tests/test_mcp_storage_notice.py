@@ -53,6 +53,11 @@ def test_100_mcp_tool_calls_zero_tool_call_probes_and_no_delay(
         "notebooklm_tools.mcp.tools.server._check_auth_status", lambda: "configured"
     )
     monkeypatch.setattr("notebooklm_tools.mcp.tools.server._get_latest_pypi_version", lambda: None)
+    # Fork: server_info also runs `gcloud auth print-access-token` (~0.5 s where gcloud is
+    # installed, as on GitHub runners); stub it so the benchmark stays local.
+    monkeypatch.setattr(
+        "notebooklm_tools.mcp.tools.server._check_enterprise_auth", lambda: "not authenticated"
+    )
 
     probe_calls = 0
     orig_probe = CredentialWorkerClient.probe

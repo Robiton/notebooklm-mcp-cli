@@ -135,7 +135,8 @@ Upstream is now merged by release band rather than cherry-picked (plan:
   planted in the working directory can't be imported in place of the worker. In enterprise mode the
   MCP credential probe never opens the OS keystore, and the "protect your login" notice is not
   attached to tool results. Enterprise `server_info` checks gcloud; personal mode reports protected
-  storage from the presence of `credentials.enc` without unlocking it.
+  storage from the presence of `credentials.enc` without unlocking it. Upstream's credential smoke
+  script no longer prints decrypted cookie or token values on failure (CodeQL).
 - **Fork fixes:** a saved build label is kept; the profile's fallback label (personal or
   enterprise) is applied when the request URL is built, not stored over it. The desktop extension
   launcher, the CLI update check, `nlm setup` MCP entries and the auth docs pointed at upstream's
