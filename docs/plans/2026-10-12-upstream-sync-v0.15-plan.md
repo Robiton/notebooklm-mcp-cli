@@ -208,8 +208,10 @@ conflicts.
   install/uvx/upgrade strings.
 - **`notebook_url`.** Upstream added a host-aware helper (personal `notebook.google.com` vs
   NotebookLM). The fork takes it and short-circuits to the API profile in enterprise mode.
-- **Windows CI.** Upstream's `windows-latest` leg merged cleanly into `lint-test.yml`; the fork's
-  SHA pins were kept.
+- **Windows CI dropped.** Upstream's `windows-latest` matrix leg renamed the test job per OS, so the
+  `main` ruleset's required "Run tests" check never reported and the PR was blocked. The fork targets
+  a hosted MCP server and is developed on macOS (Brian, 2026-10-12), so the leg was removed and the
+  job is a single Linux "Run tests" again. Re-check this on every upstream sync.
 - **Tool count:** 56 (upstream's 53 plus fork-only tools). Docs, SKILL.md and the skill test updated.
 
 ## Open decisions (Brian)
