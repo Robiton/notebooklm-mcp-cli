@@ -59,7 +59,7 @@ def test_core_recovery_uses_configured_default_profile(monkeypatch):
 
     monkeypatch.setattr(
         "notebooklm_tools.core.auth.load_cached_tokens",
-        lambda: None,
+        lambda *, profile_name=None: None,
         raising=True,
     )
     monkeypatch.setattr(

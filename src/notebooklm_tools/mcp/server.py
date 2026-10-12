@@ -80,6 +80,7 @@ Consolidated tools:
 - studio_create(artifact_type=audio|video|...): Create any artifact type
 - studio_revise: Revise individual slides in an existing slide deck
 - download_artifact(artifact_type=audio|video|...): Download any artifact type
+- download_all_artifacts: Download every completed artifact of a notebook into a per-notebook folder
 - note(action=create|list|update|delete): Manage notes in notebooks
 - label(action=auto|list|reorganize|create|rename|set_emoji|move_source|delete): Manage source labels
 - configure_mode(mode, project_id, location): Switch between personal and enterprise
@@ -97,7 +98,7 @@ async def health_check(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             "status": "healthy",
-            "service": "notebooklm-mcp",
+            "service": "gemini-notebook-mcp",
             "version": __version__,
         }
     )
@@ -160,6 +161,8 @@ def _register_tools() -> None:
         auth,
         batch,
         chat,
+        chats,
+        collections,
         cross_notebook,
         downloads,
         exports,
@@ -179,6 +182,11 @@ def _register_tools() -> None:
     # Register collected tools with mcp
     register_all_tools(mcp)
 
+    # Optionally hide tool groups/tools via environment variables (opt-in).
+    from . import tool_groups
+
+    tool_groups.apply(mcp)
+
 
 # Register tools on import
 _register_tools()
@@ -197,7 +205,7 @@ def main() -> None:
     configure_stdio_utf8_on_windows()
 
     parser = argparse.ArgumentParser(
-        description="NotebookLM MCP Server",
+        description="Gemini Notebook MCP Server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Environment Variables:
@@ -210,6 +218,7 @@ Environment Variables:
   NOTEBOOKLM_MCP_DEBUG         Debug logging (default: false)
   NOTEBOOKLM_HL                Interface language and default artifact language (default: en)
   NOTEBOOKLM_QUERY_TIMEOUT     Query timeout in seconds (default: 120.0)
+  NOTEBOOKLM_RATE_LIMIT_MAX_RETRIES  Retry count for HTTP 429 / resource limits (default: 3; 0 disables)
 
 OAuth (for remote MCP on claude.ai):
   NOTEBOOKLM_OAUTH_CLIENT_ID      OAuth Client ID

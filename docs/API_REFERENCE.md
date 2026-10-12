@@ -1,6 +1,6 @@
-# NotebookLM MCP API Reference
+# Gemini Notebook (formerly Google NotebookLM) MCP API Reference
 
-This document contains detailed API documentation for the internal NotebookLM APIs. Only read this file when debugging API issues or adding new features.
+This document contains detailed API documentation for the internal Gemini Notebook APIs. Only read this file when debugging API issues or adding new features.
 
 **For general project info, see [AGENTS.md](../AGENTS.md)**
 
@@ -28,6 +28,12 @@ notebook_add_text(notebook_id, text="My research notes...", title="Notes")
 result = notebook_query(notebook_id, query="What are the key points?")
 print(result["answer"])
 ```
+
+Queries use a 120-second wall-clock timeout by default. Source-heavy notebooks
+may need a larger budget, for example `notebook_query(..., timeout=180)`. If a
+query may take longer, use `notebook_query_start(..., timeout=180)` and poll
+`notebook_query_status` until it completes. A deadline error includes a retry
+hint and the `query_deadline_exceeded` debug code.
 
 ### Configure Chat Settings
 ```python
@@ -202,13 +208,12 @@ result = video_overview_create(
 )
 
 # Check generation status (takes several minutes)
-status = studio_status(notebook_id)
+status = studio_status(notebook_id, artifact_id=result["artifact_id"])
 for artifact in status["artifacts"]:
     print(f"{artifact['title']}: {artifact['status']}")
-    if artifact["audio_url"]:
-        print(f"  Audio: {artifact['audio_url']}")
-    if artifact["video_url"]:
-        print(f"  Video: {artifact['video_url']}")
+
+# Rich fields are opt-in and responses are paginated.
+detailed = studio_status(notebook_id, include_details=True, limit=20, offset=0)
 
 # Delete an artifact (after user confirmation)
 studio_delete(
@@ -220,21 +225,63 @@ studio_delete(
 
 **Audio Formats:** deep_dive (conversation), brief, critique, debate
 **Audio Lengths:** short, default, long
-**Video Formats:** explainer, brief, cinematic, short (vertical, ~60s, English-only, no visual style)
+**Video Formats:** explainer, brief, cinematic, short (vertical, ~60s, no visual style)
 **Video Styles:** auto_select, custom, classic, whiteboard, kawaii, anime, watercolor, retro_print, heritage, paper_craft
 
 > **Enterprise mode constraints (hard API limits — not bugs):**
 > - `studio_status` polling does **not** work in enterprise mode. The Discovery Engine REST API does not expose artifact completion status. Use the `notebook_url` from the error response and check status in the NotebookLM UI.
 > - **Video generation** is **not available** in enterprise mode. The Discovery Engine REST API has no video endpoint. Users must generate video manually via the Studio panel in the NotebookLM UI.
 > - In enterprise mode: only `studio_create` with `artifact_type=audio` is supported via MCP.
+For Short videos, language selection is best-effort. The captured RPC uses a
+null language slot, so non-English requests are reinforced through the focus
+prompt rather than an undocumented payload change.
 
 ---
 
 ## Base Endpoint
 
 ```
-POST https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute
+POST https://notebook.google.com/_/LabsTailwindUi/data/batchexecute
 ```
+
+### Gemini Notebook Enterprise
+
+Enterprise uses a project- and location-scoped Cloud NotebookLM endpoint. The
+configured base host may be `notebook.cloud.google.com` (current documented
+host), `notebooklm.cloud.google.com`, or `vertexaisearch.cloud.google.com` for
+older deployments. Set `NOTEBOOKLM_PROJECT_ID` and `NOTEBOOKLM_LOCATION` before
+starting the client. `NOTEBOOKLM_PROJECT_ID` is required for Enterprise; the
+location defaults to `global`.
+
+For the documented `notebook.cloud.google.com` host, the routes are:
+
+```
+POST https://notebook.cloud.google.com/{location}/_/CloudNotebookLmUi/data/batchexecute
+POST https://notebook.cloud.google.com/{location}/_/CloudNotebookLmUi/data/google.cloud.notebooklm.v1main.NotebookService/GenerateFreeFormStreamed
+POST https://notebook.cloud.google.com/{location}/upload/_/
+```
+
+The Enterprise list-notebooks RPC is `rG2vCb` with a project-qualified parent:
+
+```json
+["projects/{project}/locations/{location}", null, null, 1]
+```
+
+Enterprise streamed-query requests identify the notebook with the resource
+name `projects/{project}/locations/{location}/notebooks/{notebook_id}`:
+
+```json
+[
+  [[["source-id"]]],
+  "question",
+  {"70000": "projects/{project}/locations/{location}/notebooks/{notebook_id}"}
+]
+```
+
+These structures are based on a contributor-provided Enterprise web-client
+capture and are covered by the Enterprise routing tests. Live validation still
+requires access to an Enterprise deployment; record a redacted network capture
+when updating them because Google may rotate the internal RPC IDs and paths.
 
 ## Request Format
 
@@ -291,6 +338,7 @@ The `f.req` structure:
 | `b7Wfje` | Rename source | `[null, ["source_id"], [[["new_title"]]]]` - path: `/notebook/<notebook_id>` |
 | `tGMBJ` | Delete source | `[[["source_id"]], [2]]` - deletion is IRREVERSIBLE |
 | `hPTbtc` | Get conversation IDs | `[notebook_id]` |
+| `khqZz` | Get conversation turns (full Q&A history) | See "Conversation Turns (khqZz)" below |
 | `hT54vc` | User preferences | - |
 | `ZwVcOc` | Settings | - |
 | `ozz5Z` | Subscription info | - |
@@ -469,9 +517,57 @@ Streaming JSON with multiple chunks:
 
 ---
 
+## Conversation Turns (`khqZz`)
+
+Discovered via Chrome DevTools capture of the web UI loading a notebook's chat panel
+(2026-07-22). This is a `batchexecute` RPC (unlike the streaming query endpoint above)
+that fetches the **full Q&A history for a past conversation from the server** — it's
+what lets the same chat re-appear after closing and reopening a notebook, and it's what
+`nlm chats get` / `chat_get` / `chat_export` use to show real transcripts even on a
+fresh CLI invocation or MCP server session (`get_conversation_turns()` in
+`core/conversation.py`, wrapping `RPC_GET_CONVERSATION_TURNS`).
+
+Companion to `hPTbtc` (`get_conversation_id`), which only returns the conversation
+UUID — `khqZz` is the RPC that returns the actual turn content for that UUID.
+
+### Request
+```python
+params = [
+    [2, None, [1], [1, None, None, None, None, None, None, None, None, None, [1, 3]]],  # boilerplate client-capability descriptor, same shape used by hPTbtc
+    None,
+    None,
+    "conversation-uuid",  # from get_conversation_id()
+    20,                   # max turns to return (page size; no pagination implemented yet)
+]
+```
+
+### Response
+```
+[[turn, turn, ...], "continuation_token"]
+```
+Turns are returned **newest-first**, alternating **answer then query** per turn pair
+(the same `[answer, None, 2]` / `[query, None, 1]` shape the client already builds
+locally in `_build_conversation_history()` for follow-up queries):
+
+- **Answer turn**: `[turn_id, [unix_sec, nanos], 2, None, content]` where
+  `content[0] = [answer_text, None, [conv_id, conv_id, num]]` — the answer text is
+  nested **one level inside `content[0]`** (`content[0][0]`), not `content[0]` directly.
+  The remaining `content` entries (`content[1]`, `content[3]`, ...) carry rich
+  formatting/citation spans.
+- **Query turn**: `[turn_id, [unix_sec, nanos], 1, "query_text"]`
+
+`get_conversation_turns()` pairs consecutive `(answer, query)` entries, reverses them
+to chronological order, and returns `[{"turn": 1, "query": ..., "answer": ...}, ...]` —
+the same shape as the local-cache-based `get_conversation_history()`. Only plain
+answer/query text is extracted; the rich formatting and citation spans are not yet
+parsed. The `continuation_token` for fetching turns beyond the requested `limit` is
+not yet used (no pagination).
+
+---
+
 ## Research RPCs (Source Discovery)
 
-NotebookLM's "Research" feature discovers and suggests sources based on a query. It supports two source types (Web and Google Drive) and two research modes (Fast and Deep).
+Gemini Notebook's "Research" feature discovers and suggests sources based on a query. It supports two source types (Web and Google Drive) and two research modes (Fast and Deep).
 
 ### Source Types
 | Type | Value | Description |
@@ -612,7 +708,7 @@ Imports selected sources from research results into the notebook.
 
 ## Studio RPCs (Audio/Video Overviews)
 
-NotebookLM's "Studio" feature generates audio podcasts and video overviews from notebook sources.
+Gemini Notebook's "Studio" feature generates audio podcasts and video overviews from notebook sources.
 
 ### `R7cb6c` - Create Studio Content
 
@@ -673,9 +769,10 @@ params = [
 **Short format (code 4) — verified via live capture, 2026-06-30:** Short Video
 Overviews have no visual style picker, so the inner options list omits
 `visual_style_code`/`visual_style_prompt` entirely (matching Cinematic), and
-additionally sends `language_code` as `null` (server defaults to `"en"`;
-English-only for now) plus a trailing flag `1` whose meaning is undocumented
-by Google but required for the request to succeed:
+additionally sends `language_code` as `null` plus a trailing flag `1` whose
+meaning is undocumented by Google but required for the request to succeed.
+Current service behavior adds a best-effort language requirement to
+`focus_prompt` for non-English Short requests:
 ```python
 [
     [[source_id1], [source_id2], ...],  # Source IDs
@@ -730,6 +827,16 @@ params = [[2], notebook_id, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"']
     ...
 ]
 ```
+
+Artifacts with type code `4` use the nested subtype at `[9][1][0]`:
+
+- `1` = flashcards
+- `2` = quiz
+- `4` = mind map
+
+Mind map subtype `4` was confirmed from a live `gArtLc` response on 2026-07-14.
+Older clients that only distinguish flashcards and quizzes will mislabel these
+saved mind maps as flashcards.
 
 ### `V5N4be` - Delete Studio Content
 
@@ -799,7 +906,7 @@ Returns the same structure as `R7cb6c` (Create Studio Content):
 | **Lengths** | 1=Short, 2=Default, 3=Long |
 | **Languages** | BCP-47 codes, including regional values such as `"es-ES"`, `"es-US"`, and `"es-419"` |
 
-For Audio Overviews, NotebookLM has been observed using the region subtag to
+For Audio Overviews, Gemini Notebook has been observed using the region subtag to
 select the voice accent. `es` and `es-ES` produce Spain Spanish, while `es-US`
 and `es-419` produce Latin-American Spanish. Prompt text does not reliably
 override the accent. This is observed behavior and may change upstream.
@@ -810,7 +917,7 @@ override the accent. This is observed behavior and may change upstream.
 |--------|--------|
 | **Formats** | 1=Explainer (comprehensive), 2=Brief, 3=Cinematic, 4=Short (vertical, ~60s) |
 | **Visual Styles** | 1=Auto-select, 2=Custom, 3=Classic, 4=Whiteboard, 5=Kawaii, 6=Anime, 7=Watercolor, 8=Retro print, 9=Heritage, 10=Paper-craft (not applicable to Cinematic or Short) |
-| **Languages** | BCP-47 codes: "en", "es", "fr", "de", "ja", etc. (Short is English-only for now) |
+| **Languages** | BCP-47 codes: "en", "es", "fr", "de", "ja", etc. Short uses best-effort prompt steering because its RPC language slot is null. |
 
 #### Infographic Request
 ```python
@@ -974,7 +1081,7 @@ Returns an AI-generated summary of the notebook and suggested report topics.
 
 ### `tr032e` - Get Source Guide
 
-Generates an AI summary and keyword chips for a specific source. This is the "Source Guide" feature shown when clicking on a source in the NotebookLM UI.
+Generates an AI summary and keyword chips for a specific source. This is the "Source Guide" feature shown when clicking on a source in the Gemini Notebook UI.
 
 ```python
 # Request params
@@ -1081,11 +1188,18 @@ params = [
 
 **Key Difference from Flashcards:** Quiz uses format code `2` at the first position of the options array, while Flashcards use `1`.
 
+**Mind maps share type code 4 too:** newer mind maps are stored as type-4 studio artifacts with format code `4` at `artifact[9][1][0]` (older mind maps live in the notes store via the `cFji9` RPC). The status parser classifies format code 4 as `mind_map`, and downloading one fetches the artifact's interactive HTML (`v9rmvd`) and extracts the mind map JSON (`{"name": ..., "children": [...]}`) from the `data-app-data` attribute — the same mechanism quiz/flashcards use.
+
 ---
 
 ## Data Table RPCs
 
 Data Tables use the `R7cb6c` RPC with **type code 9** (STUDIO_TYPE_DATA_TABLE).
+
+Excel exports of data tables are returned by the same status RPC with **type
+code 10** (`STUDIO_TYPE_DATA_TABLE_XLSX`). Their file metadata is at
+`artifact[24]` as `[filename, mime_type, viewer_url, download_url]`. The
+download path streams `download_url` as binary XLSX without CSV parsing.
 
 ### Data Table Request Structure
 ```python
@@ -1424,7 +1538,7 @@ null  # Null on success
 ## Drive Source Sync
 
 ### Problem
-NotebookLM doesn't auto-update Google Drive sources when the underlying document changes. Users must manually click each source > "Check freshness" > "Click to sync with Google Drive".
+Gemini Notebook doesn't auto-update Google Drive sources when the underlying document changes. Users must manually click each source > "Check freshness" > "Click to sync with Google Drive".
 
 ### Solution
 The `source_list_drive` and `source_sync_drive` tools automate this process.
@@ -1521,7 +1635,7 @@ The MCP needs these cookies (automatically filtered from the full cookie header)
    - Saves to cache for reuse
 
 2. **From page fetch (slower first time):**
-   - Client fetches `notebooklm.google.com` using cookies
+   - Client fetches `notebook.google.com` using cookies
    - Extracts `SNlM0e` (CSRF) and `FdrFJe` (session ID) from HTML
    - Saves to cache for reuse
    - ~1-2 seconds one-time delay
@@ -1718,7 +1832,7 @@ GyzE7e([[2], notebook_id, [label_id_to_remove]])
 
 ### `ozz5Z` — Get User Subscription Tier
 
-Returns the user's current NotebookLM subscription tier. Fires on the homepage (`source-path=/`) during page load.
+Returns the user's current Gemini Notebook subscription tier. Fires on the homepage (`source-path=/`) during page load.
 
 **Captured request params (2026-04-27, `source-path=/`):**
 ```python
