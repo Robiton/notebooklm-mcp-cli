@@ -44,3 +44,18 @@ jobs:
 
       - name: Run tests with pytest
         run: uv run --extra dev --with pytest-github-actions-annotate-failures pytest -v --tb=short -m "not e2e"
+
+  # Fork: the main ruleset requires a check named "Run tests". Upstream's OS matrix renamed
+  # the job per leg, so this gate reports that name and passes only if every leg passed.
+  tests-complete:
+    name: Run tests
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every test leg to pass
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          echo "test matrix result: $RESULT"
+          test "$RESULT" = "success"
