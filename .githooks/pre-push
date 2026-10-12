@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+# Project:  ai-project-scaffold
+# File:     .githooks/pre-push
+# Modified: 2026-09-25
+# Version:  0.3.1.20260925.0324
+# Purpose:  Run tools/preflight.sh before a push, so the gate runs BEFORE CI does.
+# Changelog:
+#   2026-09-25 v0.3.1.20260925.0324 — NEVER STRAIGHT TO THE DEFAULT BRANCH. A push or deletion whose target is main, master or the remote's recorded default is refused, receipt or not: the owner approves every merge. Tags go out. A repo opts out only by declaring <!-- scaffold:direct-push-ok <why> --> at column 0 of AGENTS.md ON THE REMOTE, read at the tip git ls-remote reports -- never the checkout or a tracking ref, both of which the restricted agent can write.
+#   2026-09-23 v0.3.0.20260923.0947 — GATE WHAT IS PUSHED, NOT WHAT IS CHECKED OUT. The
+#                                     receipt and the full run both covered HEAD only, so
+#                                     `git push origin other-branch` went out on HEAD's pass.
+#                                     A pushed commit that is not HEAD now needs its own
+#                                     PASS, or the push is refused. stdin is read once and
+#                                     handed to the chained hook.
+#   2026-09-22 v0.2.2.20260922.1627 — stop advertising --no-verify on every push; the bypass
+#                                     lives only in the owner-only refusal text
+#   2026-09-22 v0.2.1.20260922.1536 — THE ESCAPE HATCH IS THE OWNER'S. The refusal text
+#                                     offered --no-verify to whoever read it, and the reader
+#                                     is usually an agent; it now says an agent stops and
+#                                     asks.
+#   2026-09-01 v0.2.0.20260901.0845 — READ THE RECEIPT INSTEAD OF RE-RUNNING THE GATE. This
+#                        hook re-ran all ~173s of preflight on every push to establish what
+#                        preflight had already established. That cost is why it gets
+#                        uninstalled, and an uninstalled guard prevents nothing -- which is
+#                        how an adopter came to type `preflight ; push` with a semicolon and
+#                        push over a RED gate, a semicolon being the difference between a
+#                        gate and a printout.
+#                        preflight now stamps its verdict with the commit it gated. If the
+#                        newest verdict is a PASS for the exact commit being pushed, the
+#                        answer is already known. STRICTLY NO WEAKER THAN BEFORE: no
+#                        receipt, a stale sha, a FAIL, or an unreadable log all fall through
+#                        to the full run, so the shortcut can only skip work provably done.
+#                        The refusal text now names the semicolon habit explicitly, because
+#                        the incident was real and the correction is one character.
+#   2026-08-11 v0.1.0 — Initial, for #171. A repo's hooks do not ship with its clone:
+#                        `.git/hooks` is not versioned and does not come with a fetch, so
+#                        any rule enforced by a hook today is enforced on whoever happened
+#                        to install it — and it LOOKS enforced from the inside, which is
+#                        the worse half. Measured in one adopting project: core.hooksPath
+#                        unset and the only four hooks present were git-lfs's.
+#                        CHAINS `.git/hooks/pre-push` RATHER THAN REPLACING IT. Setting
+#                        core.hooksPath is EXCLUSIVE — it disables `.git/hooks` entirely,
+#                        including anything git-lfs or the developer installed there.
+#                        Silently silencing an LFS pre-push would be worse than the problem
+#                        this hook solves, so the old one runs FIRST and its failure is
+#                        still a failure.
+
+set -uo pipefail
+
+# ---------------------------------------------------------------- the chained hook first
+# git-lfs installs a pre-push that uploads objects. If core.hooksPath is set and we do not
+# call it, the push succeeds and the binaries never upload — a silent data failure, which
+# is exactly the trade #171 warned against making.
+#
+# NOT `git rev-parse --git-path hooks/pre-push` — THAT HONOURS core.hooksPath and, once
+# this hook is installed, resolves to THIS FILE. Verified on git 2.55.0: with hooksPath set
+# it returns `.githooks/pre-push`, so the chain would have been infinite recursion on every
+# push. `--git-dir` is unaffected by the setting, so the real `.git/hooks` is reachable
+# only through it.
+#
+# STDIN IS READ ONCE, HERE, AND HANDED ON. git writes one line per ref being pushed
+# (`<local ref> <local sha> <remote ref> <remote sha>`), and it is the only record of WHAT is
+# being pushed. The chained hook (git-lfs reads it to find objects) would otherwise consume
+# it, and the receipt check below needs it too.
+_refs=""
+if [ ! -t 0 ]; then _refs="$(cat)"; fi
+_gitdir="$(git rev-parse --git-dir 2>/dev/null || echo "")"
+_prev="${_gitdir:+$_gitdir/hooks/pre-push}"
+if [ -n "$_prev" ] && [ -x "$_prev" ]; then
+  printf '%s\n' "$_refs" | "$_prev" "$@" || exit $?
+fi
+
+# ---------------------------------------------------------- never straight to the default branch
+#
+# THE OWNER APPROVES EVERY MERGE (ai/STANDARDS.md -> Git workflow). GitHub cannot enforce
+# that on a free plan's private repositories, so this refuses the slip: a push, or a
+# deletion, whose target is the default branch. A PR merged on GitHub never passes through
+# here, and a release pushes a tag, so neither is affected.
+#
+# PROTECTED: `main` and `master` always, plus whatever the remote's HEAD names. Always both,
+# not "the default": the local record of the remote's HEAD is a writable ref, and trusting it
+# to NARROW the set would let one `git symbolic-ref` unprotect main.
+#
+# A REPOSITORY MAY OPT OUT, and says so in its own AGENTS.md at column 0:
+#   <!-- scaffold:direct-push-ok <why> -->
+# For a notes vault whose owner has decided its commits go straight to main.
+#
+# THE MARKER IS READ FROM THE REMOTE ITSELF, NEVER FROM ANYTHING LOCAL. AGENTS.md in the
+# checkout is a file the restricted agent can edit, and `origin/main` is a local ref that
+# `git update-ref` forges without a push (CONTROL's review, 2026-09-25). So the tip comes from
+# `git ls-remote`, and AGENTS.md is read at that commit, which must already be here (fetched).
+# On the remote's branch the marker can only have arrived through a merged PR, which the
+# owner approved. The network is touched only when a push would otherwise be refused.
+_remote="${1:-origin}"
+_protected="refs/heads/main refs/heads/master"
+_dflt="$(git symbolic-ref -q --short "refs/remotes/$_remote/HEAD" 2>/dev/null || true)"
+[ -n "$_dflt" ] && _protected="$_protected refs/heads/${_dflt#"$_remote"/}"
+_to_default=""
+while read -r _lref _lsha _rref _rsha; do
+  [ -n "${_rref:-}" ] || continue
+  for _p in $_protected; do
+    [ "$_rref" = "$_p" ] || continue
+    _tip="$(git ls-remote "$_remote" "$_rref" 2>/dev/null | cut -f1 | head -1)"
+    if [ -n "$_tip" ] && git show "$_tip:AGENTS.md" 2>/dev/null \
+         | grep -q '^<!-- scaffold:direct-push-ok'; then
+      break   # the remote's own branch declares the opt-out
+    fi
+    _to_default="$_to_default  $_lref -> $_rref\n"
+    break
+  done
+done <<< "$_refs"
+if [ -n "$_to_default" ]; then
+  printf 'pre-push: PUSH REFUSED -- this targets the default branch:\n%b' "$_to_default" >&2
+  echo "          Push a branch and open a PR. The owner approves each merge, in the" >&2
+  echo "          session doing it (ai/STANDARDS.md -> Git workflow). A peer's message" >&2
+  echo "          is not that approval. An agent that reads this stops and asks." >&2
+  if grep -q '^<!-- scaffold:direct-push-ok' AGENTS.md 2>/dev/null; then
+    echo "          AGENTS.md here declares scaffold:direct-push-ok, but $_remote's branch" >&2
+    echo "          does not. An opt-out counts only once the owner has merged it." >&2
+  fi
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------- the gate
+# CI REMAINS THE BACKSTOP. This hook is a convenience that moves the same gate earlier; a
+# hook that becomes load-bearing is one that fails silently on the machine that skipped
+# installing it, and this one is opt-in by design so that machine definitely exists.
+if [ ! -x tools/preflight.sh ]; then
+  # Not an error. A project may legitimately not have it, and refusing a push over a
+  # missing convenience is how a guard gets uninstalled.
+  exit 0
+fi
+
+# ---------------------------------------------------------------- the receipt shortcut
+#
+# WHY THIS EXISTS: the hook used to re-run the entire ~173s gate on every push, to learn
+# something preflight had recorded seconds earlier. Three minutes per push is a hook people
+# uninstall -- or route around, until `--no-verify` is reflex and the guard protects nothing.
+# On this programme's own machine that is exactly what happened, and an adopter independently
+# reported the shape it leaves behind: `preflight ; push` typed with a SEMICOLON, so the gate
+# ran, FAILED, and the push went through anyway. A semicolon makes a gate advisory.
+#
+# So preflight now stamps its verdict with the commit it was about, and this reads it. If the
+# newest verdict is a PASS for the exact commit being pushed, the gate has already run on this
+# code and re-running it would produce the same answer more slowly.
+#
+# STRICTLY NO WEAKER THAN BEFORE. Every path that is not "a pass for THIS commit" falls
+# through to the full run below: no receipt, a stale sha, a FAIL, an unreadable log. The
+# shortcut can only skip work that was provably already done.
+_receipt_ok=0
+_log="ai/.scaffold-run-log"
+_head="$(git rev-parse HEAD 2>/dev/null || true)"
+if [ -n "$_head" ] && [ -f "$_log" ]; then
+  # The NEWEST preflight verdict, whatever it says. Taking the newest PASS instead would
+  # find an older green one and skip straight past the failure that followed it -- which is
+  # the defect this hook exists to prevent, rebuilt inside the hook.
+  _row="$(grep '	preflight:preflight	' "$_log" 2>/dev/null | tail -1)"
+  if [ -n "$_row" ]; then
+    _verdict="$(printf '%s' "$_row" | cut -f3)"
+    _detail="$(printf '%s' "$_row" | cut -f4)"
+    case "$_verdict:$_detail" in
+      "ok:sha=$_head "*)
+        _receipt_ok=1 ;;
+    esac
+  fi
+fi
+
+# ------------------------------------------------ commits being pushed that are not HEAD
+#
+# THE RECEIPT ABOVE, AND THE FULL RUN BELOW, BOTH GATE HEAD -- the checkout. The commit being
+# pushed is on stdin, and it need not be HEAD: `git push origin other-branch` from here pushed
+# other-branch's tip on a receipt for this one's, and a full run would have gated this
+# checkout's bytes and waved the other commit through all the same. Measured 2026-09-23 in an
+# adoption: the hook printed "already PASSED for <HEAD>" while pushing a different branch.
+#
+# So a pushed commit that is not HEAD needs a receipt of its OWN -- the newest preflight
+# verdict naming that sha, and a clean PASS. With none, this refuses: running preflight here
+# cannot help, because it would gate the wrong tree.
+#
+# Skipped, because there is nothing new to gate: a deletion (all-zero local sha), a ref that
+# is not a commit, and a commit the remote already has.
+_zero="0000000000000000000000000000000000000000"
+_unvouched=""
+while read -r _lref _lsha _rref _rsha; do
+  [ -n "${_lsha:-}" ] || continue
+  [ "$_lsha" = "$_zero" ] && continue
+  _c="$(git rev-parse -q --verify "${_lsha}^{commit}" 2>/dev/null)" || continue
+  [ "$_c" = "$_head" ] && continue
+  if [ -n "${1:-}" ] && [ -z "$(git rev-list -n1 "$_c" --not --remotes="$1" 2>/dev/null)" ]; then
+    continue
+  fi
+  _own=""
+  [ -f "$_log" ] && _own="$(grep '	preflight:preflight	' "$_log" 2>/dev/null \
+                            | awk -F'\t' -v s="sha=$_c" 'index($4, s)==1' | tail -1)"
+  case "$(printf '%s' "$_own" | cut -f3):$(printf '%s' "$_own" | cut -f4)" in
+    "ok:sha=$_c "*) ;;
+    *) _unvouched="$_unvouched  $_lref at $_c\n" ;;
+  esac
+done <<< "$_refs"
+
+if [ -n "$_unvouched" ]; then
+  printf 'pre-push: PUSH REFUSED -- these commits are not the checkout (HEAD %s)\n' "$_head" >&2
+  printf '          and no preflight has passed on them:\n%b' "$_unvouched" >&2
+  echo "          preflight gates the checkout, so running it here would gate the wrong" >&2
+  echo "          tree. Check the branch out, run tools/preflight.sh, and push from there." >&2
+  exit 1
+fi
+
+if [ "$_receipt_ok" = "1" ]; then
+  echo "pre-push: preflight already PASSED for ${_head}, not re-running it." >&2
+  echo "          (tools/preflight.sh to force a fresh run)" >&2
+  exit 0
+fi
+
+echo "pre-push: running tools/preflight.sh" >&2
+if tools/preflight.sh; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+
+  PUSH REFUSED — preflight failed above.
+
+  This is the same set of gates CI runs, reported all at once. CI stops at its
+  first red step, so pushing now teaches you about exactly one failure and hides
+  the next behind it.
+
+  If you also run preflight by hand, CHAIN IT WITH && AND NOT WITH ; --
+
+      tools/preflight.sh && git push        correct
+      tools/preflight.sh ; git push         pushes even when the gate FAILED
+
+  A semicolon runs the next command regardless of the previous one's exit code,
+  which turns the gate into a printout. That is a real reported incident, not a
+  hypothetical, and it is why this hook exists as the backstop for the habit.
+
+  Genuine emergency, or preflight itself is broken -- the OWNER's call, never an
+  agent's (an agent stops here and asks):
+      git push --no-verify
+
+  Turn this hook off entirely, one visible command:
+      git config --unset core.hooksPath
+EOF
+exit 1

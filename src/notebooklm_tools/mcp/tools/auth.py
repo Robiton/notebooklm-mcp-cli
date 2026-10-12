@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/auth.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0558
+# Purpose:  MCP tools for personal-mode authentication (refresh, save tokens)
+# Changelog:
+#   2026-10-12 v1.0.8 — mark token status strings scaffold:not-a-secret (secret_scan false positive)
 """Auth tools - Authentication management."""
 
 import time
@@ -133,13 +140,13 @@ def save_auth_tokens(
 
         # Build status message
         if csrf_token and session_id:
-            token_msg = "CSRF token and session ID extracted from network request - no page fetch needed! ⚡"
+            token_msg = "CSRF token and session ID extracted from network request - no page fetch needed! ⚡"  # scaffold:not-a-secret
         elif csrf_token:
-            token_msg = "CSRF token extracted from network request. Session ID will be auto-extracted on first use."
+            token_msg = "CSRF token extracted from network request. Session ID will be auto-extracted on first use."  # scaffold:not-a-secret
         elif session_id:
-            token_msg = "Session ID extracted from network request. CSRF token will be auto-extracted on first use."
+            token_msg = "Session ID extracted from network request. CSRF token will be auto-extracted on first use."  # scaffold:not-a-secret
         else:
-            token_msg = "CSRF token and session ID will be auto-extracted on first API call (~1-2s one-time delay)."
+            token_msg = "CSRF token and session ID will be auto-extracted on first API call (~1-2s one-time delay)."  # scaffold:not-a-secret
 
         return {
             "status": "success",

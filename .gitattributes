@@ -1,0 +1,12 @@
+# Append-log files merge with git's built-in union driver: a conflict keeps BOTH
+# sides' additions instead of blocking. SESSION and BACKLOG are logs by design —
+# parallel PRs append entries / flip task checkboxes in the same spots constantly,
+# and every collision is "both sides are real data, keep both."
+# Cost is cosmetic only (adjacent entries may land in odd order) — tidy in the next commit.
+#
+# ai/MEMORY.md is deliberately EXCLUDED: decision entries get *edited* (superseded →
+# stub), and union would silently interleave two edits of the same lines with no
+# conflict marker. MEMORY conflicts stop for the project owner (see ai/TEAM.md
+# working agreements) — never auto-merge the decision ledger.
+ai/SESSION.md merge=union
+ai/BACKLOG.md merge=union

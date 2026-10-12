@@ -5,6 +5,38 @@ _Most recent session at the top._
 
 ---
 
+## 2026-10-12 — Brian Worrell — Claude Code (session 10)
+
+**Who worked on this:** Brian Worrell + Claude Code (claude-opus-5-5)
+
+**What we worked on:**
+- Upgraded the AI scaffold from its original April adoption to `Robiton/ai-project-scaffold` 0.111.23.20261010.1324
+- The project had no `.scaffold-version` (adopted before scaffold releases existed). Identified the adopted scaffold commit as `9d56ce2` (2026-04-04) by diffing AGENTS.md / sync-check.sh / .cursorrules against early commits, tagged it locally as `0.1.1.20260404.0000`, and ran `tools/scaffold_upgrade.sh --from <local clone>` against it so the three-way merge had a real base
+- Resolved 7 merge conflicts (AGENTS.md, ai/STANDARDS.md, ai/CODING.md ×2, ai/SECURITY.md ×2, ai/PLANNING.md) — API-integration overlay and all project-specific release/coding/security content preserved
+- Reconciled 8 kept product files: took incoming `.cursorrules`, `.windsurfrules`, `copilot-instructions.md`, `.editorconfig`, `sync-check.sh`, `scaffold-check.yml`; kept our `.codex` (added version-format line) and our PR template
+- `CLAUDE.md` is now a committed `@AGENTS.md` pointer (was a gitignored symlink); `.gitignore` narrowed so `.claude/` skills + hook templates and `.cursor/rules/` are committed, personal `.claude/settings*.json` stay ignored
+- Filled AGENTS.md Project Commands and SECURITY.md project-specific risks; PHI section marked not applicable
+- Declared header baseline 2026-10-12 (`tools/header_check.sh --adopt`)
+- Fixes found by the new gates: broken `./CLAUDE.md` link in `docs/API_REFERENCE.md`; four status strings in `mcp/tools/auth.py` marked `scaffold:not-a-secret` (+ file header); `upstream-check.yml` `git remote add` made idempotent
+- Standardised lint commands on pinned ruff (`uv run --extra dev ruff`) everywhere in `ai/`
+
+**Decisions made:**
+- Scaffold base for this project is `9d56ce2`; `.scaffold-version` now tracks releases, so future upgrades are plain `tools/scaffold_upgrade.sh`
+- Did NOT run `tools/changelog.sh --write` — it would replace the hand-maintained fork + upstream CHANGELOG with a tag-derived one (see BACKLOG)
+
+**Problems encountered:**
+- `tools/changelog.sh --check` fails: the scaffold expects a tag-generated CHANGELOG; ours is hand-written Keep a Changelog with upstream history and upstream's lightweight `v0.x` tags. No opt-out exists in the scaffold
+- New CI gate `header_check --since origin/main` requires a file header on every edited `.py` file — affects upstream cherry-picks going forward
+- `uv run` in a fresh checkout rewrites 2 lines of `uv.lock` (same churn as the uncommitted `uv.lock` change on main)
+- Local gaps (exit 3, not passes): zizmor, actionlint, osv-scanner not installed
+
+**Next steps:**
+- Push `chore/scaffold-upgrade-0.111.23`, open PR, watch the new scaffold-check.yml on CI
+- Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
+- Optionally wire session hooks: `./setup.sh` writes `.claude/settings.json` hooks (currently a personal allowlist only)
+
+---
+
 ## 2026-04-14 — Brian Worrell — Claude Code (session 9)
 
 **Who worked on this:** Brian Worrell + Claude Code (claude-sonnet-4-6)

@@ -1,7 +1,7 @@
 # Project Backlog
 
 _This file is the project to-do list. Updated by all tools and team members._
-_Last updated: 2026-04-14 (session 9, v1.0.8) by Claude Code_
+_Last updated: 2026-10-12 (session 10, scaffold 0.111.23) by Claude Code_
 
 ---
 
@@ -12,6 +12,18 @@ _(nothing active)_
 ---
 
 ## Up next
+
+### Scaffold follow-ups (from 0.111.23 upgrade, 2026-10-12)
+
+- [ ] **Merge scaffold upgrade PR** (`chore/scaffold-upgrade-0.111.23`) once scaffold-check.yml is green on CI | Priority: High | Owner: Brian | Due: —
+- [ ] **CHANGELOG gate mismatch** — `tools/changelog.sh --check` (preflight) wants a tag-generated CHANGELOG.md; ours is hand-maintained with fork + upstream history. Decide: scaffold opt-out (raise on Robiton/ai-project-scaffold) vs. move upstream history to an archive and adopt generated changelog | Priority: Med | Owner: Brian | Due: —
+- [ ] **Header rule vs. upstream files** — CI now fails any PR editing a `.py` file without a scaffold header. Decide whether upstream-derived `src/` files get headers on edit (cherry-pick conflict surface) or need a declared exemption (scaffold has none today) | Priority: Med | Owner: Brian | Due: —
+- [ ] Declare a version-stamp baseline in AGENTS.md (`<!-- notebooklm:version-stamp-baseline X -->`) — `release_status.sh` reports GAP until then | Priority: Low | Owner: Brian | Due: —
+- [ ] Install local scanners so gates stop reporting DID NOT RUN: `brew install osv-scanner actionlint zizmor` | Priority: Low | Owner: Brian | Due: —
+- [ ] **Keep CI scanner pins current** — `scaffold-check.yml` has a LOCAL install step (shellcheck 0.11.0, actionlint 1.7.7, zizmor 1.30.1, osv-scanner 2.6.0, SHA-256 verified) because this repo runs on GitHub-hosted runners only. Scaffold upgrades will sidecar this file — re-apply the step and match pins to `tools/*` constants | Priority: Low | Owner: Brian | Due: —
+- [ ] **Open Dependabot alerts** — 1 critical + 3 high (PyJWT, urllib3) on main as of 2026-10-12; bump in a separate PR | Priority: High | Owner: Brian | Due: —
+- [ ] Wire session hooks into `.claude/settings.json` (`./setup.sh`) — SessionStart/Stop/PreCompact journal | Priority: Low | Owner: Brian | Due: —
+- [ ] Resolve stray `uv.lock` churn (2-line rewrite by `uv run`) — commit or revert on main | Priority: Low | Owner: Brian | Due: —
 
 ### Research tasks
 
@@ -101,4 +113,5 @@ _(nothing active)_
 - [x] Merge enterprise-url-support → main (PR #8, squash merge) | Completed: 2026-04-07
 - [x] Release v1.0.1 to PyPI (GitHub release tag, publish.yml triggered) | Completed: 2026-04-07
 - [x] Swap local install from upstream notebooklm-mcp-cli to notebooklm-enterprise-mcp v1.0.1 | Completed: 2026-04-07
+- [x] Upgrade AI scaffold to 0.111.23.20261010.1324 (base 9d56ce2) | Completed: 2026-10-12
 - [x] Close upstream contribution strategy — jacob-bd closed #126 (enterprise) and #129 (podcast); fork is now one-way sync only | Completed: 2026-04-07

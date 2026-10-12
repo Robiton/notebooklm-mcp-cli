@@ -1,0 +1,54 @@
+# gitleaks configuration — ai-project-scaffold
+#
+# WHY THIS FILE EXISTS. Run bare, gitleaks reports 12 findings in tools/secret_scan.sh in
+# EVERY repository the scaffold ships to — measured 2026-08-30 across all six repos on the
+# self-hosted runner, identical count in five of them because the file is vendored. All 12
+# are synthetic fixtures inside that script's own selftest(): the secret scanner has to
+# contain things that look like secrets in order to prove it detects them.
+#
+# A GATE THAT IS RED ON ARRIVAL TRAINS PEOPLE TO SCROLL PAST IT. That is the same reason
+# ShellCheck is deliberately not a blocking gate here (36 findings, 2 of them false-positive
+# errors). So this config lands BEFORE gitleaks is wired into anything, not after.
+#
+# THE SHAPE OF THE FIX MATTERS. The obvious move is `paths = ['tools/secret_scan\.sh']`,
+# which is a blind spot: a real credential pasted into that file would then never be seen.
+# Instead this teaches gitleaks the marker THE SCAFFOLD ALREADY USES — `scaffold:not-a-secret`,
+# which secret_scan.sh itself honours — so the two tools agree on what a declared non-secret
+# is, and the exemption travels with the line rather than with the filename. An adopter who
+# marks their own fixture gets the same treatment for free.
+
+title = "ai-project-scaffold"
+
+[extend]
+useDefault = true
+
+# NOTE: [[allowlists]] (plural, array-of-tables) ONLY. gitleaks 8.30.1 refuses to load a
+# config that mixes the deprecated singular [allowlist] with it:
+#   FTL Failed to load config error="[allowlist] is deprecated, it cannot be used alongside [[allowlists]]"
+# and a config that fails to load exits 1 — which in a gate is indistinguishable from
+# "leaks found". Caught by running it; it would have shipped as a permanent red otherwise.
+[[allowlists]]
+description = "Lines explicitly declared not-a-secret via the scaffold's own marker."
+regexTarget = "line"
+regexes = [
+  # The scaffold's own convention. One marker, honoured by both tools.
+  '''scaffold:not-a-secret''',
+]
+
+[[allowlists]]
+description = "Fixture constants used by tools/secret_scan.sh --selftest. Exact literals only."
+regexTarget = "secret"
+regexes = [
+  '''^sk_live_9f8a7b6c5d4e3f2a1b$''',
+  '''^3f9a1b2c-4d5e-6f70-8192-a3b4c5d6e7f8$''',
+  '''^ghp_A1b2C3d4E5f6G7h8I9j0K1l2$''',
+  # AWS's own published documentation example secret. Authenticates to nothing.
+  '''^wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY$''',
+  # jwt.io's published demo token — HS256 over {"sub":"1234567890"}, signed with the literal
+  # secret "secret". The JWT equivalent of AKIAIOSFODNN7EXAMPLE, which gitleaks already  # scaffold:not-a-secret
+  # allowlists by default. localcoder uses it as a redaction-test fixture in audit.py and
+  # mcp_client.py; the base64 decodes to {"alg":"HS256"} and {"sub":"1234567890"} and carries
+  # no secret material. Matched as a PREFIX because the source splits it across two string
+  # literals, so gitleaks only ever sees header.payload.
+  '''^eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.?$''',
+]

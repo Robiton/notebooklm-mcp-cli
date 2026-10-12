@@ -28,7 +28,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
-.cursor/
+# .cursor/rules/ is committed (scaffold hook file); only runtime state is ignored below
 *.swp
 *.swo
 
@@ -64,7 +64,9 @@ downloads/
 # Auto Claude data directory
 .auto-claude/
 .worktrees/
-.claude/
+# .claude/ skills + hook templates are committed; per-developer settings are not
+.claude/settings.json
+.claude/settings.local.json
 run*.notebooklm-py-analysis/
 *.code-workspace
 
@@ -74,9 +76,63 @@ test_pr_61.py
 notebooklm-mcp-*.mcpb
 
 # AI Project Scaffold
-CLAUDE.md
 .cursor/cache/
 .cursor/logs/
 .agents/cache/
 .agents/runtime/
 .agents/*.db
+
+# --- entries added by tools/scaffold_upgrade.sh, 0.111.23.20261010.1324 ---
+.claude/cache/
+.claude/logs/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+secrets/
+credentials/
+passwords.conf
+.mcp-env
+.mcp-env.*
+mcp-secrets*
+*.bearer
+*bearer*token*
+*_token
+*.token
+*.pyc
+*.pyo
+*.pyd
+env/
+dist/*.egg
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist/*.zip
+dist/*.tar.gz
+output/
+*.tmp
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+.vscode/settings.json
+ai/SESSION_JOURNAL.md
+ai/.scaffold-run-log
+ai/.scaffold-run-log.tmp.*
+.audit-coverage/
+.audit-coverage-jobs.json
+.session-journal-state
+.correction-capture-state
+.correction-capture-health
+.scaffold-version-check
+docs/benchmarks/localcoder-benchmarks.md
+docs/benchmarks/localcoder-benchmarks.jsonl
+docs/benchmarks/localcoder-eval.md
+docs/benchmarks/localcoder-eval.jsonl
+docs/benchmarks/localcoder-eval-baseline.json
+.localcoder-log.jsonl
+.localcoder-audit.jsonl*
+*.scaffold-backup
+.release-receipts/
+.claude/*.lock

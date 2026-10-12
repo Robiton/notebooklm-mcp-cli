@@ -64,6 +64,8 @@ packages = ["src/notebooklm_tools"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# tools/ is vendored from ai-project-scaffold and linted by its own gate (tools/lint_python.sh)
+extend-exclude = ["tools"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Project:  ai-project-scaffold
+# File:     .githooks/post-merge
+# Modified: 2026-09-01
+# Version:  0.1.0.20260901.1656
+# Purpose:  Keep git-lfs working once core.hooksPath points at .githooks.
+# Changelog:
+#   2026-09-01 v0.1.0.20260901.1656 — Upstreamed from Robiton/godsfall#146, which is where
+#                        the need was found and verified (#274). core.hooksPath is
+#                        EXCLUSIVE: setting it disables .git/hooks entirely, and git-lfs
+#                        installs exactly these three there and announces none of them. In
+#                        that repository -- 1,746 LFS-tracked files -- installing the
+#                        pre-push gate would have silenced LFS with nothing to report it,
+#                        and it had already paid that bill once: 377 broken pointer files
+#                        across every clone.
+#                        CHAINS RATHER THAN COPIES. A vendored copy of git-lfs's hook is a
+#                        second implementation to drift against the installed git-lfs;
+#                        delegating to the real one keeps exactly one.
+#                        VERIFIED THERE, NOT ASSUMED: with core.hooksPath=.githooks set,
+#                        deleting and restoring a tracked asset returned 529,278 bytes of
+#                        real audio rather than a pointer stub.
+#                        HARMLESS WHERE THERE IS NO git-lfs. With no .git/hooks/post-merge
+#                        to chain to, this exits 0 and nothing changes.
+
+set -uo pipefail
+
+# NOT `git rev-parse --git-path hooks/post-merge` — that honours core.hooksPath and, once
+# installed, resolves to THIS FILE, making the chain infinite recursion. `--git-dir` is
+# unaffected by the setting, so the real .git/hooks is reachable only through it. Same
+# reasoning, and the same git 2.55.0 verification, as .githooks/pre-push.
+_gitdir="$(git rev-parse --git-dir 2>/dev/null || echo "")"
+_prev="${_gitdir:+$_gitdir/hooks/post-merge}"
+if [ -n "$_prev" ] && [ -x "$_prev" ]; then
+  exec "$_prev" "$@"
+fi
+exit 0
