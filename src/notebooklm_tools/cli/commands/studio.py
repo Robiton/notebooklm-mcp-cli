@@ -135,15 +135,15 @@ def studio_status(
     json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
     profile: str | None = typer.Option(None, "--profile", "-p", help="Profile to use"),
 ) -> None:
-    """List all studio artifacts and their status."""
+    """List all studio artifacts and their status (including mind maps)."""
     try:
         notebook_id = get_alias_manager().resolve(notebook_id)
         with get_client(profile) as client:
-            artifacts = client.poll_studio_status(notebook_id)
+            result = studio_service.get_studio_status(client, notebook_id)
 
         fmt = detect_output_format(json_output)
         formatter = get_formatter(fmt, console)
-        formatter.format_artifacts(artifacts, full=full)
+        formatter.format_artifacts(result["artifacts"], full=full)
     except (ServiceError, NLMError) as e:
         handle_error(e, json_output=locals().get("json_output", False))
 
@@ -575,12 +575,16 @@ def create_video(
     style_prompt: str = typer.Option(
         "",
         "--style-prompt",
-        help="Custom visual style description (implies --style custom unless another style is explicitly set)",
+        help="Custom visual style description. For explainer/brief: implies --style custom. For cinematic: mapped to --focus (custom_instructions).",
     ),
     language: str = typer.Option(
         "", "--language", help="BCP-47 language code (default: NOTEBOOKLM_HL or en)"
     ),
-    focus: str = typer.Option("", "--focus", help="Optional focus topic"),
+    focus: str = typer.Option(
+        "",
+        "--focus",
+        help="Focus topic or creative direction. For cinematic format, this is the full steering prompt (visual style, audience, narrative).",
+    ),
     source_ids: str | None = typer.Option(None, "--source-ids", help="Comma-separated source IDs"),
     confirm: bool = typer.Option(False, "--confirm", "-y", help="Skip confirmation"),
     profile: str | None = typer.Option(None, "--profile", "-p", help="Profile to use"),

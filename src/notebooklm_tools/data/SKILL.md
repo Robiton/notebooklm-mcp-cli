@@ -59,6 +59,7 @@ nlm --version           # Check installed version
 9. **DO NOT launch REPL**: Never use `nlm chat start` - it opens an interactive REPL that AI tools cannot control. Use `nlm notebook query` for one-shot Q&A instead.
 10. **Choose output format wisely**: Default output (no flags) is compact and token-efficient—use it for status checks. Use `--quiet` to capture IDs for piping. Only use `--json` when you need to parse specific fields programmatically.
 11. **Use `--help` when unsure**: Run `nlm <command> --help` to see available options and flags for any command.
+12. **Studio: fast track by default**: Infer format/style/prompt silently—one compact line, then `studio_create(confirm=True)`. No intake questionnaires. Fast track reduces clarifying questions, not the confirm gate. **Cinematic video is always guided** (quota-limited). Full preview only when vague, high-stakes, cinematic, or user asks. See **[references/studio-prompting-guide.md](references/studio-prompting-guide.md)**.
 
 ## Workflow Decision Tree
 
@@ -77,7 +78,7 @@ User wants to...
 │   ├─► From Google Drive → nlm source add <nb-id> --drive <doc-id> --type doc
 │   └─► Discover new sources → nlm research start "query" --notebook-id <nb-id>
 │
-├─► Generate content from sources
+├─► Generate content from sources (→ Studio Prompting for optimal focus_prompt)
 │   ├─► Podcast/Audio → nlm audio create <nb-id> --confirm
 │   ├─► Written summary → nlm report create <nb-id> --confirm
 │   ├─► Study materials → nlm quiz/flashcards create <nb-id> --confirm
@@ -114,6 +115,8 @@ nlm login
 
 # Then reload tokens in MCP
 mcp__notebooklm-mcp__refresh_auth()
+# Returns status: "success" (valid), "expired" (tokens dead, run `nlm login`),
+# or "error". `nlm login` is the only recovery path for "expired".
 ```
 
 Or manually save cookies via MCP (fallback):
@@ -170,7 +173,7 @@ nlm notebook delete <id> --confirm     # PERMANENT deletion
 Use `source_add` with these `source_type` values:
 - `url` - Web page or YouTube URL (`url` param)
 - `text` - Pasted content (`text` + `title` params)
-- `file` - Local file upload (`file_path` param)
+- `file` - Local file upload (`file_path` param). Supported extensions: `PDF, TXT, MD, DOCX, CSV, EPUB, MP3, M4A, WAV, AAC, OGG, OPUS, MP4, JPG, JPEG, PNG, GIF, WEBP`. Note: Image-bearing sources (PDF / JPG / PNG / etc.) feed Studio video generation's visual-crop pipeline — charts, photos, and diagrams may be extracted as on-screen aids in Video Overviews.
 - `drive` - Google Drive doc (`document_id` + `doc_type` params)
 
 Other tools: `source_list_drive`, `source_describe`, `source_get_content`, `source_rename`, `source_sync_drive` (requires `confirm=True`), `source_delete` (requires `confirm=True`).
@@ -183,6 +186,7 @@ nlm source add <nb-id> --url "https://youtube.com/..." # YouTube video
 nlm source add <nb-id> --text "content" --title "X"  # Pasted text
 nlm source add <nb-id> --drive <doc-id>              # Drive doc (auto-detect type)
 nlm source add <nb-id> --drive <doc-id> --type slides # Explicit type
+nlm source add <nb-id> --file "/path/to/diagram.png" --wait # Local file upload (images, PDFs, documents, audio, video)
 
 # Listing and viewing
 nlm source list <nb-id>                # Table of sources
@@ -236,6 +240,7 @@ nlm research status <nb-id> --full            # Full details
 # Import discovered sources
 nlm research import <nb-id> <task-id>            # Import all
 nlm research import <nb-id> <task-id> --indices 0,2,5  # Import specific
+nlm research import <nb-id> <task-id> --cited-only      # Import cited sources
 nlm research import <nb-id> <task-id> --timeout 600    # Custom timeout (default: 300s)
 ```
 
@@ -245,12 +250,12 @@ nlm research import <nb-id> <task-id> --timeout 600    # Custom timeout (default
 
 #### MCP Tools (Unified Creation)
 
-Use `studio_create` with `artifact_type` and type-specific options. All require `confirm=True`.
+Use `studio_create` with `artifact_type` and type-specific options. All require `confirm=True`. `studio_create` runs a pre-flight auth check before firing the request, so stale auth fails immediately with an `nlm login` hint instead of returning a fake success that collapses seconds later.
 
 | artifact_type | Key Options |
 |--------------|-------------|
 | `audio` | `audio_format`: deep_dive/brief/critique/debate, `audio_length`: short/default/long |
-| `video` | `video_format`: explainer/brief, `visual_style`: auto_select/classic/whiteboard/kawaii/anime/watercolor/retro_print/heritage/paper_craft |
+| `video` | `video_format`: explainer/brief/cinematic, `visual_style`: auto_select/classic/whiteboard/kawaii/anime/watercolor/retro_print/heritage/paper_craft (not for cinematic), `video_style_prompt` |
 | `report` | `report_format`: Briefing Doc/Study Guide/Blog Post/Create Your Own, `custom_prompt` |
 | `quiz` | `question_count`, `difficulty`: easy/medium/hard |
 | `flashcards` | `difficulty`: easy/medium/hard |
@@ -326,13 +331,52 @@ nlm infographic create <id> --orientation portrait --detail detailed --style pro
 # Video
 nlm video create <id> --confirm
 nlm video create <id> --format brief --style whiteboard --confirm
-# Formats: explainer, brief
+nlm video create <id> --format cinematic --focus "Full creative brief..." --confirm
+# Formats: explainer, brief, cinematic (English, 18+, quota-limited)
 # Styles: auto_select, classic, whiteboard, kawaii, anime, watercolor, retro_print, heritage, paper_craft
+# Cinematic: put full brief in --focus; --style-prompt merges into --focus
 
 # Data Table
 nlm data-table create <id> "Extract all dates and events" --confirm
 # DESCRIPTION is required as second argument
 ```
+
+#### Studio Prompting (Read Before Generating)
+
+**Full guides:** [studio-prompting-guide.md](references/studio-prompting-guide.md) | [studio-prompt-examples.md](references/studio-prompt-examples.md)
+
+**Fast track (default):** Silently infer (user message → notebook title → `notebook_describe` if needed) → **minimal** 1–3 sentence prompt with grounding anchor → one-line notice → `studio_create(confirm=True)`. Never run multi-question intake.
+
+**Guided preview (exception):** Vague request, **any cinematic video**, high-stakes deliverable, empty notebook, or user asks → show settings + **full** prompt → one optional refine → generate.
+
+**Grounding anchor (every prompt):** `Use only uploaded sources. Do not invent statistics, quotes, or examples not in the sources.`
+
+**Iterate only on failure or user dissatisfaction** — do not proactively offer regen on success. Slides: use `studio_revise` for targeted fixes.
+
+**Prompt parameters by artifact:**
+
+| Artifact | Prompt field | CLI flag |
+|----------|--------------|----------|
+| audio, video, infographic, slide_deck, quiz, flashcards | `focus_prompt` | `--focus` |
+| report (Create Your Own) | `custom_prompt` | `--prompt` |
+| data_table | `description` | positional arg (required) |
+
+**Quick format picks:**
+
+| User intent | Default |
+|-------------|---------|
+| Podcast / learn | audio: `deep_dive`, `default` |
+| Quick audio recap | audio: `brief`, `short` |
+| Teach / explain | video: `explainer` |
+| Exec video summary | video: `brief` |
+| Narrative / launch video | video: `cinematic` + full brief in focus |
+| Shareable slides | slide_deck: `detailed_deck` |
+| Live presentation | slide_deck: `presenter_slides` |
+| LinkedIn visual | infographic: `square`, `concise`, `bento_grid` |
+| Custom report | report: `Create Your Own` + `custom_prompt` |
+| Structured extraction | data_table: explicit column schema in `description` |
+
+**After generation:** Poll `studio_status`. Revise slides with `studio_revise`. Reuse successful prompts from `custom_instructions` in status output.
 
 ### 6. Studio (Artifact Management)
 
@@ -343,7 +387,7 @@ nlm data-table create <id> "Extract all dates and events" --confirm
 
 #### MCP Tools
 
-Use `studio_status` to check progress (or rename with `action="rename"`). Use `download_artifact` with `artifact_type` and `output_path`. Use `export_artifact` with `export_type`: docs/sheets. Delete with `studio_delete` (requires `confirm=True`).
+Use `studio_status` to check progress (or rename with `action="rename"`). For failed artifacts, `studio_status` returns a non-null `error_reason` field so callers know why without re-running. Use `download_artifact` with `artifact_type` and `output_path`. Use `export_artifact` with `export_type`: docs/sheets. Delete with `studio_delete` (requires `confirm=True`).
 
 #### CLI Commands
 ```bash
@@ -628,6 +672,48 @@ nlm tag list                                              # List all tagged note
 nlm tag select "ai research"                              # Find notebooks by tag match
 ```
 
+### 16. Long-Lived MCP Server Configuration
+
+The MCP server runs as a long-lived process. For 24/7 deployments (e.g. an always-on assistant), a few knobs help bound memory and tune behavior.
+
+#### Conversation cache bounds (added in 0.6.14)
+
+The in-process conversation history cache used to grow without bound, eventually OOM'ing the host on always-on servers. Three env-var knobs cap memory. Set any to `0` to disable that specific cap and restore the old unbounded behavior:
+
+| Env var | Default | Purpose |
+|---------|---------|---------|
+| `NOTEBOOKLM_CONVERSATION_MAX_TURNS` | `50` | Max turns kept per conversation. Older turns are FIFO-dropped. Survivors are renumbered `1..N` so `turn_number` stays a stable 1-indexed position in the current list. |
+| `NOTEBOOKLM_CONVERSATION_MAX_CONVS` | `500` | Max distinct conversations cached. On overflow, the least-recently-used conversation is evicted. Reads and writes both promote to MRU. |
+| `NOTEBOOKLM_CONVERSATION_MAX_CHARS_PER_TURN` | `100000` | Per-turn answer char cap. Safety net against pathological payloads. Queries are user input and not truncated. |
+
+With all defaults: 500 convs × 50 turns × up to 100k chars = hard upper bound around ~2.5 GB of answer text. In practice answers are 1–10 KB, so the typical ceiling is ~25 MB.
+
+Negative values are clamped to `0` (unlimited) with a warning. Invalid values fall back to the default with a warning.
+
+#### Cache stats (added in 0.6.14)
+
+For monitoring from Python, the `BaseClient` exposes `get_conversation_cache_stats()` which returns:
+
+```python
+{
+    "conversations": int,            # current number of cached conversations
+    "total_turns": int,              # current number of cached turns across all convs
+    "max_turns_per_conversation": int,
+    "max_conversations": int,
+    "max_chars_per_turn": int,
+}
+```
+
+There's no MCP or CLI tool wrapper in 0.6.14. Call it directly from Python if you need to surface cache pressure in your own tooling.
+
+#### Server startup flags (notebooklm-mcp)
+
+When starting the MCP server directly, two flags control transport-layer behavior. Neither affects the conversation cache above.
+
+- `--stateless` / `--no-stateless` (default: `true`, env `NOTEBOOKLM_MCP_STATELESS`): Controls whether the MCP HTTP transport keeps per-session state. Leave it `true` unless you know you need sessions. The flag exists to work around an MCP SDK double-response crash (python-sdk#2416) and is unrelated to the conversation cache.
+- `--transport http` / `--transport stdio` (default: `stdio`): Pick the transport. `--transport http` requires `--port` (default `8000`).
+- `--host <addr>` (default `127.0.0.1`): Bind address for HTTP/SSE. Refuses external binds unless `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1` is set.
+
 ## Common Patterns
 
 ### Pattern 1: Research → Podcast Pipeline
@@ -698,6 +784,7 @@ nlm pipeline run <id> ingest-and-podcast --url "https://example.com"
 | "Import timed out" | Too many sources | Use `--timeout 600` for larger notebooks |
 | "Google API error code 3" | Transient deep research error | Retry in a few minutes, or use `--mode fast` |
 | Browser doesn't launch | Port conflict | Close browser, retry |
+| `nlm login` crashes with `ClientAuthenticationError` | (Fixed in 0.6.14) Disk tokens fully expired | `nlm login` now works directly, no manual `nlm login profile delete` needed |
 
 ## Rate Limiting
 
@@ -710,6 +797,8 @@ Wait between operations to avoid rate limits:
 ## Advanced Reference
 
 For detailed information, see:
+- **[references/studio-prompting-guide.md](references/studio-prompting-guide.md)**: Studio prompt best practices, fast vs guided modes, per-artifact decision trees
+- **[references/studio-prompt-examples.md](references/studio-prompt-examples.md)**: Copy-paste prompt templates and command examples
 - **[references/command_reference.md](references/command_reference.md)**: Complete command signatures
 - **[references/troubleshooting.md](references/troubleshooting.md)**: Detailed error handling
 - **[references/workflows.md](references/workflows.md)**: End-to-end task sequences

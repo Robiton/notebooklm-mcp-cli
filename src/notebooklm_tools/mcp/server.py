@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/server.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.0952
 # Purpose:  NotebookLM MCP Server - Modular Architecture
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """NotebookLM MCP Server - Modular Architecture.
 
@@ -197,6 +198,7 @@ def main() -> None:
 Environment Variables:
   NOTEBOOKLM_MCP_TRANSPORT     Transport type (stdio, http, sse)
   NOTEBOOKLM_MCP_HOST          Host to bind (default: 127.0.0.1)
+  NOTEBOOKLM_ALLOW_EXTERNAL_BIND  Allow a non-loopback host (default: false; refused otherwise)
   NOTEBOOKLM_MCP_PORT          Port to listen on (default: 8000)
   NOTEBOOKLM_MCP_PATH          MCP endpoint path (default: /mcp)
   NOTEBOOKLM_MCP_STATELESS     Stateless HTTP sessions (default: true, set false to disable)
@@ -247,7 +249,13 @@ Examples:
         "--stateless",
         action=argparse.BooleanOptionalAction,
         default=_env_bool("NOTEBOOKLM_MCP_STATELESS", default=True),
-        help="Stateless HTTP sessions (default: true). Avoids MCP SDK double-response crash (python-sdk#2416)",
+        help=(
+            "Stateless HTTP sessions (default: true). Avoids MCP SDK double-response crash "
+            "(python-sdk#2416). NOTE: this affects the MCP HTTP transport layer only — "
+            "it does NOT control the in-process conversation history cache. To bound the "
+            "conversation cache (e.g. for long-lived servers), set "
+            "NOTEBOOKLM_CONVERSATION_MAX_TURNS / NOTEBOOKLM_CONVERSATION_MAX_CONVS."
+        ),
     )
     parser.add_argument(
         "--debug",
@@ -295,18 +303,6 @@ Examples:
 
     set_query_timeout(args.query_timeout)
 
-    # Non-loopback host warning
-    _LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
-    if args.transport in ("http", "sse") and args.host not in _LOOPBACK_HOSTS:
-        import warnings
-
-        warnings.warn(
-            "SECURITY WARNING: HTTP transport is bound to a non-loopback address "
-            f"('{args.host}'). There is no built-in authentication. "
-            "Do not expose this port to untrusted networks.",
-            stacklevel=2,
-        )
-
     # Set up OAuth if configured (HTTP/SSE transport only)
     oauth_middleware: list = []
     if args.oauth_client_id and args.oauth_client_secret:
@@ -327,8 +323,9 @@ Examples:
     # Run server with appropriate transport
     # show_banner=False prevents Rich box-drawing output that can corrupt
     # the JSON-RPC protocol on Windows (especially with non-English locales)
+    import sys
+
     if args.transport == "stdio":
-        import sys
 
         class _StdoutToStderrWrapper:
             """Redirects sys.stdout.write to sys.stderr, but preserves original buffer.
@@ -354,34 +351,44 @@ Examples:
         sys.stdout = _StdoutToStderrWrapper(sys.stdout)
 
         mcp.run(show_banner=False)
-    elif args.transport == "http":
+    elif args.transport in ("http", "sse"):
         _LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
         if args.host not in _LOOPBACK_HOSTS:
+            if not _env_bool("NOTEBOOKLM_ALLOW_EXTERNAL_BIND"):
+                print(
+                    f"SECURITY ERROR: Refusing to bind to non-loopback address '{args.host}'.\n"
+                    "There is no built-in authentication — binding externally exposes\n"
+                    "your Google cookies to anyone on the network.\n\n"
+                    "To override, set: NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             import warnings
 
             warnings.warn(
-                "SECURITY WARNING: HTTP transport is bound to a non-loopback address "
-                f"('{args.host}'). There is no built-in authentication. "
-                "Do not expose this port to untrusted networks.",
+                f"SECURITY WARNING: {args.transport.upper()} transport is bound to a "
+                f"non-loopback address ('{args.host}'). There is no built-in "
+                "authentication. Do not expose this port to untrusted networks.",
                 stacklevel=2,
             )
-        mcp.run(
-            transport="streamable-http",
-            host=args.host,
-            port=args.port,
-            path=args.path,
-            stateless_http=args.stateless,
-            middleware=oauth_middleware or None,
-            show_banner=False,
-        )
-    elif args.transport == "sse":
-        mcp.run(
-            transport="sse",
-            host=args.host,
-            port=args.port,
-            middleware=oauth_middleware or None,
-            show_banner=False,
-        )
+        if args.transport == "http":
+            mcp.run(
+                transport="streamable-http",
+                host=args.host,
+                port=args.port,
+                path=args.path,
+                stateless_http=args.stateless,
+                middleware=oauth_middleware or None,
+                show_banner=False,
+            )
+        else:
+            mcp.run(
+                transport="sse",
+                host=args.host,
+                port=args.port,
+                middleware=oauth_middleware or None,
+                show_banner=False,
+            )
 
 
 if __name__ == "__main__":
