@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/test_base_url_resolution.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1546
 # Purpose:  Regression tests for NotebookLM base-URL host resolution (issue #269).
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Regression tests for NotebookLM base-URL host resolution (issue #269).
 

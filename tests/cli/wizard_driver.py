@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/wizard_driver.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Drive the real `nlm setup` wizard in a pseudo-terminal against a sandboxed home.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Drive the real `nlm setup` wizard in a pseudo-terminal against a sandboxed home.
 
 Used by test_setup_wizard_e2e.py. The wizard runs as a real subprocess with a

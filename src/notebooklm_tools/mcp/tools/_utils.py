@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/_utils.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1438
+# Version:  1.0.8.20261012.1546
 # Purpose:  MCP Tools - Shared utilities and base components
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)

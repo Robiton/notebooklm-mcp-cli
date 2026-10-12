@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_base_host_capture.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Regression tests for capturing the signed-in host during login (issue #269).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Regression tests for capturing the signed-in host during login (issue #269).
 
 Google's "Gemini Notebook" rebrand redirects some migrated accounts to

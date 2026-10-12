@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/aliases.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Alias CRUD for notebook/source IDs, shared by MCP (the CLI keeps using core.alias).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Alias CRUD for notebook/source IDs, shared by MCP (the CLI keeps using core.alias)."""
 
 from __future__ import annotations

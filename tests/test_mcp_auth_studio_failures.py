@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_auth_studio_failures.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Regression tests for the P1 auth/studio silent-failure bug (Netter bug report 2026-06-01).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Regression tests for the P1 auth/studio silent-failure bug (Netter bug report 2026-06-01).
 
 Bug: under stale/expired auth, `refresh_auth()` returns status:"success" (it only

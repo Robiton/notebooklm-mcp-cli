@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_setup_skill_actions.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for safe skill actions: backup, deduplication, and version checking.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for safe skill actions: backup, deduplication, and version checking."""
 
 from pathlib import Path

@@ -1,7 +1,7 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/test_fork_credential_hardening.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1600
+# Version:  1.0.8.20261012.1545
 # Purpose:  Fork hardening of upstream's credential store: isolated worker, no enterprise probe.
 # Changelog:
 #   2026-10-12 v1.0.8 — created: hardening found reviewing upstream v0.15.4 (sync batch 6)

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_wizard_helpers.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for shared wizard picker-row model and questionary conversion.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for shared wizard picker-row model and questionary conversion."""
 
 from notebooklm_tools.cli.commands import setup_wizard as w

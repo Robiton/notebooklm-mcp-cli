@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/api_profile.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  API profiles for personal and enterprise NotebookLM.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """API profiles for personal and enterprise NotebookLM.
 
 Enterprise NotebookLM (notebooklm.cloud.google.com) uses a completely different

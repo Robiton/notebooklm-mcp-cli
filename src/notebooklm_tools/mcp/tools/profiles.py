@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/profiles.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Profile tool - list saved Google accounts and choose which one this MCP server uses.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Profile tool - list saved Google accounts and choose which one this MCP server uses."""
 
 from ...services import ServiceError

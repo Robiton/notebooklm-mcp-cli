@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_suggest_protected_name.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  suggest_protected_name: a usable protected-mode name derived from an unusable one.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """suggest_protected_name: a usable protected-mode name derived from an unusable one."""
 
 import pytest

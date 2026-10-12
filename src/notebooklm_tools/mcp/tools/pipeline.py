@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/pipeline.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Pipeline tools — consolidated tool for multi-step notebook workflows.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Pipeline tools — consolidated tool for multi-step notebook workflows."""
 
 from ...services import pipeline as pipeline_service

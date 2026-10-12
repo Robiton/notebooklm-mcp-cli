@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_auth_migration_protected.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Comprehensive unit and contract tests for Task 4: Storage Mode Migration and Conflicts.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Comprehensive unit and contract tests for Task 4: Storage Mode Migration and Conflicts.
 
 Verifies:
