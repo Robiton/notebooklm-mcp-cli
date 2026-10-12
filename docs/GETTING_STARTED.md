@@ -17,7 +17,10 @@ the [CLI Guide](CLI_GUIDE.md) and [MCP Guide](MCP_GUIDE.md).
 
 If you have never used `notebooklm-mcp-cli` before, the path is:
 
-1. **Install** — `uv tool install notebooklm-mcp-cli`. This gives you both
+1. **Install** — `uv tool install notebooklm-enterprise-mcp` (this fork's PyPI
+   package; if upstream's `notebooklm-mcp-cli` is installed, see
+   [README → Switching from Upstream](../README.md#switching-from-upstream-jacob-bdnotebooklm-mcp-cli)
+   first, since both provide the same binaries). This gives you both
    the `nlm` CLI and the `notebooklm-mcp` server binary. See the
    [README → Installation](../README.md#installation) section for
    alternatives (`uvx`, `pip`, `pipx`, source install).
@@ -58,7 +61,7 @@ recommended.
 ### 1. Install the unified CLI/MCP
 
 ```bash
-uv tool install notebooklm-mcp-cli
+uv tool install notebooklm-enterprise-mcp
 ```
 
 This installs both `nlm` and the `notebooklm-mcp` server binary.
