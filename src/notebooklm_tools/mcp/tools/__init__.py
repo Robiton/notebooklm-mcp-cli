@@ -65,11 +65,13 @@ from .sources import (
     source_sync_drive,
 )
 from .studio import (
+    report,
     studio_create,
     studio_delete,
     studio_revise,
     studio_status,
 )
+from .usage import usage_get
 
 __all__ = [
     # Downloads (1 consolidated + 1 bulk)
@@ -108,11 +110,12 @@ __all__ = [
     "research_start",
     "research_status",
     "research_import",
-    # Studio (4 - consolidated create + revise + list_types via status)
+    # Studio (5 - consolidated create + revise + status + delete + interactive report)
     "studio_create",
     "studio_status",
     "studio_delete",
     "studio_revise",
+    "report",
     # Chat (7)
     "notebook_query",
     "notebook_query_start",
@@ -129,6 +132,7 @@ __all__ = [
     "label",
     # Server (1)
     "server_info",
+    "usage_get",
     # Batch (1 consolidated — action: query|add_source|create|delete|studio)
     "batch",
     # Cross-notebook (1)
