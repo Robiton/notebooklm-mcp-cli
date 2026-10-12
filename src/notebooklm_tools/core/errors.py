@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/errors.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Exception classes for NotebookLM API artifacts and client errors.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 # src/notebooklm_tools/core/errors.py
 """Exception classes for NotebookLM API artifacts and client errors.
 
@@ -178,3 +185,11 @@ class RPCDriftError(NotebookLMError):
         )
         self.rpc_id = rpc_id
         self.present_ids = present_ids or []
+
+
+class KickoffOutcomeUnknownError(NotebookLMError):
+    """The generation kickoff may or may not have been accepted.
+
+    Raised when the kickoff response was lost (timeout, 5xx, transport error)
+    or malformed. Callers must re-read status instead of re-sending.
+    """

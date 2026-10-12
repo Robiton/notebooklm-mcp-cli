@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_downloads.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Tests for services.downloads module.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for services.downloads module."""
 
 from unittest.mock import AsyncMock, MagicMock
@@ -499,6 +506,21 @@ class TestDownloadAll:
         assert paths["mind_map"].endswith("Map.json")
         assert paths["slide_deck"].endswith("Deck.pdf")
         assert (tmp_path / "My Notebook").is_dir()
+
+    @pytest.mark.asyncio
+    async def test_downloads_interactive_report_as_markdown(
+        self, bulk_client, monkeypatch, tmp_path
+    ):
+        _patch_lookups(
+            monkeypatch,
+            [_artifact(artifact_id="ir1", type="interactive_report", title="Lesson")],
+        )
+        result = await download_all(bulk_client, "nb-1", str(tmp_path))
+
+        assert result["downloaded"] == 1
+        assert result["skipped"] == []
+        assert result["items"][0]["path"].endswith("Lesson.md")
+        assert bulk_client.download_report.call_args.args[2] == "ir1"
 
     @pytest.mark.asyncio
     async def test_downloads_xlsx_data_table_with_xlsx_extension(

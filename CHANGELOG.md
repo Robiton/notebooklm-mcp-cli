@@ -95,6 +95,27 @@ Upstream is now merged by release band rather than cherry-picked (plan:
 - **Fork fix:** `server_info` raised `NameError` since batch 1 (the PyPI update check was dropped in
   the merge). Restored; upstream's new capability test covers it.
 
+### Upstream v0.10.1 – v0.12.0 (batch 5)
+
+- **Added:** interactive reports and the single `report` MCP tool (`get` / `elements` / `generate`,
+  with per-element settings), plus `nlm report …`; plan usage reporting (`usage_get`, `nlm usage`,
+  `--profile`); `nlm auth refresh` (headless, non-interactive session refresh) and
+  `NOTEBOOKLM_DISABLE_HEADLESS_REFRESH`.
+- **Security:** MCP downloads are confined to one directory (GHSA-92q4-9x75-55rf): by default
+  `~/Downloads/gemini-notebook` when `~/Downloads` exists, otherwise the app storage directory, or
+  `NOTEBOOKLM_DOWNLOAD_DIR`. The sensitive-path denylist is wider. Pipeline names are validated
+  against path traversal (GHSA-596g-p98x-c7hw). The WSL CDP bridge firewall rule is scoped to the WSL
+  adapter, `debug_page.html` is created private, and MCP debug logging redacts responses.
+- **Fixed:** sessions dying after ~8 hours; headless refresh port collisions; `nlm login --clear`;
+  profile credential isolation; Claude Desktop null-list parameters; verb command defaults; the
+  macOS "Claude Desktop is still running" false positive.
+- **Fork:** CLI downloads (where the user types the path) keep the fork's home/cwd/temp allowlist on
+  top of upstream's denylist. `nlm download all` / `download_all` rejects a bad output directory
+  before making any network call. The new `report` tool and `nlm studio status --mcp-compatible`
+  build notebook URLs from the API profile, so enterprise links are correct. New tool group `usage`
+  (53 tools in total). The fork keeps its own SHA-pinned workflows, `dependabot.yml` and
+  `SECURITY.md`; upstream's action version bumps are left to the fork's dependabot.
+
 ---
 
 ## [1.0.8] - 2026-04-14 — Backlog sweep

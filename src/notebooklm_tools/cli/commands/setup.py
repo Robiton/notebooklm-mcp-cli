@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/cli/commands/setup.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1438
 # Purpose:  MCP server setup commands for AI tool clients.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — uvx config installs the fork package (notebooklm-enterprise-mcp), not upstream's
 """MCP server setup commands for AI tool clients.
@@ -404,7 +405,7 @@ def _claude_desktop_process_list() -> str:
             )
         else:
             result = subprocess.run(
-                ["ps", "-axo", "command="],
+                ["ps", "-axo", "pid=,ppid=,command="],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -412,7 +413,40 @@ def _claude_desktop_process_list() -> str:
             )
     except (OSError, subprocess.SubprocessError):
         return ""
-    return result.stdout
+    if platform.system() == "Windows":
+        return result.stdout
+    return _without_own_process_ancestry(result.stdout, os.getpid())
+
+
+def _without_own_process_ancestry(ps_output: str, own_pid: int) -> str:
+    """Drop this process and its ancestors from a ``pid ppid command`` snapshot.
+
+    Their command lines carry the client name (``nlm setup add claude-desktop``,
+    or the shell that launched it) and would otherwise be mistaken for Claude
+    Desktop itself. An ancestor whose executable *is* Claude Desktop is kept,
+    since then Claude Desktop really is running.
+    """
+    parents: dict[int, int] = {}
+    processes: list[tuple[int, str]] = []
+    for line in ps_output.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3 or not parts[0].isdigit() or not parts[1].isdigit():
+            continue
+        pid, ppid = int(parts[0]), int(parts[1])
+        parents[pid] = ppid
+        processes.append((pid, parts[2]))
+
+    ancestry: set[int] = set()
+    pid = own_pid
+    while pid > 0 and pid not in ancestry:
+        ancestry.add(pid)
+        pid = parents.get(pid, 0)
+
+    return "\n".join(
+        command
+        for pid, command in processes
+        if pid not in ancestry or _is_claude_desktop_process_line(command.split()[0])
+    )
 
 
 def _is_claude_desktop_process_line(line: str) -> bool:

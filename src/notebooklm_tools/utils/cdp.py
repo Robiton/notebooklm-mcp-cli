@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/utils/cdp.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1438
 # Purpose:  Chrome DevTools Protocol (CDP) utilities for cookie extraction
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
@@ -1918,7 +1919,11 @@ def run_headless_auth(
             port = existing_port
             chrome_was_running = True
         else:
-            # No Chrome running - launch in headless mode
+            # No Chrome running - launch in headless mode. Pick a free port
+            # first so a foreign process already holding the default port can't
+            # make Chrome bind elsewhere (e.g. [::1]) while we probe the wrong
+            # listener (issue #330).
+            port = find_available_port(starting_from=port)
             chrome_process = launch_chrome_process(port, headless=True, profile_name=profile_name)
             if not chrome_process:
                 return None

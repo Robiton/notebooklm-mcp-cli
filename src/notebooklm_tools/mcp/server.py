@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/server.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1438
 # Purpose:  NotebookLM MCP Server - Modular Architecture
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
@@ -80,6 +81,10 @@ Consolidated tools:
 - source_add(source_type=url|text|drive|file): Add any source type
 - studio_create(artifact_type=audio|video|...): Create any artifact type
 - studio_revise: Revise individual slides in an existing slide deck
+- Interactive reports: studio_create(artifact_type="report", report_format="Interactive") to create;
+  report(action=get|elements|generate) to read it and generate its embedded audio / video /
+  slide deck / infographic / flashcards / quiz / mind map elements (generate validates a plan
+  first; confirm=True only after user approval or explicit delegation)
 - download_artifact(artifact_type=audio|video|...): Download any artifact type
 - download_all_artifacts: Download every completed artifact of a notebook into a per-notebook folder
 - note(action=create|list|update|delete): Manage notes in notebooks
@@ -177,6 +182,7 @@ def _register_tools() -> None:
         sources,
         studio,
         studio_advanced,
+        usage,
     )
     from .tools._utils import register_all_tools
 

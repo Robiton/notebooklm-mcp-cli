@@ -1,6 +1,6 @@
 # Upstream sync plan: v0.5.24 → v0.15.4
 
-**Date:** 2026-10-12 · **Status:** batches 1–3 merged (#40–#42); batch 4 (v0.10.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
+**Date:** 2026-10-12 · **Status:** batches 1–4 merged (#40–#43); batch 5 (v0.12.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
 
 ## Where we are
 
@@ -168,6 +168,25 @@ conflicts.
 - **Rebrand reaches identity strings.** Server name, titles and package metadata stay the fork's
   pending decision 2; doc body text that merged cleanly carries "Gemini Notebook". One upstream
   test asserting the server name is skipped with a pointer to the decision.
+
+## Findings from batch 5
+
+- **Download containment changed design.** Upstream replaced the denylist-only check with
+  `validate_output_path(..., enforce_root=...)` (GHSA-92q4-9x75-55rf): MCP writes are confined to one
+  download root, CLI writes keep the denylist. The fork's `_safe_output_path` (home/cwd/temp
+  allowlist) collided with it. Resolution: upstream's function, with the fork's allowlist added on
+  the CLI path; the fork's `_BLOCKED_FILES` was a subset of upstream's `_SENSITIVE_FILES` and went.
+- **Behaviour change for MCP users:** downloads without `NOTEBOOKLM_DOWNLOAD_DIR` now land in
+  `~/Downloads/gemini-notebook` (or the app storage dir), and paths outside it are refused. The
+  directory name carries the rebrand (decision 2).
+- **New upstream code keeps calling `get_notebook_url`.** The fork builds URLs from the API profile;
+  the new `report` MCP tool and `nlm studio status --mcp-compatible` were switched. Every batch:
+  `git grep -n get_notebook_url src` should show only the definition.
+- **Upstream test relied on an accident.** `download_all`'s containment test passed upstream only
+  because `get_notebook` raised on a mock client. In the fork it returned a mock title that crashed
+  filename sanitising first. Fixed in code: the output directory is validated before any network call.
+- **Workflows:** upstream only bumped action versions here (checkout v6/7, setup-uv, gh-release) and
+  added `dependabot.yml`. The fork keeps its SHA-pinned workflows and its own dependabot config.
 
 ## Open decisions (Brian)
 
