@@ -16,11 +16,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4
         with:
+          enable-cache: false  # release builds must not restore a shared cache (zizmor cache-poisoning)
           version: "latest"
       
       - name: Set up Python
@@ -30,7 +31,7 @@ jobs:
         run: uv build
       
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
 
       - name: Build MCPB extension
         if: github.event_name == 'release'
@@ -38,6 +39,6 @@ jobs:
 
       - name: Upload MCPB to release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: notebooklm-mcp-*.mcpb
