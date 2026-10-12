@@ -103,7 +103,14 @@ conflicts.
   header on upstream code would be false provenance and churn. Filed Robiton/ai-project-scaffold#385
   for a declared path exemption. Until then, `scaffold-check` is **expected red on sync PRs** (it is
   not a required check). The bare form that runs on `main` passes, because the merged files' last
-  commits predate the header baseline.
+  commits predate the header baseline. A file that **already has a fork header** and takes a clean
+  upstream change (e.g. `mcp/tools/auth.py`) is correctly flagged as stale; re-stamp it.
+- **New upstream workflows arrive tag-pinned.** v0.6.0 added `release-gate.yml` with `@v4`/`@v7`
+  actions, and zizmor failed it (7 high). Every batch: SHA-pin new or changed upstream workflows to
+  the SHAs already used here, and set `enable-cache: false` on release triggers. Upstream workflows
+  also use `uv run --dev`, which in the fork resolves to the pip-audit-only dependency group (PEP 735
+  `f42c2a1` was never taken), so rewrite it to `--extra dev`. Check locally with
+  `uvx zizmor@1.30.1 --min-severity high --offline .github/workflows/`.
 
 ## Open decisions (Brian)
 
