@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Project:  ai-project-scaffold
+# File:     .githooks/post-commit
+# Modified: 2026-09-01
+# Version:  0.2.0.20260901.1656
+# Purpose:  Journal the commit for tools with no session hooks, and keep git-lfs
+#           working once core.hooksPath points at .githooks.
+# Changelog:
+#   2026-09-01 v0.2.0.20260901.1656 — JOURNALS THE COMMIT (#279). Every other record-keeping
+#                        mechanism here lives in .claude/settings.json, so a Cursor or Codex
+#                        session read the standards and wrote nothing while the README
+#                        claimed the record travels regardless of tool. A commit is the one
+#                        event every tool produces, and session_journal.sh checkpoint already
+#                        knows what to do with it.
+#   2026-09-01 v0.1.0.20260901.1656 — Upstreamed from Robiton/godsfall#146, which is where
+#                        the need was found and verified (#274). core.hooksPath is
+#                        EXCLUSIVE: setting it disables .git/hooks entirely, and git-lfs
+#                        installs exactly these three there and announces none of them. In
+#                        that repository -- 1,746 LFS-tracked files -- installing the
+#                        pre-push gate would have silenced LFS with nothing to report it,
+#                        and it had already paid that bill once: 377 broken pointer files
+#                        across every clone.
+#                        CHAINS RATHER THAN COPIES. A vendored copy of git-lfs's hook is a
+#                        second implementation to drift against the installed git-lfs;
+#                        delegating to the real one keeps exactly one.
+#                        VERIFIED THERE, NOT ASSUMED: with core.hooksPath=.githooks set,
+#                        deleting and restoring a tracked asset returned 529,278 bytes of
+#                        real audio rather than a pointer stub.
+#                        HARMLESS WHERE THERE IS NO git-lfs. With no .git/hooks/post-commit
+#                        to chain to, this exits 0 and nothing changes.
+
+set -uo pipefail
+
+# ---- THE ONLY RECORD-KEEPING A NON-CLAUDE TOOL GETS (#279) --------------------------------
+#
+# Every record-keeping mechanism in this scaffold -- the journal, correction capture, the
+# checkpoint, the closeout -- is wired through .claude/settings.json, so a Cursor, Codex or
+# plain-terminal session reads the standards and writes nothing. The README claimed the
+# record travels "regardless of which tool", and it did not.
+#
+# A COMMIT IS THE ONE EVENT EVERY TOOL PRODUCES. `session_journal.sh checkpoint` already
+# records the commits made since it last looked, so this is the whole fallback: one call,
+# after a commit, from a hook git runs for everybody.
+#
+# post-commit AND NOT pre-commit. pre-commit runs before the commit exists and cannot name
+# the thing it is about; the journal row would be a row about nothing.
+#
+# NEVER FAILS THE COMMIT. The commit is already made by the time this runs, and a hook that
+# errors here would put a red line in front of someone whose work is already saved.
+if [ -x tools/session_journal.sh ]; then
+  tools/session_journal.sh commit >/dev/null 2>&1 || true
+fi
+
+# NOT `git rev-parse --git-path hooks/post-commit` — that honours core.hooksPath and, once
+# installed, resolves to THIS FILE, making the chain infinite recursion. `--git-dir` is
+# unaffected by the setting, so the real .git/hooks is reachable only through it. Same
+# reasoning, and the same git 2.55.0 verification, as .githooks/pre-push.
+_gitdir="$(git rev-parse --git-dir 2>/dev/null || echo "")"
+_prev="${_gitdir:+$_gitdir/hooks/post-commit}"
+if [ -n "$_prev" ] && [ -x "$_prev" ]; then
+  exec "$_prev" "$@"
+fi
+exit 0

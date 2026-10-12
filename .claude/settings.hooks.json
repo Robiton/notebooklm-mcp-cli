@@ -1,0 +1,98 @@
+{
+  "_comment": [
+    "CANONICAL HOOK SET \u2014 the single source of truth for what setup.sh installs.",
+    "setup.sh merges this into .claude/settings.json, replacing only the `hooks` key and",
+    "preserving every sibling key an adopter owns (permissions, env, model, statusLine).",
+    "It exists as a separate file because the adopter's own settings.json occupies the",
+    "obvious path: before this file, setup.sh carried a SECOND copy of the hooks in a",
+    "heredoc, that copy drifted to 1 of 6 commands, and every project created without an",
+    "existing settings.json silently lost the session journal and correction capture.",
+    "CHANGE HOOKS HERE. tools/preflight.sh fails if this file and .claude/settings.json",
+    "disagree, so the two cannot drift apart again.",
+    "",
+    "THE OUTPUT SHAPE IS PER EVENT, AND GETTING IT WRONG IS SILENT (#276).",
+    "`hookSpecificOutput.additionalContext` is how a hook speaks TO THE MODEL, and the",
+    "harness accepts it for SessionStart, UserPromptSubmit, PostToolUse and Stop ONLY.",
+    "PreCompact rejects it: the client printed `Hook JSON output validation failed` and",
+    "the checkpoint rule this repository shipped to every adopter had never once reached",
+    "a model. So the rule now rides SessionStart with matcher `compact`, which fires",
+    "immediately after compaction -- the only moment the harness gives us -- and PreCompact",
+    "does the thing it CAN do, which is write the journal entry before the detail is lost.",
+    "`tools/session_hook.sh --selftest` runs every command in this file and validates its",
+    "stdout against the schema for its own event, so this class of defect fails a gate.",
+    "",
+    "THE REDIRECT IS PER EVENT (#277). A SessionStart hook's stdout is added to the",
+    "model's context; a SessionEnd hook's is read by nobody. Every wrapper here used to",
+    "end `>/dev/null 2>&1`, which threw away the journal's start message -- 'N un-distilled",
+    "entries are in ai/SESSION_JOURNAL.md, fold them into ai/SESSION.md before starting new",
+    "work' -- on every single session start, in every adopter, since the wrapper shipped.",
+    "start and checkpoint now speak on stdout; end and precompact stay silent, because",
+    "nothing is listening there. stderr is discarded everywhere: a hook that puts a red",
+    "line in front of a user is a hook the user turns off, after which nothing is recorded."
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -f \"$d/ai/STANDARDS.md\" ] || continue; [ -f \"$d/sync-check.sh\" ] && ( cd \"$d\" && bash sync-check.sh ); done; true'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/session_hook.sh\" ] || continue; \"$d/tools/session_hook.sh\" start; break; done' 2>/dev/null"
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Scaffold checkpoint rule: this session was just COMPACTED, so conversation detail is already gone and only the summary remains. Before continuing, write any decision, gotcha or piece of progress that is not yet recorded into ai/SESSION.md, ai/BACKLOG.md and ai/MEMORY.md. Read those files first if you are unsure what is already there.\"}}'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/session_hook.sh\" ] || continue; \"$d/tools/session_hook.sh\" checkpoint; break; done' 2>/dev/null"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/session_hook.sh\" ] || continue; \"$d/tools/session_hook.sh\" end; break; done' >/dev/null 2>&1"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/session_hook.sh\" ] || continue; \"$d/tools/session_hook.sh\" precompact; break; done' >/dev/null 2>&1"
+          }
+        ]
+      },
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/session_hook.sh\" ] || continue; \"$d/tools/session_hook.sh\" precompact; break; done' >/dev/null 2>&1"
+          }
+        ]
+      }
+    ]
+  }
+}

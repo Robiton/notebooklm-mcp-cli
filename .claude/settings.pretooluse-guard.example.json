@@ -1,0 +1,79 @@
+{
+  "_README": [
+    "PreToolUse guard \u2014 SHIPPED OFF, AND THIS FILE IS WHY IT IS A SEPARATE FILE.",
+    "",
+    "Claude Code never reads this file. It is a paste-able example, nothing more.",
+    "",
+    "TO ENABLE: copy the \"PreToolUse\" key below into the \"hooks\" object of",
+    ".claude/settings.json, then restart your session. Read what it does first:",
+    "  tools/guard_pretooluse.py --selftest    # 33 behavioural cases, no Claude Code needed",
+    "  tools/README.md                         # what it guards and why it asks rather than denies",
+    "",
+    "WHY NOT AN INERT KEY IN settings.json. It used to ship as \"_DISABLED_PreToolUse\"",
+    "in the real settings file \u2014 JSON has no comments, so an inert key looked like the",
+    "idiom, and it sat in the file you already had rather than an example nobody opens.",
+    "That bet depended on Claude Code ignoring unknown hook events silently. It stopped:",
+    "the key now produces `hooks._DISABLED_PreToolUse: Unknown hook event ... was ignored`",
+    "on EVERY session start, in EVERY project, forever, with nothing an adopter could do",
+    "about it (#101). The first question it drew was \"is this due to the AI scaffold?\" \u2014",
+    "a deliberately-disabled feature is indistinguishable from a broken config to the",
+    "person reading the warning, and that channel also carries genuinely broken settings.",
+    "",
+    "A no-op \"PreToolUse\" entry would have been worse: it registers a real hook that runs",
+    "on every tool call to do nothing, trading a visible warning for an invisible cost.",
+    "",
+    "The enable step is still one edit, and a fresh project starts with a clean console.",
+    "",
+    "THE COMMAND LOOKS FOR THE GUARD; IT DOES NOT ASSUME YOUR CWD IS THE REPO.",
+    "It was `python3 tools/guard_pretooluse.py`, resolved against the session's working",
+    "directory. On 2026-08-09 that was measured to be the wrong assumption on this",
+    "project's own machine, where sessions open in the PARENT of three scaffold repos \u2014",
+    "the layout this scaffold's own AGENTS.md prescribes. Every other cwd-relative hook",
+    "had therefore never fired once. For a journal that is a lost feature; for a SECURITY",
+    "GUARD it is worse than not installing it, because you believe you are covered.",
+    "",
+    "So it takes the first tools/guard_pretooluse.py it finds in the working directory or",
+    "one level below, and execs it. Every copy is identical \u2014 scaffold_upgrade.sh",
+    "force-installs tools/ \u2014 so which one runs does not matter; the guard reads the target",
+    "path out of the hook payload, not out of its own location.",
+    "",
+    "If it finds none it exits 0 and allows, which is the same fail-open rule the guard",
+    "itself follows: ai/SECURITY.md, containment over prevention.",
+    "",
+    "TWO GUARDS, BOTH OFF, AND THEY ARE SEPARATE ENTRIES ON PURPOSE.",
+    "guard_pretooluse.py enforces the SECURITY hard lines \u2014 destructive commands,",
+    "protected paths, commits on main. guard_delegation.py is a WORKING-HABIT nudge:",
+    "it interrupts the first large write to a delegatable file when the local model has",
+    "not drafted anything recently. Enable them independently; most projects want the",
+    "first and only some want the second.",
+    "",
+    "guard_delegation asks rather than denies, once per file per session, and then",
+    "allows. Set \"delegation\": {\"guard\": {\"decision\": \"deny\"}} in",
+    "ai/localcoder.config.json once your project has decided that drafting is the norm.",
+    "  tools/guard_delegation.py --selftest    # 24 cases, half of them known-good input"
+  ],
+  "PreToolUse": [
+    {
+      "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/guard_pretooluse.py\" ] && exec python3 \"$d/tools/guard_pretooluse.py\"; done; exit 0'",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "PreToolUse_delegation": [
+    {
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash -c 'r=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$r/ai/STANDARDS.md\" ]; then set -- \"$r\"; else set -- . */; fi; for d in \"$@\"; do [ -x \"$d/tools/guard_delegation.py\" ] && exec python3 \"$d/tools/guard_delegation.py\"; done; exit 0'",
+          "timeout": 10
+        }
+      ]
+    }
+  ]
+}
