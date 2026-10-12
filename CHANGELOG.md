@@ -27,6 +27,25 @@ Upstream is now merged by release band rather than cherry-picked (plan:
 - **Fork:** version-alignment check now also covers `AGENTS_SECTION.md` and the desktop extension
   manifest (both brought to 1.0.8).
 
+### Upstream v0.6.1 – v0.7.0 (batch 2)
+
+- **Added:** import cited research sources; cinematic video `--style-prompt`; GitHub Copilot as an
+  `nlm setup` target; `docs/GETTING_STARTED.md`; studio prompting guides for the agent skill.
+- **Security:** HTTP/SSE transport now **refuses to bind to a non-loopback address** unless
+  `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1` (the fork previously only warned). This applies with OAuth
+  configured too. Also: cookie values redacted from debug logs; credential files created
+  TOCTOU-safe.
+- **Changed:** RPC error code 8 raises `ResourceExhaustedError` with Google's user-facing message,
+  and studio creation reports rate limits and decoded RPC errors; audio downloads to `.mp3` / `.wav`
+  etc. are rejected (NotebookLM delivers AAC in MP4, so use `.m4a`).
+- **Fixed:** stale auth fails loudly instead of reporting false success; conversation-history cache
+  bounded (OOM in long-lived servers); short query answers no longer fall back to the thinking
+  chunk; Netscape cookie-file parsing for `--manual` login; Windows CDP login reliability and tab
+  reuse; snap-installed browsers; cross-domain artifact download headers; false-negative errors on
+  `source_add` / `research_import`.
+- **Fork:** `server_info` keeps the fork's per-mode auth status. Upstream's live check
+  (`_check_auth_status`) is merged but not wired in yet.
+
 ---
 
 ## [1.0.8] - 2026-04-14 — Backlog sweep

@@ -74,6 +74,7 @@ Connect AI assistants (Claude, Gemini, Cursor, etc.) to NotebookLM:
 # Automatic setup — picks the right config for each tool
 nlm setup add claude-code
 nlm setup add gemini
+nlm setup add github-copilot
 nlm setup add cursor
 nlm setup add cline
 nlm setup add antigravity
@@ -107,6 +108,7 @@ Then use natural language: *"Create a notebook about quantum computing and gener
 | Diagnose issues | `nlm doctor` | — |
 
 📚 **More Documentation:**
+- **[Getting Started](docs/GETTING_STARTED.md)** — Install, login, agent setup, and migration from another NotebookLM MCP
 - **[CLI Guide](docs/CLI_GUIDE.md)** — Complete command reference
 - **[MCP Guide](docs/MCP_GUIDE.md)** — All 35 MCP tools with examples
 - **[Authentication](docs/AUTHENTICATION.md)** — Setup and troubleshooting
@@ -218,6 +220,14 @@ nlm login
 ```
 
 > **MCP configuration doesn't change** — the executable is still called `notebooklm-mcp`, so your Claude Code, Cursor, or other tool configs need no edits.
+
+## Getting Started
+
+If you are setting up the tool for the first time — or migrating from a
+browser-based NotebookLM MCP — see the
+[Getting Started Guide](docs/GETTING_STARTED.md). It covers install,
+login, agent registration, and a step-by-step migration path that avoids
+the "two NotebookLM servers registered" trap.
 
 ## Uninstalling
 
@@ -382,6 +392,7 @@ Use `nlm setup` to automatically configure the MCP server for your AI tools — 
 nlm setup add claude-code
 nlm setup add claude-desktop
 nlm setup add gemini
+nlm setup add github-copilot
 nlm setup add cursor
 nlm setup add windsurf
 
@@ -465,7 +476,19 @@ gemini mcp add --scope user notebooklm-mcp notebooklm-mcp
 | Cursor | `~/.cursor/mcp.json` |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` |
 
-**Claude Desktop / VS Code** may not resolve `PATH` — use the full path to the binary:
+**GitHub Copilot (VS Code workspace)** uses `.vscode/mcp.json` with a top-level `servers` key:
+```json
+{
+  "servers": {
+    "notebooklm-mcp": {
+      "command": "notebooklm-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+**Claude Desktop** may not resolve `PATH` — use the full path to the binary:
 ```json
 {
   "mcpServers": {
@@ -481,7 +504,7 @@ Find your path with: `which notebooklm-mcp`
 | Tool | Config Location |
 |------|-----------------|
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| VS Code | `~/.vscode/mcp.json` |
+| GitHub Copilot | `.vscode/mcp.json` |
 
 </details>
 

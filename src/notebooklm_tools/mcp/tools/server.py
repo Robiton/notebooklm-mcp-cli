@@ -79,22 +79,26 @@ def _compare_versions(current: str, latest: str) -> bool:
 
 
 def _check_auth_status() -> str:
-    """Check local auth token state (no network call).
-
-    Returns one of:
-        configured  — tokens present and < 7 days old
-        stale       — tokens present but > 7 days old
-        not_configured — no tokens found
-        error       — failed to check
-    """
+    """Map AuthCheckResult.reason to the stable status strings documented in server_info."""
     try:
-        from notebooklm_tools.core.auth import load_cached_tokens
+        from notebooklm_tools.services.auth import check_auth
 
-        cached = load_cached_tokens()
-        if not cached or not cached.cookies:
+        res = check_auth(live=True)
+
+        if res.valid:
+            return "configured"
+        if res.reason == "no_tokens":
             return "not_configured"
-        age_hours = (time.time() - cached.extracted_at) / 3600
-        return "stale" if age_hours > 168 else "configured"
+        reason = res.reason or ""
+        if reason in ("expired", "stale_heuristic") or reason.startswith("load_error"):
+            return "stale"
+        # 401/403 are definitive credential rejections, not transient network issues.
+        if reason in ("http_401", "http_403"):
+            return "stale"
+        if reason.startswith("network_error") or reason.startswith("http_"):
+            return "unverified"
+        # Unknown reason — be conservative.
+        return "stale"
     except Exception:
         return "error"
 
@@ -106,16 +110,18 @@ def server_info() -> dict[str, Any]:
     AI assistants: If update_available is True, inform the user that a new
     version is available and suggest updating with the provided command.
 
-    Note: auth_status is a LOCAL check (token presence and age on disk).
-    It does NOT make a live Google API call. A "configured" status means
-    tokens exist and are recent — not that they are guaranteed valid.
+    auth_status is reported per mode. "enterprise" checks for a gcloud access
+    token; "personal" checks that cached cookies exist on disk (no network call),
+    so "authenticated" means credentials are present, not that they are still valid.
+    `_check_auth_status()` is upstream's live check (`nlm login --check`),
+    kept for a later decision on whether personal mode should report it.
 
     Returns:
         dict with version info, configuration, and auth status for both modes:
         - version: Current installed version
         - latest_version: Latest version on PyPI (or None if check failed)
         - update_available: True if a newer version exists
-        - auth_status: per-mode status (configured | stale | not_configured | error)
+        - auth_status: {"enterprise": ..., "personal": ...} human-readable status per mode
         - update_command: Command to run to update
     """
     from notebooklm_tools.utils.config import get_config

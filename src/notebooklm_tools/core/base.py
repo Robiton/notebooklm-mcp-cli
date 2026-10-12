@@ -22,6 +22,7 @@ import random
 import re
 import threading
 import urllib.parse
+from collections import OrderedDict
 from typing import Any
 
 import httpx
@@ -30,7 +31,7 @@ from . import constants
 from .api_profile import APIProfile, get_api_profile
 from .data_types import ConversationTurn
 from .errors import ClientAuthenticationError as AuthenticationError
-from .errors import RPCError
+from .errors import ResourceExhaustedError, RPCError
 from .retry import DEFAULT_BASE_DELAY, DEFAULT_MAX_DELAY, DEFAULT_MAX_RETRIES, is_retryable_error
 from .utils import (
     RPC_NAMES,
@@ -42,6 +43,51 @@ from .utils import (
 # Configure logger (API internals only logged at DEBUG level, usually disabled)
 logger = logging.getLogger("notebooklm_mcp.api")
 logger.setLevel(logging.WARNING)  # Suppress internal API logs by default
+
+
+def _safe_int_env(name: str, default: int) -> int:
+    """Read an integer env var, falling back to `default` if missing or unparseable.
+
+    A value of 0 (or negative, clamped here) means "no cap" for cache-size knobs.
+    Negative values are clamped to 0 and logged so a stray `-1` doesn't silently
+    disable a cap the user thought they had set.
+    """
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r; falling back to default %d", name, raw, default)
+        return default
+    if value < 0:
+        logger.warning("%s=%d is negative; clamping to 0 (no cap)", name, value)
+        return 0
+    return value
+
+
+def _extract_user_message(detail_data: Any, _depth: int = 0) -> str:
+    """Recursively extract human-readable strings from a protobuf detail payload.
+
+    UserDisplayableError payloads contain user-facing text buried in nested
+    lists. This walks the structure depth-first and returns all non-empty
+    strings joined by '; '. Capped at 20 levels to guard against malformed
+    responses.
+    """
+    if _depth > 20 or detail_data is None:
+        return ""
+    if isinstance(detail_data, str):
+        stripped = detail_data.strip()
+        return stripped if stripped else ""
+    if isinstance(detail_data, list):
+        parts: list[str] = []
+        for item in detail_data:
+            found = _extract_user_message(item, _depth + 1)
+            if found:
+                parts.append(found)
+        return "; ".join(parts)
+    return ""
+
 
 # Timeout configuration (seconds)
 DEFAULT_TIMEOUT = 30.0  # Default for most operations
@@ -303,9 +349,21 @@ class BaseClient:
         self._bl = build_label or self._profile.bl_fallback
         self._created_at: float = _time.time()
 
-        # Conversation cache for follow-up queries
-        # Key: conversation_id, Value: list of ConversationTurn objects
-        self._conversation_cache: dict[str, list[ConversationTurn]] = {}
+        # Conversation cache for follow-up queries.
+        # Key: conversation_id, Value: list of ConversationTurn objects.
+        #
+        # Bounded to prevent unbounded memory growth in long-lived MCP server
+        # processes (Issue #213). The dict itself is an OrderedDict for LRU
+        # eviction; per-conversation turn lists are FIFO-trimmed. See
+        # `_cache_conversation_turn` for the actual caps and eviction logic.
+        self._max_turns_per_conversation = _safe_int_env(
+            "NOTEBOOKLM_CONVERSATION_MAX_TURNS", default=50
+        )
+        self._max_conversations = _safe_int_env("NOTEBOOKLM_CONVERSATION_MAX_CONVS", default=500)
+        self._max_chars_per_turn = _safe_int_env(
+            "NOTEBOOKLM_CONVERSATION_MAX_CHARS_PER_TURN", default=100_000
+        )
+        self._conversation_cache: OrderedDict[str, list[ConversationTurn]] = OrderedDict()
 
         # Request counter for _reqid parameter (required for query endpoint)
         self._reqid_counter = random.randint(100000, 999999)
@@ -567,8 +625,35 @@ class BaseClient:
                                                 detail_data = detail[1] if len(detail) > 1 else None
                                                 break
 
+                                    # Provide fallback names for common gRPC status codes
+                                    # if the backend didn't provide a specific detail_type
+                                    friendly_type = detail_type
+                                    if not friendly_type:
+                                        grpc_codes = {
+                                            3: "INVALID_ARGUMENT",
+                                            5: "NOT_FOUND",
+                                            7: "PERMISSION_DENIED",
+                                            8: "RESOURCE_EXHAUSTED",
+                                            16: "UNAUTHENTICATED",
+                                        }
+                                        friendly_type = grpc_codes.get(error_code, "unknown")
+
+                                    msg = f"API error (code {error_code}): {friendly_type}"
+
+                                    if "UserDisplayableError" in detail_type:
+                                        user_msg = _extract_user_message(detail_data)
+                                        if user_msg:
+                                            msg = f"API error (code {error_code}): {user_msg}"
+
+                                    if error_code == 8:
+                                        raise ResourceExhaustedError(
+                                            msg,
+                                            detail_type=detail_type,
+                                            detail_data=detail_data,
+                                        )
+
                                     raise RPCError(
-                                        f"API error (code {error_code}): {detail_type or 'unknown'}",
+                                        msg,
                                         error_code=error_code,
                                         detail_type=detail_type,
                                         detail_data=detail_data,
