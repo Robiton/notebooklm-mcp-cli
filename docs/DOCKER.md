@@ -114,14 +114,20 @@ The server supports `--transport http` via the `NOTEBOOKLM_MCP_TRANSPORT` enviro
 **Container startup command:**
 
 ```bash
-notebooklm-mcp --transport http --host 0.0.0.0 --port 8000 --path /mcp
+NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1 notebooklm-mcp --transport http --host 0.0.0.0 --port 8000 --path /mcp
 ```
+
+Since upstream v0.6.x the server **refuses** a non-loopback bind unless
+`NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1` is set. A container has to bind `0.0.0.0` to be reachable
+through its published port, so set it here. It only removes the refusal: publish the port to
+`127.0.0.1` on the host, or put the server behind OAuth (`--oauth-*`), before exposing it further.
 
 Or equivalently via environment variables:
 
 ```
 NOTEBOOKLM_MCP_TRANSPORT=http
 NOTEBOOKLM_MCP_HOST=0.0.0.0
+NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1
 NOTEBOOKLM_MCP_PORT=8000
 NOTEBOOKLM_MCP_PATH=/mcp
 ```
@@ -244,6 +250,7 @@ Environment variables at docker run time:
     NOTEBOOKLM_LOCATION=global
     NOTEBOOKLM_MCP_TRANSPORT=http
     NOTEBOOKLM_MCP_HOST=0.0.0.0
+    NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1
     NOTEBOOKLM_MCP_PORT=8000
 │
 Claude Code / Claude Desktop:

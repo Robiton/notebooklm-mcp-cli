@@ -579,6 +579,7 @@ nlm login
 # Configure for HTTP transport
 export NOTEBOOKLM_MCP_TRANSPORT=http
 export NOTEBOOKLM_MCP_HOST=0.0.0.0
+export NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1  # required for a non-loopback bind
 export NOTEBOOKLM_MCP_PORT=8000
 
 # Start server
@@ -629,6 +630,7 @@ services:
     environment:
       - NOTEBOOKLM_MCP_TRANSPORT=http
       - NOTEBOOKLM_MCP_HOST=0.0.0.0
+      - NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1
       - NOTEBOOKLM_MCP_PORT=8000
     volumes:
       - ./auth:/root/.notebooklm-mcp

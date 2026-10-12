@@ -23,7 +23,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from notebooklm_tools.core import constants
-from notebooklm_tools.core.errors import RPCError
+from notebooklm_tools.core.errors import ResourceExhaustedError, RPCError
 
 from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
@@ -47,6 +47,10 @@ VALID_ARTIFACT_TYPES = frozenset(
         "data_table",
         "mind_map",
     ]
+)
+
+_CINEMATIC_FOCUS_HINT = (
+    "Use --focus to pass creative direction (visual style, narrative, audience)."
 )
 
 
@@ -81,6 +85,7 @@ class ArtifactInfo(TypedDict, total=False):
     type: str
     title: str
     status: str
+    error_reason: str | None
     created_at: str | None
     url: str | None
     custom_instructions: str | None
@@ -227,9 +232,13 @@ def _normalize_video_style(
 
     if video_format == "cinematic":
         if style != "auto_select":
-            raise ValidationError("video format 'cinematic' does not support --style")
+            raise ValidationError(
+                f"video format 'cinematic' does not support --style. {_CINEMATIC_FOCUS_HINT}"
+            )
         if prompt:
-            raise ValidationError("video format 'cinematic' does not support --style-prompt")
+            raise ValidationError(
+                f"video format 'cinematic' does not support --style-prompt. {_CINEMATIC_FOCUS_HINT}"
+            )
         return style, ""
 
     if prompt:
@@ -296,6 +305,23 @@ def create_artifact(
         ServiceError: API call failures
     """
     validate_artifact_type(artifact_type)
+
+    if artifact_type == "video":
+        # Cinematic format: --style-prompt maps to custom_instructions (same as --focus),
+        # not visual_style_prompt. Remap before validation so the user can use either flag.
+        if video_format == "cinematic" and video_style_prompt.strip():
+            if focus_prompt:
+                focus_prompt = f"{focus_prompt}\n\n{video_style_prompt}"
+            else:
+                focus_prompt = video_style_prompt
+            video_style_prompt = ""
+
+        _normalize_video_style(
+            video_format=video_format,
+            visual_style=visual_style,
+            video_style_prompt=video_style_prompt,
+        )
+
     resolved_ids = _resolve_source_ids(client, notebook_id, source_ids)
 
     try:
@@ -342,6 +368,25 @@ def create_artifact(
         raise ServiceError(
             str(e),
             user_message=str(e),
+        ) from e
+    except ResourceExhaustedError as e:
+        raise ServiceError(
+            f"Failed to create {artifact_type}: {e}",
+            user_message=(
+                f"Rate limited — {e}. "
+                f"Wait a few minutes before retrying {artifact_type.replace('_', ' ')} creation."
+            ),
+            hint="NotebookLM limits how frequently artifacts can be created. "
+            "Wait 1-2 minutes and try again.",
+        ) from e
+    except RPCError as e:
+        short_detail = e.detail_type.rsplit(".", 1)[-1] if e.detail_type else ""
+        formatted_error = (
+            f"Google API error code {e.error_code} ({short_detail})" if short_detail else str(e)
+        )
+        raise ServiceError(
+            f"Failed to create {artifact_type}: {formatted_error}",
+            user_message=f"Could not create {artifact_type.replace('_', ' ')} — {formatted_error}.",
         ) from e
     except Exception as e:
         logger.error("Studio create failed: %s: %s", type(e).__name__, e, exc_info=True)
@@ -535,6 +580,31 @@ def _create_mind_map(
 # ---------- Status ----------
 
 
+def _derive_error_reason(raw_artifact: dict[str, Any]) -> str | None:
+    """Best-effort failure reason for a studio artifact.
+
+    The raw NotebookLM gRPC payload does not include an error string, so:
+    1. Prefer a real key if a future API version provides one.
+    2. Otherwise, synthesize a reason for genuinely failed artifacts so callers
+       get a non-null signal instead of silence (the bug: failed artifacts
+       returned every field null, leaving agents to poll forever).
+    Non-failed artifacts return None.
+    """
+    for key in ("error_reason", "failure_reason", "failure_code", "error"):
+        value = raw_artifact.get(key)
+        if isinstance(value, str) and value:
+            return value
+
+    if raw_artifact.get("status") == "failed":
+        return (
+            "generation_failed: NotebookLM rejected or aborted this artifact "
+            "(no media produced). Common causes: expired auth, capacity/"
+            "rate-limit, or an unsupported prompt. Re-check auth (nlm login) "
+            "and retry."
+        )
+    return None
+
+
 def get_studio_status(
     client: NotebookLMClient,
     notebook_id: str,
@@ -570,6 +640,11 @@ def get_studio_status(
             "status": raw_artifact.get("status")
             if isinstance(raw_artifact.get("status"), str)
             else "unknown",
+            # Surface a failure signal so callers stop polling and act. The raw
+            # gRPC payload carries no error string, so prefer any real key if a
+            # future API exposes one, else synthesize a reason for failed
+            # artifacts (status 4 with no media URL = backend rejected the job).
+            "error_reason": _derive_error_reason(raw_artifact),
             "created_at": raw_artifact.get("created_at")
             if isinstance(raw_artifact.get("created_at"), str)
             or raw_artifact.get("created_at") is None
@@ -772,7 +847,12 @@ def revise_artifact(
         formatted_error = (
             f"Google API error code {e.error_code} ({short_detail})" if short_detail else str(e)
         )
-        if e.error_code == 7:
+        if e.error_code == 8:
+            hint = (
+                "NotebookLM limits how frequently artifacts can be revised. "
+                "Wait 1-2 minutes and try again."
+            )
+        elif e.error_code == 7:
             hint = (
                 "Verify the artifact_id points to a completed slide deck in an editable "
                 "notebook you own. NotebookLM rejects revisions for view-only/shared decks."
