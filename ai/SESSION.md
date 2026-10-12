@@ -45,8 +45,11 @@ _Most recent session at the top._
 - Batch 2 merged as #41. CodeQL flagged upstream's live auth check (substring `accounts.google.com`); fixed with a hostname helper and regression test.
 - Batch 3 (v0.8.0): 19 conflicts. uv.lock re-locked (adds socksio). The upstream `--auto-import` option was lost in the conflicted signature and re-added. The new `AuthHealthChecker` repeats the substring check and now uses the helper. Upstream tests adapted: freshness test thread race (upstream fixes it later), file-source error (fork resolves the path first), config stub lacks `.enterprise`. Found a pre-existing fork bug: `nlm setup` uvx config ran upstream's package; fixed along with 3 install docs. 1015 tests pass.
 
+- Batch 3 merged as #42.
+- Batch 4 (v0.10.0): 33 conflicts. Upstream added its own Enterprise support (batchexecute, chosen by `NOTEBOOKLM_BASE_URL`), overlapping the fork's `APIProfile`. Folded in: the profile still decides enterprise (`enterprise.mode`) and upstream's `_is_enterprise()` / prefix / query-endpoint helpers read it; upstream's personal `base_host` (notebook.google.com) kept. Enterprise listing params and upload path follow upstream's captured traffic (not live-verified by either side). Found and fixed a batch 1 regression: `server_info` raised `NameError` (update check dropped). Mistake caught: `git checkout --ours` on version files dropped upstream's clean hunks in SKILL.md and others; redone with `checkout -m`. 1475 tests pass.
+
 **Next steps:**
-- Batches 4–6 of the upstream sync (plan doc); pin any new upstream workflows each batch
+- Batches 5–6 of the upstream sync (plan doc); pin any new upstream workflows each batch
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
 - Optionally wire session hooks: `./setup.sh` writes `.claude/settings.json` hooks (currently a personal allowlist only)
 
