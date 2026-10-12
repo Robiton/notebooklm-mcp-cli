@@ -104,10 +104,15 @@ def get_client():
                 reset_config()
                 cached = load_cached_tokens()
 
-                # If tokens changed on disk (e.g., profile switch), force re-init
-                if cached and getattr(_client, "cookies", None) != cached.cookies:
-                    mcp_logger.info("Authentication profile change detected, reloading client.")
-                    _client = None  # Reset directly; lock already held
+                # Force re-init if cookies changed (profile switch) OR if disk
+                # tokens are newer than the running client (same-profile re-auth
+                # via `nlm login` — fixes Issue #161).
+                if cached:
+                    cookies_changed = getattr(_client, "cookies", None) != cached.cookies
+                    disk_is_newer = cached.extracted_at > getattr(_client, "_created_at", 0)
+                    if cookies_changed or disk_is_newer:
+                        mcp_logger.info("Authentication change detected, reloading client.")
+                        _client = None  # Reset directly; lock already held
             except Exception as e:
                 mcp_logger.debug(f"Failed to check auth status: {e}")
 
@@ -115,9 +120,12 @@ def get_client():
             return _client
 
         cookie_header = os.environ.get("NOTEBOOKLM_COOKIES", "")
-        csrf_token = os.environ.get("NOTEBOOKLM_CSRF_TOKEN", "")
-        session_id = os.environ.get("NOTEBOOKLM_SESSION_ID", "")
 
+        # NOTEBOOKLM_CSRF_TOKEN and NOTEBOOKLM_SESSION_ID env vars are deprecated
+        # and no longer read. Both are auto-extracted on first API call. Passing
+        # stale values from env would bypass auto-refresh and cause auth failures.
+        csrf_token = ""
+        session_id = ""
         build_label = ""
 
         if cookie_header:
@@ -128,8 +136,8 @@ def get_client():
             cached = load_cached_tokens()
             if cached:
                 cookies = cached.cookies
-                csrf_token = csrf_token or cached.csrf_token
-                session_id = session_id or cached.session_id
+                csrf_token = cached.csrf_token
+                session_id = cached.session_id
                 build_label = cached.build_label or ""
             else:
                 raise ValueError(

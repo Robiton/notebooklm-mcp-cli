@@ -1,7 +1,19 @@
 """NotebookLM Tools - Unified CLI and MCP server for Google NotebookLM."""
 
+from __future__ import annotations
+
+from typing import Any
+
 __version__ = "1.0.8"
 
-from notebooklm_tools.core.client import NotebookLMClient
-
 __all__ = ["NotebookLMClient", "__version__"]
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy-load heavy client so early imports (e.g. stdio encoding) stay light."""
+    if name == "NotebookLMClient":
+        from notebooklm_tools.core.client import NotebookLMClient as _NotebookLMClient
+
+        globals()["NotebookLMClient"] = _NotebookLMClient
+        return _NotebookLMClient
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

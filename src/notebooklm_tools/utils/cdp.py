@@ -25,10 +25,11 @@ from httpx import Client, HTTPTransport
 # can intercept localhost requests and break Chrome DevTools Protocol connections.
 # See: https://github.com/jacob-bd/notebooklm-mcp-cli/issues/119
 httpx_client = Client(
+    trust_env=False,
     mounts={
         "http://": HTTPTransport(proxy=None),
         "https://": HTTPTransport(proxy=None),
-    }
+    },
 )
 import websocket  # noqa: E402
 
@@ -520,7 +521,6 @@ def launch_chrome_process(
         return None
 
     profile_dir = get_chrome_profile_dir(profile_name)
-    profile_dir.mkdir(parents=True, exist_ok=True)
 
     args = [
         chrome_path,
@@ -682,6 +682,38 @@ def find_or_create_notebooklm_page(port: int = CDP_DEFAULT_PORT) -> dict | None:
     return find_or_create_notebooklm_page_by_cdp_url(_cdp_http_base(port))
 
 
+@contextlib.contextmanager
+def _cdp_websocket_without_proxy_env():
+    """Unset HTTP proxy env vars for this CDP WebSocket connect only.
+
+    ``websocket-client`` reads ``HTTP_PROXY`` / ``HTTPS_PROXY`` whenever
+    ``http_proxy_host`` is omitted or explicitly ``None`` (see
+    ``websocket._url.get_proxy_info``), so those kwargs do not disable proxies.
+    CDP must always reach the local browser, never an upstream proxy.
+
+    Complements :data:`httpx_client` (Issue #119); see PR #157 discussion.
+    """
+    import os
+
+    keys = (
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+    )
+    saved: dict[str, str] = {}
+    for key in keys:
+        if key in os.environ:
+            saved[key] = os.environ.pop(key)
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            os.environ[key] = value
+
+
 def execute_cdp_command(
     ws_url: str, method: str, params: dict | None = None, *, retry: bool = True
 ) -> dict:
@@ -713,10 +745,12 @@ def execute_cdp_command(
         # suppress_origin=True is required for some managed Chrome/CDP endpoints
         # (e.g. OpenClaw browser profile) that reject default Origin headers.
         try:
-            ws = websocket.create_connection(ws_url, timeout=30, suppress_origin=True)
+            with _cdp_websocket_without_proxy_env():
+                ws = websocket.create_connection(ws_url, timeout=30, suppress_origin=True)
         except TypeError:
             # Older websocket-client versions may not support suppress_origin.
-            ws = websocket.create_connection(ws_url, timeout=30)
+            with _cdp_websocket_without_proxy_env():
+                ws = websocket.create_connection(ws_url, timeout=30)
         _cached_ws = ws
         _cached_ws_url = ws_url
     else:

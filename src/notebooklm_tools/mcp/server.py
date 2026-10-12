@@ -28,6 +28,17 @@ from starlette.responses import JSONResponse, Response
 
 from notebooklm_tools import __version__
 
+_FALSY = frozenset({"false", "0", "no", "off"})
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    """Read a boolean from an environment variable. Unset/empty → *default*; otherwise ``false|0|no|off`` (case-insensitive) → False, anything else → True."""
+    raw = os.environ.get(name, "")
+    if not raw:
+        return default
+    return raw.lower() not in _FALSY
+
+
 # Initialize MCP server
 mcp = FastMCP(
     name="notebooklm",
@@ -139,6 +150,7 @@ def _register_tools() -> None:
         cross_notebook,
         downloads,
         exports,
+        labels,
         notebooks,
         notes,
         pipeline,
@@ -167,19 +179,23 @@ def main() -> None:
     - http: Streamable HTTP for network access
     - sse: Legacy SSE transport (backwards compatibility)
     """
+    from notebooklm_tools.utils.io_encoding import configure_stdio_utf8_on_windows
+
+    configure_stdio_utf8_on_windows()
+
     parser = argparse.ArgumentParser(
         description="NotebookLM MCP Server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Environment Variables:
-  NOTEBOOKLM_MCP_TRANSPORT        Transport type (stdio, http, sse)
-  NOTEBOOKLM_MCP_HOST             Host to bind (default: 127.0.0.1)
-  NOTEBOOKLM_MCP_PORT             Port to listen on (default: 8000)
-  NOTEBOOKLM_MCP_PATH             MCP endpoint path (default: /mcp)
-  NOTEBOOKLM_MCP_STATELESS        Enable stateless mode for scaling (true/false)
-  NOTEBOOKLM_MCP_DEBUG            Enable debug logging (true/false)
-  NOTEBOOKLM_HL                   Interface language and default artifact language (default: en)
-  NOTEBOOKLM_QUERY_TIMEOUT        Query timeout in seconds (default: 120.0)
+  NOTEBOOKLM_MCP_TRANSPORT     Transport type (stdio, http, sse)
+  NOTEBOOKLM_MCP_HOST          Host to bind (default: 127.0.0.1)
+  NOTEBOOKLM_MCP_PORT          Port to listen on (default: 8000)
+  NOTEBOOKLM_MCP_PATH          MCP endpoint path (default: /mcp)
+  NOTEBOOKLM_MCP_STATELESS     Stateless HTTP sessions (default: true, set false to disable)
+  NOTEBOOKLM_MCP_DEBUG         Debug logging (default: false)
+  NOTEBOOKLM_HL                Interface language and default artifact language (default: en)
+  NOTEBOOKLM_QUERY_TIMEOUT     Query timeout in seconds (default: 120.0)
 
 OAuth (for remote MCP on claude.ai):
   NOTEBOOKLM_OAUTH_CLIENT_ID      OAuth Client ID
@@ -222,14 +238,14 @@ Examples:
     )
     parser.add_argument(
         "--stateless",
-        action="store_true",
-        default=os.environ.get("NOTEBOOKLM_MCP_STATELESS", "").lower() == "true",
-        help="Enable stateless mode for horizontal scaling",
+        action=argparse.BooleanOptionalAction,
+        default=_env_bool("NOTEBOOKLM_MCP_STATELESS", default=True),
+        help="Stateless HTTP sessions (default: true). Avoids MCP SDK double-response crash (python-sdk#2416)",
     )
     parser.add_argument(
         "--debug",
-        action="store_true",
-        default=os.environ.get("NOTEBOOKLM_MCP_DEBUG", "").lower() == "true",
+        action=argparse.BooleanOptionalAction,
+        default=_env_bool("NOTEBOOKLM_MCP_DEBUG"),
         help="Enable debug logging",
     )
     parser.add_argument(
@@ -305,6 +321,31 @@ Examples:
     # show_banner=False prevents Rich box-drawing output that can corrupt
     # the JSON-RPC protocol on Windows (especially with non-English locales)
     if args.transport == "stdio":
+        import sys
+
+        class _StdoutToStderrWrapper:
+            """Redirects sys.stdout.write to sys.stderr, but preserves original buffer.
+
+            This ensures that stray print() statements and logs go to stderr and do not
+            corrupt the MCP JSON-RPC protocol on stdout, while allowing the MCP SDK to
+            write the JSON-RPC messages to the original stdout buffer.
+            """
+
+            def __init__(self, original_stdout):
+                self._original_stdout = original_stdout
+                self.buffer = getattr(original_stdout, "buffer", original_stdout)
+
+            def write(self, s):
+                return sys.stderr.write(s)
+
+            def flush(self):
+                sys.stderr.flush()
+
+            def __getattr__(self, name):
+                return getattr(self._original_stdout, name)
+
+        sys.stdout = _StdoutToStderrWrapper(sys.stdout)
+
         mcp.run(show_banner=False)
     elif args.transport == "http":
         _LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}

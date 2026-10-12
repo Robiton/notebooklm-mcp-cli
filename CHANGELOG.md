@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — Upstream sync v0.5.25 → v0.15.4 (in progress)
+
+Upstream is now merged by release band rather than cherry-picked (plan:
+`docs/plans/2026-10-12-upstream-sync-v0.15-plan.md`). Full detail for each upstream release is in
+[upstream's CHANGELOG](https://github.com/jacob-bd/gemini-notebook-mcp-cli/blob/main/CHANGELOG.md).
+
+### Upstream v0.5.25 – v0.6.0 (batch 1)
+
+- **Added:** source label management (`label` MCP tool, `nlm label`); WSL2 support (`nlm login --wsl`),
+  previously skipped by the fork and now taken because later upstream code depends on it.
+- **Changed:** HTTP transport defaults to **stateless** mode; CLI boolean flags use `--flag/--no-flag`;
+  `NotebookLMClient` is lazy-loaded from the package `__init__`.
+- **Removed:** deprecated `NOTEBOOKLM_CSRF_TOKEN` / `NOTEBOOKLM_SESSION_ID` env vars.
+- **Fixed:** audio download 302→404; CDP WebSocket behind a system proxy; Windows Unicode crashes in
+  MCP and CLI; SOCKS proxy blocking `nlm login`; MCP reloads auth after `nlm login`; stale
+  `NOTEBOOKLM_COOKIES` auth loop; Python 3.11 TypedDict and 3.14 Windows `mkdir` regressions; EOF on
+  initialization; `server_info` reports local auth state.
+- **Fork:** version-alignment check now also covers `AGENTS_SECTION.md` and the desktop extension
+  manifest (both brought to 1.0.8).
+
+---
+
 ## [1.0.8] - 2026-04-14 — Backlog sweep
 
 ### Added
