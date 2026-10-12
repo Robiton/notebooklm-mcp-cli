@@ -9,6 +9,8 @@ on:
       - 'src/notebooklm_tools/data/SKILL.md'
       - 'version'
       - 'uv.lock'
+      - 'src/notebooklm_tools/data/AGENTS_SECTION.md'
+      - 'desktop-extension/manifest.json'
   pull_request:
     branches: [main, enterprise-url-support]
   release:
@@ -44,11 +46,17 @@ jobs:
           echo "📦 pyproject.toml:  $TOML_VERSION"
           echo "🐍 __init__.py:     $INIT_VERSION"
           echo "🤖 SKILL.md:        $SKILL_VERSION"
+          # Extract version from AGENTS_SECTION.md marker and the desktop extension manifest
+          AGENTS_VERSION=$(grep 'nlm-version:' src/notebooklm_tools/data/AGENTS_SECTION.md | head -1 | sed 's/.*nlm-version: \(.*\) -->/\1/')
+          MANIFEST_VERSION=$(grep '"version"' desktop-extension/manifest.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+
           # Extract this project's own entry from uv.lock (the line after its name)
           LOCK_VERSION=$(grep -A1 '^name = "notebooklm-enterprise-mcp"$' uv.lock | sed -n 's/^version = "\(.*\)"/\1/p')
 
           echo "📄 version file:    $FILE_VERSION"
           echo "🔒 uv.lock:         $LOCK_VERSION"
+          echo "📝 AGENTS_SECTION:  $AGENTS_VERSION"
+          echo "🧩 manifest.json:   $MANIFEST_VERSION"
 
           FAILED=0
 
@@ -76,10 +84,22 @@ jobs:
             FAILED=1
           fi
 
+          if [ "$TOML_VERSION" != "$AGENTS_VERSION" ]; then
+            echo ""
+            echo "❌ MISMATCH: pyproject.toml ($TOML_VERSION) ≠ AGENTS_SECTION.md ($AGENTS_VERSION)"
+            FAILED=1
+          fi
+
+          if [ "$TOML_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo ""
+            echo "❌ MISMATCH: pyproject.toml ($TOML_VERSION) ≠ manifest.json ($MANIFEST_VERSION)"
+            FAILED=1
+          fi
+
           if [ "$FAILED" -eq 1 ]; then
             echo ""
             echo "🛑 Version alignment check FAILED."
-            echo "   All five files must declare the same version before releasing."
+            echo "   All seven files must declare the same version before releasing."
             echo ""
             echo "   Files to update:"
             echo "     - pyproject.toml                      → version = \"X.Y.Z\""
@@ -87,6 +107,8 @@ jobs:
             echo "     - src/notebooklm_tools/data/SKILL.md  → version: \"X.Y.Z\""
             echo "     - version                             → X.Y.Z"
             echo "     - uv.lock                             → run 'uv lock'"
+            echo "     - src/notebooklm_tools/data/AGENTS_SECTION.md → <!-- nlm-version: X.Y.Z -->"
+            echo "     - desktop-extension/manifest.json     → \"version\": \"X.Y.Z\""
             exit 1
           fi
 

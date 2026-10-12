@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/base.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Base client infrastructure for NotebookLM API
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Base client infrastructure for NotebookLM API.
 
 This module contains the BaseClient class which provides all HTTP/RPC
@@ -126,6 +133,11 @@ class BaseClient:
     RPC_GET_NOTES = "cFji9"  # List notes and mind maps (same as LIST_MIND_MAPS)
     RPC_UPDATE_NOTE = "cYAfTb"  # Update note content/title
     RPC_DELETE_NOTE = "AH0mwd"  # Delete note permanently (same as DELETE_MIND_MAP)
+
+    # Label RPCs (source organization)
+    RPC_LABEL_MANAGE = "agX4Bc"  # Auto-label sources / create label / list labels
+    RPC_LABEL_MUTATE = "le8sX"  # Rename label / set emoji / move source to label
+    RPC_LABEL_DELETE = "GyzE7e"  # Delete one or more labels
 
     # Sharing RPCs
     RPC_SHARE_NOTEBOOK = "QDyure"  # Set sharing settings (visibility, collaborators)
@@ -282,11 +294,14 @@ class BaseClient:
         for attr_name, rpc_id in self._profile.rpc_ids.items():
             setattr(self, attr_name, rpc_id)
 
+        import time as _time
+
         self.cookies = cookies
         self.csrf_token = csrf_token
         self._client: httpx.Client | None = None
         self._session_id = session_id
         self._bl = build_label or self._profile.bl_fallback
+        self._created_at: float = _time.time()
 
         # Conversation cache for follow-up queries
         # Key: conversation_id, Value: list of ConversationTurn objects
@@ -707,9 +722,17 @@ class BaseClient:
             return self._call_rpc(rpc_id, params, path, timeout, _retry=True, _deep_retry=True)
 
         # All recovery attempts failed
-        raise AuthenticationError(
-            "Authentication expired. Run 'nlm login' in your terminal to re-authenticate."
+        msg = (
+            "Authentication expired. Run 'nlm login' in your terminal to re-authenticate. "
+            "MCP users: the server should auto-detect the new credentials; "
+            "if not, call the refresh_auth tool."
         )
+        if os.environ.get("NOTEBOOKLM_COOKIES"):
+            msg += (
+                " NOTE: NOTEBOOKLM_COOKIES is set in your environment and overrides "
+                "all other auth sources. Update it in your MCP config file and restart."
+            )
+        raise AuthenticationError(msg)
 
     # =========================================================================
     # Authentication Management
@@ -758,7 +781,6 @@ class BaseClient:
                 from notebooklm_tools.utils.config import get_storage_dir
 
                 debug_dir = get_storage_dir()
-                debug_dir.mkdir(parents=True, exist_ok=True)
                 debug_path = debug_dir / "debug_page.html"
                 debug_path.write_text(html, encoding="utf-8")
                 import contextlib as _ctxlib

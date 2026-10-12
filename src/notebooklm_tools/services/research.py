@@ -1,10 +1,17 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/research.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Research service — shared business logic for research start, poll, and import
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Research service — shared business logic for research start, poll, and import."""
 
 import time
-from typing import TypedDict
 
 from ..core.client import NotebookLMClient
 from ..core.errors import RPCError
+from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
 
 VALID_SOURCES = ("web", "drive")

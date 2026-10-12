@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/studio.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  StudioMixin for NotebookLM client - studio content creation and status
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """StudioMixin for NotebookLM client - studio content creation and status."""
 
 import contextlib
@@ -73,7 +80,15 @@ class StudioMixin(BaseClient):
         )
 
     def _extract_audio_media_url(self, artifact_data: list[Any]) -> str | None:
-        """Extract the best available audio media URL from an audio artifact payload."""
+        """Extract the best available audio media URL from an audio artifact payload.
+
+        Google's media list contains entries with different URL suffixes:
+          ``=m140-dv``  (priority 4, download variant — fast CDN)
+          ``=m140``     (priority 1, streaming transcode — slow CDN)
+        Prefer the ``-dv`` variant for downloads.
+
+        See: https://github.com/jacob-bd/notebooklm-mcp-cli/issues/158
+        """
         if len(artifact_data) <= 6:
             return None
 
@@ -84,7 +99,19 @@ class StudioMixin(BaseClient):
         if len(audio_options) > 5 and isinstance(audio_options[5], list):
             media_list = audio_options[5]
 
-            # Prefer the explicit downloadable audio/mp4 entry when present.
+            # First pass: prefer the -dv download variant (fast CDN).
+            for item in media_list:
+                if (
+                    isinstance(item, list)
+                    and len(item) > 2
+                    and isinstance(item[0], str)
+                    and item[0].startswith("http")
+                    and item[2] == "audio/mp4"
+                    and item[0].endswith("-dv")
+                ):
+                    return item[0]
+
+            # Second pass: any audio/mp4 URL.
             for item in media_list:
                 if (
                     isinstance(item, list)
@@ -95,7 +122,7 @@ class StudioMixin(BaseClient):
                 ):
                     return item[0]
 
-            # Otherwise fall back to the first valid media URL in the list.
+            # Third pass: first valid media URL regardless of type.
             for item in media_list:
                 if (
                     isinstance(item, list)
