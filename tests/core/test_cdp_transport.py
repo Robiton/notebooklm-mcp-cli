@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_cdp_transport.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1343
+# Purpose:  Tests for the experimental CDP RPC transport.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: upstream test with fake credentials marked for the secret scan (sync batch 4)
 """Tests for the experimental CDP RPC transport."""
 
 import json
@@ -21,7 +28,7 @@ def test_call_rpc_uses_cdp_transport_when_enabled(monkeypatch):
     with patch.object(BaseClient, "_refresh_auth_tokens"):
         client = BaseClient(
             cookies={"SID": "old"},
-            csrf_token="old-csrf",
+            csrf_token="old-csrf",  # scaffold:not-a-secret (test fixture)
             session_id="old-session",
             build_label="old-build",
         )
@@ -31,7 +38,7 @@ def test_call_rpc_uses_cdp_transport_when_enabled(monkeypatch):
 
     def prepare_cdp_transport(self, timeout):
         assert timeout == 45.0
-        self.csrf_token = "live-csrf"
+        self.csrf_token = "live-csrf"  # scaffold:not-a-secret (test fixture)
         self._session_id = "live-session"
         self._bl = "live-build"
 
@@ -68,7 +75,7 @@ def test_call_rpc_reuses_existing_cdp_context(monkeypatch):
     with patch.object(BaseClient, "_refresh_auth_tokens"):
         client = BaseClient(
             cookies={"SID": "old"},
-            csrf_token="old-csrf",
+            csrf_token="old-csrf",  # scaffold:not-a-secret (test fixture)
             session_id="old-session",
             build_label="old-build",
         )
@@ -81,7 +88,7 @@ def test_call_rpc_reuses_existing_cdp_context(monkeypatch):
             profile_name="default",
             port=9222,
             ws_url="ws://page",
-            csrf_token="live-csrf",
+            csrf_token="live-csrf",  # scaffold:not-a-secret (test fixture)
             session_id="live-session",
             build_label="live-build",
             launched=True,
@@ -106,14 +113,14 @@ def test_query_uses_cdp_transport_for_streamed_endpoint(monkeypatch):
     with patch.object(ConversationMixin, "_refresh_auth_tokens"):
         mixin = ConversationMixin(
             cookies={"SID": "old"},
-            csrf_token="old-csrf",
+            csrf_token="old-csrf",  # scaffold:not-a-secret (test fixture)
             session_id="old-session",
             build_label="old-build",
         )
 
     def prepare_cdp_transport(self, timeout):
         assert 0 < timeout <= 99.0
-        self.csrf_token = "live-csrf"
+        self.csrf_token = "live-csrf"  # scaffold:not-a-secret (test fixture)
         self._session_id = "live-session"
         self._bl = "live-build"
 
@@ -210,7 +217,7 @@ def test_close_terminates_cdp_browser_launched_by_client(monkeypatch):
             profile_name="default",
             port=9230,
             ws_url="ws://page",
-            csrf_token="live-csrf",
+            csrf_token="live-csrf",  # scaffold:not-a-secret (test fixture)
             session_id="live-session",
             build_label="live-build",
             launched=True,

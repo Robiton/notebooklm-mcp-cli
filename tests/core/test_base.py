@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_base.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1343
+# Purpose:  Tests for BaseClient infrastructure class.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: upstream test with fake credentials marked for the secret scan (sync batch 4)
 # tests/core/test_base.py
 """Tests for BaseClient infrastructure class."""
 
@@ -244,7 +251,7 @@ def test_update_cached_tokens_persists_refreshed_cookies():
 
     cached = AuthTokens(
         cookies={"SID": "old"},
-        csrf_token="old-csrf",
+        csrf_token="old-csrf",  # scaffold:not-a-secret (test fixture)
         session_id="old-session",
     )
 
@@ -255,7 +262,7 @@ def test_update_cached_tokens_persists_refreshed_cookies():
     ):
         client = BaseClient(
             cookies={"SID": "rotated"},
-            csrf_token="new-csrf",
+            csrf_token="new-csrf",  # scaffold:not-a-secret (test fixture)
             session_id="new-session",
         )
         client._update_cached_tokens()

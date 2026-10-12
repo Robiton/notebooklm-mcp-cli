@@ -106,7 +106,7 @@ class TestCheckAuthAPI:
                 "APISID": "dead",
                 "SAPISID": "dead",
             },
-            csrf_token="stale123",
+            csrf_token="stale123",  # scaffold:not-a-secret (test fixture)
             session_id="sess123",
             email="test@example.com",
         )
@@ -175,7 +175,7 @@ class TestCheckAuthAPI:
                 "APISID": "dead",
                 "SAPISID": "dead",
             },
-            csrf_token="stale123",
+            csrf_token="stale123",  # scaffold:not-a-secret (test fixture)
             session_id="sess123",
             email="test@example.com",
         )

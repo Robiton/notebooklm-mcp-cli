@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_profile_cache_isolation.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1343
+# Purpose:  Regression tests for profile-scoped auth cache updates (Issue #284).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: upstream test with fake credentials marked for the secret scan (sync batch 4)
 """Regression tests for profile-scoped auth cache updates (Issue #284)."""
 
 import json
@@ -34,7 +41,7 @@ def test_named_profile_refresh_updates_only_that_profile():
 
     client = get_client("tsm")
     client.cookies = {"SID": "account-B-refreshed"}
-    client.csrf_token = "csrf-b-refreshed"
+    client.csrf_token = "csrf-b-refreshed"  # scaffold:not-a-secret (test fixture)
     client._session_id = "session-b-refreshed"
     client._update_cached_tokens()
     client.close()
