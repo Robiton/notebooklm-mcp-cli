@@ -40,6 +40,7 @@ htmlcov/
 # Misc
 .DS_Store
 *.log
+run_log.txt
 
 # Credentials
 cookies.txt
@@ -136,3 +137,19 @@ docs/benchmarks/localcoder-eval-baseline.json
 *.scaffold-backup
 .release-receipts/
 .claude/*.lock
+
+# Claude / AI assistant settings
+.claude_settings.json
+
+# GitHub CLI temp files
+.gh_comment_body.md
+
+# Local ad-hoc test scripts
+scratch/
+
+# PR diff/patch scratch files
+*.diff
+*.patch
+
+# Internal planning docs (upstream ignores docs/plans/; the fork tracks its sync plan there)
+docs/superpowers/

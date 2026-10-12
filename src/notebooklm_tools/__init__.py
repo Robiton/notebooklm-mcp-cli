@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import notebooklm_tools.utils.env_sanitize as _env_sanitize  # noqa: F401
+
 __version__ = "1.0.8"
 
 __all__ = ["NotebookLMClient", "__version__"]

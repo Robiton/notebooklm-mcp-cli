@@ -49,6 +49,25 @@ Upstream is now merged by release band rather than cherry-picked (plan:
 - **Fork:** `server_info` keeps the fork's per-mode auth status. Upstream's live check
   (`_check_auth_status`) is merged but not wired in yet.
 
+### Upstream v0.7.1 – v0.8.0 (batch 3)
+
+- **Added:** Short Video Overview format; per-artifact `source_ids` in studio status; ChatGPT file
+  upload and artifact download bridges (`source_add_chatgpt_file`); `nlm research start
+  --auto-import` and `auto_import` on `research_status`; `docs/REMOTE_MCP.md`.
+- **RPC resilience:** `NOTEBOOKLM_RPC_OVERRIDES` hot-patches rotated batchexecute RPC IDs
+  (personal mode); drift raises `RPCDriftError` instead of returning `None`; code 8
+  (`RESOURCE_EXHAUSTED`) is retried with backoff.
+- **Auth:** multi-probe `AuthHealthChecker` (homepage + API fallback, 30 s cache) gates MCP calls
+  and semi-stale cookies are handled consistently; headless refresh uses the configured profile.
+- **Fixed:** SOCKS proxy environments (`httpx[socks]`, adds `socksio`); IPv6 CIDR entries in
+  `no_proxy` crashing httpx on import; Drive freshness checks run in parallel; modern browser
+  profile database path.
+- **Fork:** the new `AuthHealthChecker` homepage probe uses the hostname-based sign-in check (same
+  CodeQL issue as batch 2). `.gitignore` takes upstream's entries except `docs/plans/`, which the
+  fork tracks. Upstream's `CLAUDE.md` (a project guide) stays replaced by the scaffold pointer.
+  Two upstream tests were adapted: the Drive freshness test (thread-order race; upstream fixes it the
+  same way later) and the file-source error test (the fork resolves the path before upload).
+
 ---
 
 ## [1.0.8] - 2026-04-14 — Backlog sweep

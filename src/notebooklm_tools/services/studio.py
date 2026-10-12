@@ -24,7 +24,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from notebooklm_tools.core import constants
-from notebooklm_tools.core.errors import ResourceExhaustedError, RPCError
+from notebooklm_tools.core.errors import ResourceExhaustedError, RPCDriftError, RPCError
 
 from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
@@ -53,6 +53,9 @@ VALID_ARTIFACT_TYPES = frozenset(
 _CINEMATIC_FOCUS_HINT = (
     "Use --focus to pass creative direction (visual style, narrative, audience)."
 )
+
+# Video formats with no visual style picker — full creative direction goes through --focus
+_STYLELESS_VIDEO_FORMATS = frozenset({"cinematic", "short"})
 
 
 # ---------- TypedDicts ----------
@@ -91,6 +94,7 @@ class ArtifactInfo(TypedDict, total=False):
     url: str | None
     custom_instructions: str | None
     visual_style_prompt: str | None
+    source_ids: list[str]
     audio_url: str | None
     video_url: str | None
     infographic_url: str | None
@@ -231,14 +235,14 @@ def _normalize_video_style(
     prompt = video_style_prompt.strip()
     style = visual_style
 
-    if video_format == "cinematic":
+    if video_format in _STYLELESS_VIDEO_FORMATS:
         if style != "auto_select":
             raise ValidationError(
-                f"video format 'cinematic' does not support --style. {_CINEMATIC_FOCUS_HINT}"
+                f"video format '{video_format}' does not support --style. {_CINEMATIC_FOCUS_HINT}"
             )
         if prompt:
             raise ValidationError(
-                f"video format 'cinematic' does not support --style-prompt. {_CINEMATIC_FOCUS_HINT}"
+                f"video format '{video_format}' does not support --style-prompt. {_CINEMATIC_FOCUS_HINT}"
             )
         return style, ""
 
@@ -308,9 +312,9 @@ def create_artifact(
     validate_artifact_type(artifact_type)
 
     if artifact_type == "video":
-        # Cinematic format: --style-prompt maps to custom_instructions (same as --focus),
-        # not visual_style_prompt. Remap before validation so the user can use either flag.
-        if video_format == "cinematic" and video_style_prompt.strip():
+        # Cinematic/Short formats: --style-prompt maps to custom_instructions (same as
+        # --focus), not visual_style_prompt. Remap before validation so the user can use either flag.
+        if video_format in _STYLELESS_VIDEO_FORMATS and video_style_prompt.strip():
             if focus_prompt:
                 focus_prompt = f"{focus_prompt}\n\n{video_style_prompt}"
             else:
@@ -389,6 +393,9 @@ def create_artifact(
             f"Failed to create {artifact_type}: {formatted_error}",
             user_message=f"Could not create {artifact_type.replace('_', ' ')} — {formatted_error}.",
         ) from e
+    except RPCDriftError as e:
+        # Let the actionable NOTEBOOKLM_RPC_OVERRIDES guidance reach the user verbatim.
+        raise ServiceError(message=str(e), user_message=str(e)) from e
     except Exception as e:
         logger.error("Studio create failed: %s: %s", type(e).__name__, e, exc_info=True)
         raise ServiceError(
@@ -686,6 +693,9 @@ def get_studio_status(
             if isinstance(raw_artifact.get("duration_seconds"), int)
             or raw_artifact.get("duration_seconds") is None
             else None,
+            "source_ids": [
+                sid for sid in (raw_artifact.get("source_ids") or []) if isinstance(sid, str)
+            ],
         }
         artifact_id = raw_artifact.get("artifact_id")
         if isinstance(artifact_id, str):
@@ -868,6 +878,9 @@ def revise_artifact(
             user_message=f"Failed to revise slide deck — {formatted_error}.",
             hint=hint,
         ) from e
+    except RPCDriftError as e:
+        # Let the actionable NOTEBOOKLM_RPC_OVERRIDES guidance reach the user verbatim.
+        raise ServiceError(message=str(e), user_message=str(e)) from e
     except Exception as e:
         raise ServiceError(
             f"Failed to revise slide deck: {e}",
