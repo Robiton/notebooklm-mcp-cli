@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/core/utils.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.1333
 # Purpose:  Utility functions for NotebookLM API client
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Utility functions for NotebookLM API client."""
 
@@ -26,6 +27,7 @@ RPC_NAMES = {
     "tGMBJ": "delete_source",
     "b7Wfje": "rename_source",
     "hPTbtc": "get_conversations",
+    "khqZz": "get_conversation_turns",
     "J7Gthc": "delete_chat_history",
     "hT54vc": "preferences",
     "ozz5Z": "subscription",
@@ -122,16 +124,34 @@ def parse_timestamp(ts_array: list | None) -> str | None:
         return None
 
 
+def is_mind_map_json(content: Any) -> bool:
+    """Return True if a note-store content string holds mind map JSON.
+
+    The notes RPC returns both regular notes (prose content) and mind maps
+    (stringified JSON with "children"/"nodes" keys) in the same list. This is
+    the single discriminator used by both the notes and mind map listers.
+    """
+    if not content or not isinstance(content, str):
+        return False
+    try:
+        parsed = json.loads(content)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    return isinstance(parsed, dict) and ("children" in parsed or "nodes" in parsed)
+
+
 def extract_cookies_from_chrome_export(cookie_data: str | list[dict]) -> dict[str, str]:
     """Extract cookies from Chrome export format (JSON) or header string."""
+    from notebooklm_tools.utils.browser import flatten_cookies
+
     if isinstance(cookie_data, list):
-        return {c.get("name"): c.get("value") for c in cookie_data if "name" in c and "value" in c}
+        return flatten_cookies(cookie_data)
     if not isinstance(cookie_data, str):
         return {}
     try:
         data = json.loads(cookie_data)
         if isinstance(data, list):
-            return {c.get("name"): c.get("value") for c in data if "name" in c and "value" in c}
+            return flatten_cookies(data)
         if isinstance(data, dict):
             return {str(k): str(v) for k, v in data.items()}
     except json.JSONDecodeError:

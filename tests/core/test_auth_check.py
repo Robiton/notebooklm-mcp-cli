@@ -1,9 +1,11 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/core/test_auth_check.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1011
+# Version:  1.0.8.20261012.1351
 # Purpose:  Tests for the unified auth validity check (check_auth)
 # Changelog:
+#   2026-10-12 v1.0.8 — hostname-based checks for CodeQL URL-substring alerts (sync batch 4)
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — tests: login redirect detected by hostname, not query-string substring
 """Test-driven development for the elegant unified auth validity check.
 
@@ -91,7 +93,9 @@ class TestCheckAuthAPI:
             assert result.details.get("csrf_token") == "csrf123abc"
 
     def test_check_auth_live_true_detects_expired_redirect(self, tmp_path, monkeypatch):
-        """The only reliable way to know cookies are dead is seeing the redirect."""
+        """Dead cookies require homepage redirect plus RPC rejection."""
+        from notebooklm_tools.core.exceptions import AuthenticationError
+
         monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
 
         mgr = AuthManager("default")
@@ -103,13 +107,21 @@ class TestCheckAuthAPI:
                 "APISID": "dead",
                 "SAPISID": "dead",
             },
+            csrf_token="stale123",  # scaffold:not-a-secret (test fixture)
+            session_id="sess123",
             email="test@example.com",
         )
 
-        with patch("httpx.Client") as MockClient:
+        with (
+            patch("httpx.Client") as MockClient,
+            patch(
+                "notebooklm_tools.core.client.NotebookLMClient.list_notebooks",
+                side_effect=AuthenticationError("dead"),
+            ),
+        ):
             client = MockClient.return_value.__enter__.return_value
 
-            # Simulate Google login redirect (the authoritative failure mode)
+            # Simulate Google login redirect.
             req = httpx.Request("GET", "https://accounts.google.com/ServiceLogin")
             resp = httpx.Response(200, request=req, text="login page here")
             client.get.return_value = resp
@@ -149,6 +161,121 @@ class TestCheckAuthAPI:
         )
         assert not _is_google_login_url("https://accounts.google.com.evil.example/")
 
+    def test_check_auth_live_true_classifies_rpc_auth_error_as_expired(self, tmp_path, monkeypatch):
+        """RPC error 16 from a live check is an expired session, not a network error."""
+        from notebooklm_tools.core.errors import ClientAuthenticationError
+
+        monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
+
+        mgr = AuthManager("default")
+        mgr.save_profile(
+            cookies={
+                "SID": "dead",
+                "HSID": "dead",
+                "SSID": "dead",
+                "APISID": "dead",
+                "SAPISID": "dead",
+            },
+            csrf_token="stale123",  # scaffold:not-a-secret (test fixture)
+            session_id="sess123",
+            email="test@example.com",
+        )
+
+        with (
+            patch("httpx.Client") as MockClient,
+            patch(
+                "notebooklm_tools.core.client.NotebookLMClient.list_notebooks",
+                side_effect=ClientAuthenticationError("RPC Error 16: Authentication expired"),
+            ),
+        ):
+            client = MockClient.return_value.__enter__.return_value
+            req = httpx.Request("GET", "https://accounts.google.com/ServiceLogin")
+            client.get.return_value = httpx.Response(200, request=req, text="login page")
+
+            result = check_auth(live=True)
+
+        assert result.valid is False
+        assert result.reason == "expired"
+        assert result.live is True
+
+    def test_check_auth_live_true_redirect_but_rpc_alive_is_valid(self, tmp_path, monkeypatch):
+        """Homepage redirects can be false negatives; a live RPC wins."""
+        monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
+
+        mgr = AuthManager("default")
+        mgr.save_profile(
+            cookies={"SID": "x", "HSID": "x", "SSID": "x", "APISID": "x", "SAPISID": "x"},
+            csrf_token="csrf123",
+            session_id="sess123",
+            email="test@example.com",
+            build_label="build123",
+        )
+
+        with (
+            patch("httpx.Client") as MockClient,
+            patch(
+                "notebooklm_tools.core.client.NotebookLMClient.list_notebooks",
+                return_value=[],
+            ),
+        ):
+            client = MockClient.return_value.__enter__.return_value
+            req = httpx.Request("GET", "https://accounts.google.com/ServiceLogin")
+            client.get.return_value = httpx.Response(200, request=req, text="login page")
+
+            result = check_auth(live=True)
+
+        assert result.valid is True
+        assert result.reason is None
+        assert result.live is True
+        assert result.details == {"recovered_via": "rpc"}
+
+    def test_check_auth_live_true_non_redirect_non_200_reports_http_error(
+        self, tmp_path, monkeypatch
+    ):
+        """A non-login non-200 homepage remains an HTTP error."""
+        monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
+
+        mgr = AuthManager("default")
+        mgr.save_profile(
+            cookies={"SID": "x", "HSID": "x", "SSID": "x", "APISID": "x", "SAPISID": "x"},
+            email="test@example.com",
+        )
+
+        with patch("httpx.Client") as MockClient:
+            client = MockClient.return_value.__enter__.return_value
+            req = httpx.Request("GET", "https://notebooklm.google.com/")
+            client.get.return_value = httpx.Response(500, request=req, text="oops")
+
+            result = check_auth(live=True)
+
+        assert result.valid is False
+        assert result.reason == "http_500"
+        assert result.live is True
+
+    def test_check_auth_live_true_degrades_on_read_timeout(self, tmp_path, monkeypatch):
+        """Regression for #243: a real httpx.ReadTimeout from the homepage probe
+        must degrade to a graceful invalid result, never propagate as an uncaught
+        exception (which previously crashed `nlm login --check`). This pins the
+        fault line directly — narrowing the except in check_auth fails this test.
+        """
+        monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
+
+        mgr = AuthManager("default")
+        mgr.save_profile(
+            cookies={"SID": "x", "HSID": "x", "SSID": "x", "APISID": "x", "SAPISID": "x"},
+            email="test@example.com",
+        )
+
+        with patch("httpx.Client") as MockClient:
+            client = MockClient.return_value.__enter__.return_value
+            client.get.side_effect = httpx.ReadTimeout("read timed out")
+
+            result = check_auth(live=True, timeout=5.0)
+
+        assert result.valid is False
+        assert result.reason == "network_error: ReadTimeout"
+        assert result.live is True
+
     def test_auth_manager_has_check_validity(self, tmp_path, monkeypatch):
         """AuthManager should expose a convenient .check_validity() method."""
         monkeypatch.setattr("notebooklm_tools.utils.config.get_storage_dir", lambda: tmp_path)
@@ -183,3 +310,25 @@ class TestIntegrationWithExistingCode:
         # After the elegant change, _validate_saved_profile becomes a thin presenter
         # around check_auth(live=True) + nice printing.
         assert True  # placeholder until we do the CLI side cleanup
+
+
+class TestHomepageFetchPrefix:
+    """The enterprise path prefix is chosen by hostname, not by a URL substring (CodeQL)."""
+
+    def _fetched_url(self, base_url, monkeypatch):
+        monkeypatch.setenv("NOTEBOOKLM_LOCATION", "us")
+        monkeypatch.delenv("NOTEBOOKLM_PROJECT_ID", raising=False)
+        from notebooklm_tools.core.auth import _fetch_notebooklm_homepage
+
+        with patch("httpx.Client") as MockClient:
+            client = MockClient.return_value.__enter__.return_value
+            _fetch_notebooklm_homepage({"SID": "x"}, base_url=base_url)
+            return client.get.call_args.args[0]
+
+    def test_cloud_host_gets_location_prefix(self, monkeypatch):
+        url = self._fetched_url("https://notebooklm.cloud.google.com", monkeypatch)
+        assert url == "https://notebooklm.cloud.google.com/us/"
+
+    def test_cloud_mention_outside_host_gets_no_prefix(self, monkeypatch):
+        url = self._fetched_url("https://notebooklm.google.com/x/cloud.google.com", monkeypatch)
+        assert url == "https://notebooklm.google.com/x/cloud.google.com/"
