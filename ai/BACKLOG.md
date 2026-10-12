@@ -15,7 +15,7 @@ _(nothing active)_
 
 ### Scaffold follow-ups (from 0.111.23 upgrade, 2026-10-12)
 
-- [ ] **Merge scaffold upgrade PR** (`chore/scaffold-upgrade-0.111.23`) once scaffold-check.yml is green on CI | Priority: High | Owner: Brian | Due: —
+- [x] **Merge scaffold upgrade PR** — Completed 2026-10-12. Merged as Robiton#34 (4ee7ad6) with all checks green | Priority: High | Owner: Brian | Due: —
 - [ ] **CHANGELOG gate mismatch** — `tools/changelog.sh --check` (preflight) wants a tag-generated CHANGELOG.md; ours is hand-maintained with fork + upstream history. Decide: scaffold opt-out (raise on Robiton/ai-project-scaffold) vs. move upstream history to an archive and adopt generated changelog | Priority: Med | Owner: Brian | Due: —
 - [ ] **Header rule vs. upstream files** — CI now fails any PR editing a `.py` file without a scaffold header. Decide whether upstream-derived `src/` files get headers on edit (cherry-pick conflict surface) or need a declared exemption (scaffold has none today) | Priority: Med | Owner: Brian | Due: —
 - [ ] Declare a version-stamp baseline in AGENTS.md (`<!-- notebooklm:version-stamp-baseline X -->`) — `release_status.sh` reports GAP until then | Priority: Low | Owner: Brian | Due: —
@@ -23,7 +23,7 @@ _(nothing active)_
 - [ ] **Keep CI scanner pins current** — `scaffold-check.yml` has a LOCAL install step (shellcheck 0.11.0, actionlint 1.7.7, zizmor 1.30.1, osv-scanner 2.6.0, SHA-256 verified) because this repo runs on GitHub-hosted runners only. Scaffold upgrades will sidecar this file — re-apply the step and match pins to `tools/*` constants | Priority: Low | Owner: Brian | Due: —
 - [ ] **Open Dependabot alerts** — 1 critical + 3 high (PyJWT, urllib3) on main as of 2026-10-12; bump in a separate PR | Priority: High | Owner: Brian | Due: —
 - [ ] Wire session hooks into `.claude/settings.json` (`./setup.sh`) — SessionStart/Stop/PreCompact journal | Priority: Low | Owner: Brian | Due: —
-- [ ] Resolve stray `uv.lock` churn (2-line rewrite by `uv run`) — commit or revert on main | Priority: Low | Owner: Brian | Due: —
+- [x] Resolve stray `uv.lock` churn — Completed 2026-10-12. Root cause: v1.0.8 bump never ran `uv lock`, so the lock still recorded 1.0.7. Synced, and `version-check.yml` + PLANNING release checklist now cover `uv.lock` | Priority: Low | Owner: Claude Code | Due: —
 
 ### Research tasks
 
