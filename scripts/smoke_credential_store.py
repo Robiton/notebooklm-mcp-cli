@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Project:  notebooklm-mcp-cli
+# File:     scripts/smoke_credential_store.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Cross-platform smoke test script for Protected mode credential storage.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Cross-platform smoke test script for Protected mode credential storage.
 
 Tests the OS credential store integration end-to-end on macOS, Linux, and Windows:

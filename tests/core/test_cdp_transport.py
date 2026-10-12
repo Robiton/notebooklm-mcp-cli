@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/core/test_cdp_transport.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1343
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for the experimental CDP RPC transport.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: upstream test with fake credentials marked for the secret scan (sync batch 4)
 """Tests for the experimental CDP RPC transport."""
 

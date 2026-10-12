@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_task3_routing_contract.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Task 3 routing, file-mode preservation, and protected-mode contract tests.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Task 3 routing, file-mode preservation, and protected-mode contract tests.
 
 Verifies:

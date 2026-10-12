@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_cdp_port_map.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Regression tests for CDP port-map profile isolation (Issue #244).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Regression tests for CDP port-map profile isolation (Issue #244)."""
 
 from __future__ import annotations

@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/core/test_auth_check.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1351
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for the unified auth validity check (check_auth)
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — hostname-based checks for CodeQL URL-substring alerts (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — tests: login redirect detected by hostname, not query-string substring

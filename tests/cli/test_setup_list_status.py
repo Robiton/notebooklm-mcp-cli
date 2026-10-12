@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_setup_list_status.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  The direct status command reports the same user-level targets as the wizard.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """The direct status command reports the same user-level targets as the wizard."""
 
 import json

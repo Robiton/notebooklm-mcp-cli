@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tools/chats.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  MCP tools for notebook chat sessions.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """MCP tools for notebook chat sessions."""
 
 from notebooklm_tools.mcp.tools._utils import ResultDict, error_result, logged_tool

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_profiles.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  MCP profile tool: list, status, switch (this server process), optional make-default.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """MCP profile tool: list, status, switch (this server process), optional make-default."""
 
 import pytest

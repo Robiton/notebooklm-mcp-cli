@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/services/test_research.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1233
+# Version:  1.0.8.20261012.1546
 # Purpose:  Tests for services.research module.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.7.0 (sync batch 2)
 """Tests for services.research module."""

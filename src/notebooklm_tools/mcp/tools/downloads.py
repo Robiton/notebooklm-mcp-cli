@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/downloads.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1439
+# Version:  1.0.8.20261012.1546
 # Purpose:  Download tools - Consolidated download_artifact for all artifact types.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.15.4 changes (sync batch 6)
 #   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Download tools - Consolidated download_artifact for all artifact types."""
 

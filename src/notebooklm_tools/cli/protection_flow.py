@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/cli/protection_flow.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Shared steps for moving saved logins between plain and protected storage.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Shared steps for moving saved logins between plain and protected storage.
 
 Used by `nlm auth storage set` and the `nlm setup` wizard's "Credential

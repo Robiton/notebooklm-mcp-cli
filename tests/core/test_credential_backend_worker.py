@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_credential_backend_worker.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Tests for credential backend helper worker process and bounded execution.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Tests for credential backend helper worker process and bounded execution."""
 
 import os

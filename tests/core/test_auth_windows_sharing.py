@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_auth_windows_sharing.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  Windows file-sharing retry behavior for plaintext auth storage.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """Windows file-sharing retry behavior for plaintext auth storage."""
 
 from __future__ import annotations

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_active_profile_note.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1546
+# Purpose:  While a session profile switch is active (and several profiles exist), every tool result
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.15.4 merge (sync batch 6)
 """While a session profile switch is active (and several profiles exist), every tool result
 says which account is in use, so a switch can never go unnoticed in another chat."""
 
