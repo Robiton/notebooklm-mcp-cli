@@ -39,6 +39,8 @@ Current state: v1.0.8, in active use. Enterprise mode tested against GCP project
 | 2026-04-11 | `RPC_ADD_SOURCE_V2 = "ozz5Z"` as a named constant (same ID as `RPC_SUBSCRIPTION`) | Self-documenting — two distinct semantic uses of the same RPC ID | Reusing the subscription constant: semantically misleading |
 | 2026-04-14 | `studio_status` and video documented as intentionally unsupported in enterprise | Discovery Engine REST API confirmed by live test to have no artifact status or video endpoints — not a bug | Attempting a workaround: no API surface to work with |
 | 2026-04-14 | `is_shareable` defaults to `True` in `Notebook` dataclass | Consumer API does not surface this field; True is the safe fallback (most notebooks are shareable) | Default False: would incorrectly block sharing UX for consumer users |
+| 2026-10-12 | Scaffold upgraded to 0.111.23 using `9d56ce2` (2026-04-04) as the three-way merge base; `.scaffold-version` now tracks releases | Original adoption predated scaffold releases, so no base existed; matched by file diff | Re-adopting from scratch: would have lost project edits to standards files |
+| 2026-10-12 | Keep hand-maintained CHANGELOG.md; did not run `tools/changelog.sh --write` | It carries the fork header plus upstream history; tag-derived output would drop it | Generated changelog: open question, see BACKLOG |
 
 ---
 
@@ -157,6 +159,12 @@ Reviewed ~430 active forks of jacob-bd/notebooklm-mcp-cli. Key findings:
 Single-user container (one Google account per container) is viable as a distribution option for teams who don't want to install anything locally. Key open questions documented in BACKLOG.md Docker research task. Multi-user (multiple Google accounts per container) requires new multi-tenancy architecture not yet designed.
 
 ---
+
+## 2026-10-12 — Scaffold upgrade to 0.111.23
+- Decision: upgrade via `tools/scaffold_upgrade.sh` with base tag `0.1.1.20260404.0000` = scaffold commit `9d56ce2`
+- Why: project had no `.scaffold-version`; upgrader refuses to merge without a base
+- CLAUDE.md is now a committed `@AGENTS.md` pointer, never a symlink (supersedes the 2026-04-06 symlink decision)
+- Future upgrades: `tools/scaffold_upgrade.sh --dry-run` then `tools/scaffold_upgrade.sh` on a clean tree, then `tools/preflight.sh`
 
 ## 2026-04-06 — Scaffold adoption
 - Decision: Add AI project scaffold (`Robiton/ai-project-scaffold`) to this repo
