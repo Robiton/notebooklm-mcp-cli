@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     tests/services/test_sources.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.1233
 # Purpose:  Tests for services.sources module
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Tests for services.sources module."""
 

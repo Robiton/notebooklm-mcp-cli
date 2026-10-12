@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/core/test_socks_proxy.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1233
+# Purpose:  Regression tests for outbound SOCKS proxy support (Issue #237).
+# Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 """Regression tests for outbound SOCKS proxy support (Issue #237)."""
 
 import importlib.metadata
