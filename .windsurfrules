@@ -5,7 +5,7 @@ before beginning any work. Do not start coding, planning, or responding
 until the full load order is complete.
 
 This project uses version format: MAJOR.MINOR.PATCH.YYYYMMDD.HHMM
-Example: 1.0.0.20260406.1200
+Example: 1.0.0.20260325.0624
 
 At the end of every session, update `ai/SESSION.md` and `ai/BACKLOG.md`.
 Never store credentials, secrets, or PHI in any `ai/` file.

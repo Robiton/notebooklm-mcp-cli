@@ -1,4 +1,6 @@
 # EditorConfig — https://editorconfig.org
+# Enforces consistent formatting across all editors and AI tools.
+
 root = true
 
 [*]
@@ -17,6 +19,9 @@ trim_trailing_whitespace = false
 
 [*.sh]
 indent_size = 2
+
+[*.conf]
+indent_size = 0
 
 [Makefile]
 indent_style = tab
