@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/conversation.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0951
+# Purpose:  Conversation and query mixin for NotebookLM client.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.7.0 (sync batch 2)
 #!/usr/bin/env python3
 """Conversation and query mixin for NotebookLM client.
 
