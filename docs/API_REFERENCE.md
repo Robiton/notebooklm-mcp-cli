@@ -121,6 +121,9 @@ tag(action="select", query="ai research")
 # Check which sources need syncing
 sources = source_list_drive(notebook_id)
 
+# For very large notebooks, skip freshness checks when you only need the source list
+sources = source_list_drive(notebook_id, skip_freshness=True)
+
 # Sync stale sources (after user confirmation)
 source_sync_drive(source_ids=["id1", "id2"], confirm=True)
 ```
@@ -190,7 +193,7 @@ result = audio_overview_create(
 # Create a video overview
 result = video_overview_create(
     notebook_id=notebook_id,
-    format="explainer",      # explainer, brief, cinematic
+    format="explainer",      # explainer, brief, cinematic, short
     visual_style="classic",  # auto_select, custom, classic, whiteboard, kawaii, anime, etc.
     focus_prompt="",         # Optional host/content focus text
     visual_style_prompt="",  # Optional custom style text when visual_style="custom"
@@ -217,7 +220,7 @@ studio_delete(
 
 **Audio Formats:** deep_dive (conversation), brief, critique, debate
 **Audio Lengths:** short, default, long
-**Video Formats:** explainer, brief, cinematic
+**Video Formats:** explainer, brief, cinematic, short (vertical, ~60s, English-only, no visual style)
 **Video Styles:** auto_select, custom, classic, whiteboard, kawaii, anime, watercolor, retro_print, heritage, paper_craft
 
 > **Enterprise mode constraints (hard API limits — not bugs):**
@@ -658,12 +661,30 @@ params = [
                 language_code,     # "en", "es", etc.
                 focus_prompt,      # Host/content focus text
                 None,
-                format_code,       # 1=Explainer, 2=Brief, 3=Cinematic
+                format_code,       # 1=Explainer, 2=Brief, 3=Cinematic, 4=Short
                 visual_style_code,  # 1=Auto, 3=Classic, etc. (null when using custom style text)
                 visual_style_prompt  # Present when visual_style="custom"
             ]
         ]
     ]
+]
+```
+
+**Short format (code 4) — verified via live capture, 2026-06-30:** Short Video
+Overviews have no visual style picker, so the inner options list omits
+`visual_style_code`/`visual_style_prompt` entirely (matching Cinematic), and
+additionally sends `language_code` as `null` (server defaults to `"en"`;
+English-only for now) plus a trailing flag `1` whose meaning is undocumented
+by Google but required for the request to succeed:
+```python
+[
+    [[source_id1], [source_id2], ...],  # Source IDs
+    None,                                # language — always null for Short
+    focus_prompt,
+    None,
+    4,                                   # format_code = Short
+    None, None,                          # no visual style
+    1,                                   # required trailing flag (unexplained)
 ]
 ```
 
@@ -776,15 +797,20 @@ Returns the same structure as `R7cb6c` (Create Studio Content):
 |--------|--------|
 | **Formats** | 1=Deep Dive (conversation), 2=Brief, 3=Critique, 4=Debate |
 | **Lengths** | 1=Short, 2=Default, 3=Long |
-| **Languages** | BCP-47 codes: "en", "es", "fr", "de", "ja", etc. |
+| **Languages** | BCP-47 codes, including regional values such as `"es-ES"`, `"es-US"`, and `"es-419"` |
+
+For Audio Overviews, NotebookLM has been observed using the region subtag to
+select the voice accent. `es` and `es-ES` produce Spain Spanish, while `es-US`
+and `es-419` produce Latin-American Spanish. Prompt text does not reliably
+override the accent. This is observed behavior and may change upstream.
 
 ### Video Options
 
 | Option | Values |
 |--------|--------|
-| **Formats** | 1=Explainer (comprehensive), 2=Brief |
-| **Visual Styles** | 1=Auto-select, 2=Custom, 3=Classic, 4=Whiteboard, 5=Kawaii, 6=Anime, 7=Watercolor, 8=Retro print, 9=Heritage, 10=Paper-craft |
-| **Languages** | BCP-47 codes: "en", "es", "fr", "de", "ja", etc. |
+| **Formats** | 1=Explainer (comprehensive), 2=Brief, 3=Cinematic, 4=Short (vertical, ~60s) |
+| **Visual Styles** | 1=Auto-select, 2=Custom, 3=Classic, 4=Whiteboard, 5=Kawaii, 6=Anime, 7=Watercolor, 8=Retro print, 9=Heritage, 10=Paper-craft (not applicable to Cinematic or Short) |
+| **Languages** | BCP-47 codes: "en", "es", "fr", "de", "ja", etc. (Short is English-only for now) |
 
 #### Infographic Request
 ```python
@@ -1402,6 +1428,9 @@ NotebookLM doesn't auto-update Google Drive sources when the underlying document
 
 ### Solution
 The `source_list_drive` and `source_sync_drive` tools automate this process.
+For very large notebooks, `source_list_drive(notebook_id, skip_freshness=True)` skips
+the per-source freshness RPCs and returns the source list faster, with stale status
+reported as unknown.
 
 ### Source Metadata Structure (from `rLM1Ne` response)
 

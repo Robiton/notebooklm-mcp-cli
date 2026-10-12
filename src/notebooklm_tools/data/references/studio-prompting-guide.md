@@ -193,6 +193,15 @@ Run mentally; do not present as a questionnaire.
 
 **Parameters:** `audio_format`, `audio_length`, `focus_prompt`
 
+### Language and accent
+
+Use a regional BCP-47 locale when the requested accent matters. NotebookLM has
+been observed producing Spain Spanish for `es`/`es-ES` and Latin-American
+Spanish for `es-US`/`es-419`. Prompt instructions do not reliably change the
+voice accent. `NOTEBOOKLM_HL` sets the default locale, while `language` can
+override it per generation. This behavior is controlled upstream and may
+change.
+
 ### Format × length decision tree
 
 | Scenario | Format | Length |
@@ -220,6 +229,7 @@ Run mentally; do not present as a questionnaire.
 | Exec recap (~2 min) | `brief` | Fast track OK |
 | Structured learning, data walkthrough | `explainer` | Fast track OK |
 | Narrative launch, memorable teaser | `cinematic` | **Always guided** |
+| Quick mobile/social recap (~60s, vertical) | `short` | Fast track OK |
 
 ### Visual style (explainer/brief only)
 
@@ -241,6 +251,12 @@ No visual style picker. Full creative brief in `focus_prompt`. CLI `--style-prom
 **Quota note (one line):** "Cinematic uses daily quota (~2/day Pro) — proceeding with full brief."
 
 **Anti-patterns:** using `--style` on cinematic; 20+ unfocused sources; expecting exact shot list compliance.
+
+### Short: new, fast-track eligible
+
+A ~60-second, vertical "bite-sized overview" — like Cinematic, it has no visual style picker, so CLI `--style-prompt` remaps into `focus_prompt`. Rolling out gradually: English-only, 18+, Pro/Ultra subscribers first. If NotebookLM rejects the request, the account/region may not have access yet.
+
+**Fast-track prompt:** 1–2 sentences naming the core concept to distill — shorter than explainer/brief prompts since the output itself is short.
 
 ---
 
