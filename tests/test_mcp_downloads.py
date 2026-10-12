@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_downloads.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Unit tests for the download_all_artifacts MCP tool.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Unit tests for the download_all_artifacts MCP tool."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -69,6 +76,7 @@ def test_single_notebook_success_routes_to_download_all():
         output_format="json",
         slide_deck_format="pdf",
         skip_existing=False,
+        enforce_root=True,
     )
     assert result["status"] == "success"
     assert result["downloaded"] == 2
@@ -131,6 +139,7 @@ def test_all_notebooks_routes_to_sweep_and_coerces_types():
         output_format="json",
         slide_deck_format="pdf",
         skip_existing=True,
+        enforce_root=True,
     )
     assert result["status"] == "success"
     assert result["total_notebooks"] == 3
@@ -216,6 +225,7 @@ def test_download_artifact_forwards_readiness_options():
         artifact_id=None,
         output_format="json",
         slide_deck_format="pdf",
+        enforce_root=True,
         wait=True,
         wait_timeout=9,
         poll_interval=0.5,

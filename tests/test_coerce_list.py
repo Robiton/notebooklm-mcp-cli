@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_coerce_list.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Tests for MCP tools coerce_list utility.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for MCP tools coerce_list utility."""
 
 import pytest
@@ -10,6 +17,13 @@ class TestCoerceList:
 
     def test_none_returns_none(self):
         assert coerce_list(None) is None
+
+    def test_serialized_json_null_returns_none(self):
+        assert coerce_list("null") is None
+
+    @pytest.mark.parametrize("value", [["null"], '["null"]'])
+    def test_serialized_json_null_list_returns_none(self, value):
+        assert coerce_list(value) is None
 
     def test_empty_string_returns_none(self):
         assert coerce_list("") is None

@@ -22,10 +22,15 @@ nlm login switch <profile>        # Switch default profile
 nlm login profile list            # List all profiles with email addresses
 nlm login profile delete <name>   # Delete a profile
 nlm login profile rename <old> <new>  # Rename a profile
+nlm auth refresh                  # Non-interactive refresh (for schedulers)
 
 # External CDP provider (e.g., OpenClaw-managed browser)
 nlm login --provider openclaw --cdp-url http://127.0.0.1:18800
 ```
+
+For unattended machines, `nlm auth refresh` runs a headless-browser pass that
+makes Google reissue the short-lived cookies keeping a session alive — no
+interactive login. It exits non-zero on failure, so cron/launchd jobs can react.
 
 Each profile gets its own isolated browser session (supports Chrome, Arc, Dia, Brave, Edge, Chromium, Firefox, and more), so you can stay logged into multiple Google accounts simultaneously.
 
@@ -99,7 +104,13 @@ nlm video create <notebook> --style custom --style-prompt "A children's storyboo
 
 # Reports
 nlm report create <notebook> --format "Briefing Doc" --confirm
-# Formats: "Briefing Doc", "Study Guide", "Blog Post", "Create Your Own"
+# Formats: "Briefing Doc", "Study Guide", "Blog Post", "Create Your Own", "Interactive"
+
+# Interactive lesson report (embeds elements; see the nlm-skill Workflow 17)
+nlm report create <notebook> --format Interactive --prompt "Lesson goal..." --confirm
+nlm report get <notebook> <report-id>            # markdown (add --json / -o file.md)
+nlm report elements <notebook> <report-id>       # embedded elements + status
+nlm report element create <notebook> <report-id> --type infographic --confirm
 
 # Quiz & Flashcards
 nlm quiz create <notebook> --count 10 --difficulty medium --focus "Focus on key concepts" --confirm
@@ -128,22 +139,33 @@ language, or pass `--language es-419` for a specific generation.
 ### Downloads
 
 ```bash
-nlm download audio <notebook> <artifact-id> --output podcast.mp3
-nlm download video <notebook> <artifact-id> --output video.mp4
-nlm download report <notebook> <artifact-id> --output report.md
-nlm download mind-map <notebook> <artifact-id> --output mindmap.json
-nlm download slide-deck <notebook> <artifact-id> --output slides.pdf
-nlm download infographic <notebook> <artifact-id> --output infographic.png
-nlm download data-table <notebook> <artifact-id> --output data.csv
+nlm download audio <notebook> --id <artifact-id> --output podcast.m4a
+nlm download video <notebook> --id <artifact-id> --output video.mp4
+nlm download report <notebook> --id <artifact-id> --output report.md
+nlm download mind-map <notebook> --id <artifact-id> --output mindmap.json
+nlm download slide-deck <notebook> --id <artifact-id> --output slides.pdf
+nlm download infographic <notebook> --id <artifact-id> --output infographic.png
+nlm download data-table <notebook> --id <artifact-id> --output data.csv
 
 # Interactive formats (quiz/flashcards)
-nlm download quiz <notebook> <artifact-id> --format html --output quiz.html
-nlm download flashcards <notebook> <artifact-id> --format markdown --output cards.md
+nlm download quiz <notebook> --id <artifact-id> --format html --output quiz.html
+nlm download flashcards <notebook> --id <artifact-id> --format markdown --output cards.md
 
 # Download every completed artifact into a per-notebook folder
 nlm download all <notebook> --output-dir ./exports
 nlm download all --all-notebooks --output-dir ./exports --skip-existing
 ```
+
+Audio arrives as AAC in an MP4 container, so it needs a `.m4a` or `.mp4`
+suffix; `.mp3` and other mismatched extensions are rejected rather than
+written with bytes that contradict the name. Transcode afterwards if you
+need MP3:
+
+```bash
+nlm download audio <notebook> --id <artifact-id> --output raw.m4a
+ffmpeg -i raw.m4a -acodec libmp3lame -q:a 2 podcast.mp3
+```
+
 
 ### Research
 
@@ -233,6 +255,19 @@ nlm chat configure <notebook> --goal learning_guide --length longer
 nlm chat configure <notebook> --goal custom --prompt "You are an expert..."
 ```
 
+### Plan Usage
+
+```bash
+nlm usage                         # Use the configured default profile
+nlm usage --profile work          # Inspect a named profile without switching defaults
+nlm usage -p personal --json      # Short profile flag with JSON output
+```
+
+`--profile` selects credentials only for this usage check; it does not change
+`auth.default_profile`. An explicit profile takes priority over
+`NOTEBOOKLM_COOKIES`. Without `--profile`, environment cookies still take
+priority over the configured default account.
+
 ### Configuration
 
 ```bash
@@ -250,7 +285,7 @@ nlm config set output.format json       # Change default output format
 | `output.color`         | `true`    | Enable colored output                                                                                                                                                                              |
 | `output.short_ids`     | `true`    | Show shortened IDs                                                                                                                                                                                 |
 | `auth.browser`         | `auto`    | Preferred browser for login (auto, chrome, arc, brave, edge, chromium, firefox, vivaldi, opera). Falls back to auto if the preferred browser is not found.                                         |
-| `auth.default_profile` | `default` | Profile to use when `--profile` not specified. **Note:** The MCP Server always uses the active default profile. Changing this setting will instantaneously switch the MCP server's Google account. |
+| `auth.default_profile` | `default` | Profile to use when `--profile` not specified. **Note:** MCP tools use the active default profile unless environment cookies or an explicit per-call profile (supported by `usage_get`) select another account. |
 
 ### Aliases (Shortcuts)
 
@@ -395,7 +430,7 @@ nlm audio create ai --format deep_dive --confirm
 nlm studio status ai
 
 # 6. Download when ready
-nlm download audio ai <artifact-id> --output podcast.mp3
+nlm download audio ai --id <artifact-id> --output podcast.m4a
 ```
 
 ---

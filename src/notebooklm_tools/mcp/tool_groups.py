@@ -1,13 +1,14 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tool_groups.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1438
 # Purpose:  Optional group-based gating of MCP tools.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Optional group-based gating of MCP tools.
 
-The server registers a large tool set (46 tools in this fork). Clients that only need a
+The server registers a large tool set (49 tools). Clients that only need a
 subset can hide the rest to save context, without editing code, by toggling
 named groups or individual tools through environment variables.
 
@@ -96,6 +97,9 @@ TOOL_GROUPS: dict[str, set[str]] = {
     "mode": {
         "configure_mode",
     },
+    "usage": {
+        "usage_get",
+    },
     "sharing": {
         "notebook_share_status",
         "notebook_share_public",
@@ -112,6 +116,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
         "studio_status",
         "studio_delete",
         "studio_revise",
+        "report",
         "download_artifact",
         "download_all_artifacts",
         "export_artifact",

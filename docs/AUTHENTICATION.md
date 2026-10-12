@@ -135,6 +135,37 @@ This means you can stay logged into multiple Google accounts simultaneously with
 
 ---
 
+## Unattended / Scheduled Refresh
+
+A logged-in session normally self-heals: when the short-lived cookies age out,
+the client automatically runs a headless-browser pass to make Google reissue
+them. For unattended machines (a Mac mini or server running scheduled jobs),
+you can also refresh proactively so a session never lapses between jobs:
+
+```bash
+nlm auth refresh                 # Refresh the default profile
+nlm auth refresh --profile work  # Refresh a named profile
+```
+
+`nlm auth refresh` runs a headless browser against the saved profile — no
+interactive login, no window to click. It exits non-zero when the refresh
+fails, so a scheduler can react. Example launchd/cron keep-alive (every 30 min):
+
+```bash
+*/30 * * * * /path/to/nlm auth refresh >/dev/null 2>&1
+```
+
+> **Note:** This needs a saved Chrome profile (from a prior `nlm login`). It
+> does not help when `NOTEBOOKLM_COOKIES` is set as an environment variable —
+> that value overrides saved credentials, so update it directly instead.
+
+> **Disabling the refresh:** Some Google Workspace accounts have their session
+> revoked server-side whenever the saved browser profile is relaunched (issue
+> #330). Set `NOTEBOOKLM_DISABLE_HEADLESS_REFRESH=1` to turn off both the
+> automatic self-heal and `nlm auth refresh` on those accounts.
+
+---
+
 ## Enterprise / Google Workspace
 
 If your organization uses **Gemini Notebook Enterprise**, ask your Enterprise administrator for the project ID or number, the deployment location/multi-region, and confirmation that your account has access. Use the project- and location-specific host configured by your administrator (normally `notebook.cloud.google.com`). Set the base URL, project, and location before authenticating:
@@ -376,13 +407,13 @@ Make sure you copied the cookie **value**, not the header name. The value should
 
 If you keep getting "Authentication expired" even after running `nlm login` or calling `refresh_auth`, check whether `NOTEBOOKLM_COOKIES` is set as an environment variable in your MCP config.
 
-**Why this happens:** When `NOTEBOOKLM_COOKIES` is set in your config (e.g. `claude_desktop_config.json`), it takes absolute priority over all other auth sources — `auth.json`, profile cookies, `save_auth_tokens`, and `nlm login`. When those hardcoded cookies expire, no recovery action can fix a running MCP process because the stale env var is baked into its environment.
+**Why this happens:** When `NOTEBOOKLM_COOKIES` is set in your config (e.g. `claude_desktop_config.json`), it takes priority over default auth sources — `auth.json`, profile cookies, `save_auth_tokens`, and `nlm login`. An explicit CLI `--profile` or MCP `usage_get(profile="work")` uses that saved account instead. When those hardcoded cookies expire, no recovery action can fix a running MCP process because the stale env var is baked into its environment.
 
 **How to check:**
 
 ```python
 import os
-print("NOTEBOOKLM_COOKIES in env:", "YES (overrides everything!)" if os.environ.get("NOTEBOOKLM_COOKIES") else "no")
+print("NOTEBOOKLM_COOKIES in env:", "YES (used when no explicit profile is selected)" if os.environ.get("NOTEBOOKLM_COOKIES") else "no")
 ```
 
 **How to fix (pick one):**

@@ -45,13 +45,15 @@ nlm --help              # List all commands
 nlm <command> --help    # Help for specific command
 nlm --ai                # Full AI-optimized documentation (RECOMMENDED)
 nlm --version           # Check installed version
+nlm usage               # Check rolling and weekly plan usage and reset times
+nlm usage --json        # Return usage data as machine-readable JSON
 ```
 
 ## Critical Rules (Read First!)
 
 1. **Authenticate when needed**: Run `nlm login` for first-time setup or confirmed stale/missing credentials. Saved cookies often remain usable for weeks.
 2. **Do not confuse network failures with expired auth**: `auth_status="unverified"` means the probe was inconclusive. Check connectivity or try an API call before asking the user to log in again.
-3. **Auto-Authentication Recovery**: The CLI includes automatic 3-layer auth recovery (CSRF refresh -> Token reload -> Headless Auth) and 3x server error retries. Most errors are handled automatically. You only need to manually run `nlm login` if all recovery layers fail.
+3. **Auto-Authentication Recovery**: The CLI includes automatic 3-layer auth recovery (CSRF refresh -> Token reload -> Headless Auth) and 3x server error retries. Most errors are handled automatically. You only need to manually run `nlm login` if all recovery layers fail. For unattended machines, `nlm auth refresh` refreshes a session non-interactively (headless) from a scheduler so it never lapses between jobs.
 4. **⚠️ ALWAYS ASK USER BEFORE DELETE**: Before executing ANY delete command, ask the user for explicit confirmation. Deletions are **irreversible**. Show what will be deleted and warn about permanent data loss.
 5. **Always obtain approval before generation or deletion**: Direct
    `studio_create` and delete operations enforce `--confirm` / `confirm=True`.
@@ -65,10 +67,12 @@ nlm --version           # Check installed version
 11. **Choose output format wisely**: Default output (no flags) is compact and token-efficient—use it for status checks. Use `--quiet` to capture IDs for piping. Only use `--json` when you need to parse specific fields programmatically.
 12. **Use `--help` when unsure**: Run `nlm <command> --help` to see available options and flags for any command.
 13. **Studio: fast track by default**: Infer format/style/prompt silently—one compact line, then `studio_create(confirm=True)`. No intake questionnaires. Fast track reduces clarifying questions, not the confirm gate. **Cinematic video is always guided** (quota-limited). Full preview only when vague, high-stakes, cinematic, or user asks. See **[references/studio-prompting-guide.md](references/studio-prompting-guide.md)**.
+14. **Check plan usage before quota-limited work**: Run `nlm usage` (MCP: `usage_get`) before expensive chat or Studio work when budget availability matters. It reports measured compute usage, remaining percentage, and UTC reset times for the rolling and weekly windows. If the check returns an authentication error, refresh the session instead of treating the allowance as exhausted.
 
-**Current MCP surface:** 43 tools. Consolidated action tools include `note`,
+**Current MCP surface:** 50 tools. Consolidated action tools include `note`,
 `label`, `studio_status`, `batch`, `pipeline`, and `tag`. Consolidated type
-tools include `source_add`, `studio_create`, and `download_artifact`.
+tools include `source_add`, `studio_create`, and `download_artifact`. The
+read-only `usage_get` tool reports rolling and weekly plan usage windows.
 
 ## Workflow Decision Tree
 
@@ -87,6 +91,10 @@ User wants to...
 │   ├─► From Google Drive → nlm source add <nb-id> --drive <doc-id> --type doc
 │   └─► Discover new sources → nlm research start "query" --notebook-id <nb-id>
 │
+├─► Check plan usage or quota availability
+│   └─► nlm usage (MCP: usage_get)
+│       (Use --json when a script needs percentages or reset timestamps)
+│
 ├─► Generate content from sources (→ Studio Prompting for optimal focus_prompt)
 │   ├─► Podcast/Audio → nlm audio create <nb-id> --confirm
 │   ├─► Written summary → nlm report create <nb-id> --confirm
@@ -100,6 +108,10 @@ User wants to...
 │
 ├─► Ground a notebook in bounded public X research
 │   └─► See Workflow 16 in references/workflows.md
+│
+├─► Build a lesson-style interactive report with embedded elements
+│   └─► See Workflow 17 in references/workflows.md
+│       (create -> read markdown -> generate elements via the report view)
 │
 ├─► Ask questions about sources
 │   └─► nlm notebook query <nb-id> "question"
@@ -157,6 +169,7 @@ nlm login switch <profile>          # Switch the default profile
 nlm login profile list              # List all profiles with email addresses
 nlm login profile delete <name>     # Delete a profile
 nlm login profile rename <old> <new> # Rename a profile
+nlm auth refresh                    # Non-interactive headless refresh (schedulers/unattended)
 ````
 
 **Multi-Profile Support**: Each profile gets its own isolated browser session (supports Chrome, Arc, Dia, Comet, Brave, Edge, Chromium, Firefox, and more), so you can be logged into multiple Google accounts simultaneously.
@@ -168,6 +181,45 @@ probe was inconclusive; `error` means the health check itself failed.
 **Switching MCP Accounts**: The MCP server always uses the active default profile. If you need to switch which Google account the MCP server is communicating with, you MUST use the CLI: run `nlm login switch <name>`. Your next MCP tool call will instantly use the new account.
 
 **Note**: Both MCP and CLI share the same authentication backend, so authenticating with one works for both.
+
+### Plan Usage and Quotas
+
+Gemini Notebook meters chat and Studio usage as compute against two simultaneous
+windows: a short rolling window (about five hours) and a weekly cap. The API
+reports the measured percentage used, percentage remaining, and reset timestamp;
+the client does not estimate cost from request counts.
+
+#### MCP Tool
+
+Call `usage_get()` for a read-only account-level usage report. It returns:
+
+- `windows`: `rolling` and `weekly` entries, sorted in that order
+- `percent_used`: percentage consumed (0.0 when the backend confirms a full allowance)
+- `percent_remaining`: percentage left
+- `resets_at`: ISO 8601 UTC reset timestamp
+- `tier`: subscription tier when available
+
+To check separate accounts, call `usage_get(profile="work")` and
+`usage_get(profile="personal")` using their saved profile names. Each call
+uses that account without switching the default or affecting other MCP tools.
+An explicit profile overrides `NOTEBOOKLM_COOKIES`; a missing profile returns
+an error instead of falling back to another account.
+
+The API may return windows in either order, so consumers should use the window
+name. If the usage request fails with an authentication error, refresh with
+`nlm auth refresh` or `nlm login`; do not interpret the failure as zero quota.
+
+#### CLI
+
+```bash
+nlm usage                 # Human-readable table in the local timezone
+nlm usage --json          # Machine-readable JSON; reset timestamps stay in UTC
+nlm usage --profile work  # Check work without changing the default account
+nlm usage -p personal    # Check personal separately
+```
+
+Use this check before quota-limited chat or Studio work when the remaining
+budget or reset time affects the decision.
 
 ### 2. Notebook Management
 
@@ -320,7 +372,7 @@ Use `studio_create` with `artifact_type` and type-specific options. All require 
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `audio`       | `audio_format`: deep_dive/brief/critique/debate, `audio_length`: short/default/long                                                                                                                                   |
 | `video`       | `video_format`: explainer/brief/cinematic/short, `visual_style`: auto_select/classic/whiteboard/kawaii/anime/watercolor/retro_print/heritage/paper_craft (not for cinematic/short), `video_style_prompt`              |
-| `report`      | `report_format`: Briefing Doc/Study Guide/Blog Post/Create Your Own, `custom_prompt`                                                                                                                                  |
+| `report`      | `report_format`: Briefing Doc/Study Guide/Blog Post/Create Your Own/**Interactive**, `report_template` (Interactive only; `learning_overview`), `custom_prompt`                                                        |
 | `quiz`        | `question_count`, `difficulty`: easy/medium/hard                                                                                                                                                                      |
 | `flashcards`  | `difficulty`: easy/medium/hard                                                                                                                                                                                        |
 | `mind_map`    | `title`                                                                                                                                                                                                               |
@@ -330,6 +382,14 @@ Use `studio_create` with `artifact_type` and type-specific options. All require 
 
 **Common options**: `source_ids`, `language` (BCP-47 code, including regional
 locales such as `es-419`), `focus_prompt`
+
+**Interactive reports:** `studio_create(artifact_type="report",
+report_format="Interactive")` builds a lesson-style document that embeds
+recommended elements (audio / video / mind map / infographic / flashcards /
+slide deck / quiz) as *suggested* placeholders. Read it and work with its elements through one tool: `report(action="get")` (markdown for agents), `report(action="elements")` (section, card description and allowed settings per element; optional `wait_for` / `include_content`), and `report(action="generate", plan=[...])` to validate a plan and, with `confirm=True`, generate it.
+Wait on generation with bounded waiting (`wait_for` / `--wait`) and review inline
+content against the plan and section. Full sequence: Workflow 17 in
+references/workflows.md.
 
 **Audio accent:** NotebookLM has been observed using the `language` region
 subtag, not the prompt, to choose the Audio Overview accent. For example,
@@ -367,7 +427,13 @@ nlm audio create <id> --format brief --focus "key topic" --confirm
 nlm report create <id> --confirm
 nlm report create <id> --format "Study Guide" --confirm
 nlm report create <id> --format "Create Your Own" --prompt "Custom..." --confirm
-# Formats: "Briefing Doc", "Study Guide", "Blog Post", "Create Your Own"
+# Formats: "Briefing Doc", "Study Guide", "Blog Post", "Create Your Own", "Interactive"
+
+# Interactive lesson report (embeds elements — see Workflow 17)
+nlm report create <id> --format Interactive --prompt "Lesson goal..." --confirm
+nlm report get <id> <report-id>              # markdown (add --json / -o file.md)
+nlm report elements <id> <report-id>         # embedded elements + status
+nlm report element create <id> <report-id> --type infographic --confirm
 
 # Quiz
 nlm quiz create <id> --confirm
@@ -474,6 +540,18 @@ notebook (or every notebook with `all_notebooks=True`) into per-notebook
 folders, `export_artifact` with `export_type` (`docs`/`sheets`), and
 `studio_delete` with `confirm=True`.
 
+**Where MCP downloads go.** Downloads through the MCP tools are confined to one
+download directory: `~/Downloads/gemini-notebook` by default, or whatever the
+operator set in `NOTEBOOKLM_DOWNLOAD_DIR`. Pass `output_path` relative to that
+directory (`"podcast.m4a"`, `"My Notebook/report.md"`); a path outside it is
+refused. The result carries the absolute path the file was written to, so read
+the destination from the response rather than assuming it. If a user asks for a
+file somewhere else, tell them the download location and let them move it, or
+have them run the `nlm` CLI, which writes wherever they point it. Do not try to
+work around the boundary: it exists because source content can carry
+instructions, and it stops a download from overwriting shell startup files,
+agent instruction files, or git hooks.
+
 #### CLI Commands
 
 ```bash
@@ -487,7 +565,7 @@ nlm studio status <nb-id> --json --mcp-compatible  # MCP-shaped paginated output
 nlm video list <nb-id> --json                      # List videos only
 
 # Download artifacts
-nlm download audio <nb-id> --output podcast.mp3
+nlm download audio <nb-id> --output podcast.m4a   # AAC/MP4; .mp3 is rejected
 nlm download video <nb-id> --output video.mp4
 nlm download report <nb-id> --output report.md
 nlm download file <nb-id> --id <artifact-id> --output export.bin  # Generic type-10 file export
@@ -496,6 +574,8 @@ nlm download slide-deck <nb-id> --output slides.pptx --format pptx  # PPTX
 nlm download quiz <nb-id> --output quiz.html --format html    # Also: json, markdown
 nlm download all <nb-id> -d ./exports                          # Every completed artifact
 nlm download all --all-notebooks -d ./exports --skip-existing  # Sweep every notebook
+# The CLI writes wherever the user points it. Only MCP downloads are confined
+# to the download directory. Setting NOTEBOOKLM_DOWNLOAD_DIR bounds both.
 
 # Export to Google Docs/Sheets
 nlm export sheets <nb-id> <artifact-id> --title "My Data Table"
@@ -943,7 +1023,7 @@ nlm pipeline run ingest-and-podcast --notebook <id> --input-url "https://example
 | "authentication may have expired"                    | Session timeout                                    | `nlm login`                                                                                                  |
 | "Notebook not found"                                 | Invalid ID                                         | `nlm notebook list`                                                                                          |
 | "Source not found"                                   | Invalid ID                                         | `nlm source list <nb-id>`                                                                                    |
-| "Rate limit exceeded"                                | Too many calls                                     | Studio creation: wait 1-2 minutes; avoid parallel video batches                                              |
+| "Rate limit exceeded"                                | Too many calls or an exhausted usage window      | Run `nlm usage` / `usage_get` to inspect remaining budget; wait for the reported reset time when a window is exhausted |
 | "Research already in progress"                       | Pending research                                   | Use `--force` or import first                                                                                |
 | "Import timed out"                                   | Too many sources                                   | Use `--timeout 600` for larger notebooks                                                                     |
 | "Google API error code 3"                            | Transient deep research error                      | Retry in a few minutes, or use `--mode fast`                                                                 |
@@ -960,6 +1040,8 @@ Wait between operations to avoid rate limits:
 - Content generation: run sequentially; after a rate limit, wait 1-2 minutes
 - Research operations: 2 seconds
 - Query operations: 2 seconds
+- Before quota-limited chat or Studio work, check `nlm usage` (MCP: `usage_get`)
+  to see the rolling and weekly percentages and reset timestamps.
 
 ## Advanced Reference
 

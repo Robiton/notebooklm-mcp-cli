@@ -45,7 +45,7 @@ verify both staleness detection and sync functionality work correctly.
 
 ### Test 1.1 - Refresh Auth
 **Tool:** `refresh_auth`
-**CLI:** `nlm login --check` (or `nlm auth refresh` if implemented, but `nlm login --check` validates tokens)
+**CLI:** `nlm login --check` (validates tokens)
 
 **Prompt:**
 ```
@@ -53,6 +53,22 @@ Refresh authentication tokens for NotebookLM.
 ```
 
 **Expected:** Success message with auth status.
+
+---
+
+### Test 1.1b - Non-Interactive Session Refresh (unattended)
+**CLI:** `nlm auth refresh` (headless refresh; `--profile <name>` for a named profile)
+
+**Prompt:**
+```
+Refresh my NotebookLM session without opening a browser window.
+```
+
+**Expected:** With a saved Chrome profile and a working login, prints
+`✓ Session refreshed for profile '<name>'` and exits 0. With no saved profile
+or a dead login, prints a clear failure and exits non-zero (usable in
+cron/launchd). Refuses up front when `NOTEBOOKLM_COOKIES` is set in the
+environment (that value overrides saved credentials).
 
 ---
 
@@ -499,6 +515,128 @@ Create a report for notebook [notebook_id]:
 ```
 
 **Expected:** Report generation started.
+
+---
+
+### Test 5.3b - Create Interactive Report
+**Tool:** `studio_create`
+**CLI:** `nlm report create [notebook_id] --format Interactive --template learning_overview --prompt "Summarize the key ideas with a quiz" --confirm`
+
+**Prompt:**
+```
+Create an interactive report for notebook [notebook_id]:
+- artifact_type: report
+- report_format: Interactive
+- report_template: learning_overview
+- custom_prompt: Summarize the key ideas with a quiz
+- confirm: True
+```
+
+**Expected:** Interactive report generation starts (status "queued" -> "in_progress"
+-> "completed" in `studio_status`). The artifact type shows as `interactive_report`.
+
+---
+
+### Test 5.3c - Read Interactive Report
+**Tool:** `report` (action=get)
+**CLI:** `nlm report get [notebook_id] [artifact_id]` (or `--json`, `--output report.md`)
+
+**Prompt:**
+```
+Read interactive report [artifact_id] in notebook [notebook_id]:
+- call report(action="get")
+- show the first section of the markdown and the element list
+```
+
+**Expected:** Markdown content, prompt and the embedded elements
+(mind map / infographic / flashcards / slide deck / quiz) with status
+"suggested" before they are generated.
+
+---
+
+### Test 5.3d - List and Generate Report Elements
+**Tool:** `report` (action=elements, generate)
+**CLI:** `nlm report elements [notebook_id] [artifact_id]` then
+`nlm report element create [notebook_id] [artifact_id] --type quiz --confirm`
+
+**Prompt:**
+```
+List the embedded elements of interactive report [artifact_id], then generate
+the quiz element.
+```
+
+**Expected:** Element list shows ids/types/statuses; generating one flips its
+status from "suggested" to generation states and the element also appears in the
+notebook Studio panel.
+
+---
+
+### Test 5.3e - Report Element Settings Sweep
+**Tool:** `report` (action=generate, one-item plan)
+**CLI:** `nlm report element create [notebook_id] [artifact_id] --type quiz --setting difficulty=hard --setting question_amount=more --confirm`
+
+**Prompt:**
+```
+Generate an interactive report quiz element with settings difficulty=hard and question_amount=more.
+```
+
+**Expected:** Generation starts with custom settings passed into generation options (`difficulty=3`, `question_amount=3`).
+
+---
+
+### Test 5.3f - Batch Element Plan Validation (Invalid Item Stops All)
+**Tool:** `report` (action=generate)
+**CLI:** `nlm report element create-batch [notebook_id] [artifact_id] --plan invalid_plan.json --confirm`
+
+**Prompt:**
+```
+Validate and attempt to run a batch plan containing 2 valid element IDs and 1 non-existent or invalid element ID:
+[
+  {"element_id": "valid-id-1"},
+  {"element_id": "invalid-id-xyz"}
+]
+```
+
+**Expected:** Validation fails before any RPC mutation occurs; no elements change status or start generation.
+
+---
+
+### Test 5.3g - Batch Generation Stops on Quota Exhaustion
+**Tool:** `report` (action=generate)
+**CLI:** `nlm report element create-batch [notebook_id] [artifact_id] --plan plan.json --confirm`
+
+**Prompt:**
+```
+Run a multi-element batch plan when quota is exhausted.
+```
+
+**Expected:** Generation terminates immediately when encountering `RESOURCE_EXHAUSTED`; result reports `stopped_reason="quota"` and remaining planned items stay `not_started`.
+
+---
+
+### Test 5.3h - Element Bounded Waiting and Timeout
+**Tool:** `report` (action=elements)
+**CLI:** `nlm report elements [notebook_id] [artifact_id] --wait [element_id] --timeout 10`
+
+**Prompt:**
+```
+Wait on an in-progress element for up to 10 seconds.
+```
+
+**Expected:** Returns status before timeout if completed/failed, or returns `timed_out: true` with current status if timeout elapses without raising an error.
+
+---
+
+### Test 5.3i - Inline Content for Element Review
+**Tool:** `report` (action=elements)
+**CLI:** `nlm report elements [notebook_id] [artifact_id] --content`
+
+**Prompt:**
+```
+List report elements with include_content=True to review completed quiz, flashcard, or mind map elements.
+```
+
+**Expected:** Returns inline structured content for review with label "Checked against the plan and the report section, not against the original sources."
 
 ---
 
@@ -1020,6 +1158,43 @@ Get Gemini Notebook MCP server version and check for updates.
 - `latest_version`: Latest PyPI version (or null if offline)
 - `update_available`: Boolean
 - `update_command`: Upgrade command
+
+---
+
+## Test Group 13: Plan Usage
+
+### Test 13.1 - Get Remaining Usage
+**Tool:** `usage_get`
+**CLI (Noun):** `nlm usage` (add `--json` for raw output)
+
+**Prompt:**
+```
+How much of my Gemini Notebook usage allowance is left?
+```
+
+**Expected:**
+- `windows`: two entries, `rolling` first then `weekly`
+- each with `percent_used`, `percent_remaining` and `resets_at` (ISO 8601 UTC)
+- `tier`: subscription tier string, e.g. `NOTEBOOKLM_TIER_PRO_CONSUMER_USER`
+
+**Also verify:**
+- Run it twice. The reported order stays `rolling`, `weekly` even though the API
+  returns the two entries in an unstable order.
+- `percent_used` and `percent_remaining` sum to 100 for a partly consumed window.
+- With an expired session it reports an authentication error and hints at
+  `nlm auth refresh`. It must NOT report the allowance as exhausted.
+
+### Test 13.2 - Check Work and Personal Profiles
+**Tool:** `usage_get(profile="work")`, then `usage_get(profile="personal")`
+**CLI:** `nlm usage --profile work`, then `nlm usage -p personal --json`
+
+**Expected:**
+- Each call reads the selected saved account's usage, even when
+  `NOTEBOOKLM_COOKIES` is set for a different account.
+- The configured default and the account used by other MCP tools are unchanged.
+- Missing profiles return an error without falling back to environment cookies
+  or the default account.
+- Omitting the profile keeps the existing environment/default authentication.
 
 ---
 

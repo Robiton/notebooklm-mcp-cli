@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/__init__.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1333
+# Version:  1.0.8.20261012.1438
 # Purpose:  MCP tools - Modular tool definitions for the Gemini Notebook MCP server.
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.12.0 changes (sync batch 5)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """MCP tools - Modular tool definitions for the Gemini Notebook MCP server."""
 
@@ -65,11 +66,13 @@ from .sources import (
     source_sync_drive,
 )
 from .studio import (
+    report,
     studio_create,
     studio_delete,
     studio_revise,
     studio_status,
 )
+from .usage import usage_get
 
 __all__ = [
     # Downloads (1 consolidated + 1 bulk)
@@ -108,11 +111,12 @@ __all__ = [
     "research_start",
     "research_status",
     "research_import",
-    # Studio (4 - consolidated create + revise + list_types via status)
+    # Studio (5 - consolidated create + revise + status + delete + interactive report)
     "studio_create",
     "studio_status",
     "studio_delete",
     "studio_revise",
+    "report",
     # Chat (7)
     "notebook_query",
     "notebook_query_start",
@@ -129,6 +133,7 @@ __all__ = [
     "label",
     # Server (1)
     "server_info",
+    "usage_get",
     # Batch (1 consolidated — action: query|add_source|create|delete|studio)
     "batch",
     # Cross-notebook (1)

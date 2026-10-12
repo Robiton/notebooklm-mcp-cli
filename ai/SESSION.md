@@ -48,8 +48,11 @@ _Most recent session at the top._
 - Batch 3 merged as #42.
 - Batch 4 (v0.10.0): 33 conflicts. Upstream added its own Enterprise support (batchexecute, chosen by `NOTEBOOKLM_BASE_URL`), overlapping the fork's `APIProfile`. Folded in: the profile still decides enterprise (`enterprise.mode`) and upstream's `_is_enterprise()` / prefix / query-endpoint helpers read it; upstream's personal `base_host` (notebook.google.com) kept. Enterprise listing params and upload path follow upstream's captured traffic (upstream live-verified its own code on `notebook.cloud.google.com` / `global`; the fork's CLI path is untested). Upstream push disabled on the `upstream` remote (fetch-only, Brian's request); post-sync target is v1.5. Found and fixed a batch 1 regression: `server_info` raised `NameError` (update check dropped). Mistake caught: `git checkout --ours` on version files dropped upstream's clean hunks in SKILL.md and others; redone with `checkout -m`. 1475 tests pass.
 
+- Batch 4 merged as #43.
+- Batch 5 (v0.12.0): 20 conflicts. Download validation took upstream's containment design (MCP writes confined to one root) and kept the fork's home/cwd/temp allowlist for CLI writes. `download_all` now validates the output dir before network calls (an upstream test only passed by accident). The new `report` tool and CLI studio status use the API profile for notebook URLs. Fork workflows, dependabot and SECURITY.md kept. Mistake caught: `pytest | tail` in an `&&` chain let a commit through with 1 failing test; fixed and amended before push. 1747 tests pass.
+
 **Next steps:**
-- Batches 5–6 of the upstream sync (plan doc); pin any new upstream workflows each batch
+- Batch 6 of the upstream sync (plan doc); pin any new upstream workflows each batch
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
 - Optionally wire session hooks: `./setup.sh` writes `.claude/settings.json` hooks (currently a personal allowlist only)
 

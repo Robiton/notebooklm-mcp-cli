@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/cli/test_setup_claude_desktop.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1439
+# Purpose:  Tests for Claude Desktop support in ``nlm setup add/remove/list``.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: file touched by upstream v0.12.0 merge (sync batch 5)
 """Tests for Claude Desktop support in ``nlm setup add/remove/list``."""
 
 import json
@@ -18,6 +25,7 @@ from notebooklm_tools.cli.commands.setup import (
     _is_already_configured,
     _remove_single,
     _setup_claude_desktop,
+    _without_own_process_ancestry,
     app,
 )
 
@@ -219,6 +227,34 @@ class TestClaudeDesktopProcessDetection:
         process_list = "node /Users/test/bin/relay-ai claude --trace\n"
         assert _claude_desktop_profile_is_running("3p", process_list=process_list) is False
         assert _claude_desktop_profile_is_running("regular", process_list=process_list) is False
+
+    def test_own_nlm_invocation_is_not_treated_as_desktop(self):
+        ps_output = (
+            "    1     0 /sbin/launchd\n"
+            "  500     1 /bin/zsh -c nlm setup add claude-desktop\n"
+            "  501   500 /Users/test/.local/bin/python3 /Users/test/.local/bin/nlm "
+            "setup add claude-desktop\n"
+            "  502   501 ps -axo pid=,ppid=,command=\n"
+        )
+        process_list = _without_own_process_ancestry(ps_output, own_pid=501)
+        assert "claude-desktop" not in process_list
+        assert _claude_desktop_profile_is_running("regular", process_list=process_list) is False
+
+    def test_keeps_unrelated_desktop_and_desktop_ancestor(self):
+        ps_output = (
+            "    1     0 /sbin/launchd\n"
+            "  400     1 /Applications/Claude.app/Contents/MacOS/Claude\n"
+            "  500   400 /bin/zsh -c nlm setup add claude-desktop\n"
+            "  501   500 /Users/test/.local/bin/python3 /Users/test/.local/bin/nlm "
+            "setup add claude-desktop\n"
+            "  600     1 /usr/bin/claude-desktop --no-sandbox\n"
+        )
+        process_list = _without_own_process_ancestry(ps_output, own_pid=501)
+        assert process_list.splitlines() == [
+            "/Applications/Claude.app/Contents/MacOS/Claude",
+            "/usr/bin/claude-desktop --no-sandbox",
+        ]
+        assert _claude_desktop_profile_is_running("regular", process_list=process_list) is True
 
 
 class TestSetupClaudeDesktop:
