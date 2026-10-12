@@ -129,8 +129,9 @@ Upstream is now merged by release band rather than cherry-picked (plan:
 - **Fixed:** fresh logins closing the browser before sign-in; broken sessions reported as valid;
   YouTube source URLs; `research start --auto-import` racing the task; Windows credential file
   locks; concurrent alias/tag writes and artifact temp files; bounded async query concurrency.
-- **CI:** upstream's `windows-latest` test leg is merged into `lint-test.yml`, keeping the fork's
-  SHA-pinned actions.
+- **CI:** upstream's `windows-latest` test leg was not kept. The fork targets a hosted MCP server
+  and is developed on macOS; tests run on Linux as before (job name "Run tests", which the `main`
+  ruleset requires).
 - **Fork hardening:** the credential-store helper subprocess runs `python -I -m …`, so a package
   planted in the working directory can't be imported in place of the worker. In enterprise mode the
   MCP credential probe never opens the OS keystore, and the "protect your login" notice is not
