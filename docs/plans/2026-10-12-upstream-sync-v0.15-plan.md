@@ -1,6 +1,6 @@
 # Upstream sync plan: v0.5.24 → v0.15.4
 
-**Date:** 2026-10-12 · **Status:** batch 1 (v0.6.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
+**Date:** 2026-10-12 · **Status:** batch 1 merged (#40); batch 2 (v0.7.0) in review · **Tracking:** issue #26, `ai/BACKLOG.md`
 
 ## Where we are
 
@@ -112,6 +112,20 @@ conflicts.
   `f42c2a1` was never taken), so rewrite it to `--extra dev`. Check locally with
   `uvx zizmor@1.30.1 --min-severity high --offline .github/workflows/`.
 
+## Findings from batch 2
+
+- **External bind refusal.** Upstream v0.6.x refuses HTTP/SSE on a non-loopback host unless
+  `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1`. The fork only warned. Adopted as-is, which also applies to
+  OAuth-protected servers (they need the env var too). The Docker and multi-user docs now set it.
+- **`server_info` auth status.** Upstream moved to a live check (`check_auth(live=True)`). The fork
+  reports per-mode status (gcloud token, cookie presence). The fork's output is kept and upstream's
+  function is merged but unused.
+- **Package name in new upstream docs.** New upstream docs install `notebooklm-mcp-cli`. Every
+  batch, grep new or changed docs for `install notebooklm-mcp-cli` and point it at
+  `notebooklm-enterprise-mcp`.
+- **Both sides added the same feature** (`.epub`) and the set ended up with a duplicate. Ruff B033
+  caught it, so the per-batch ruff gate is doing its job.
+
 ## Open decisions (Brian)
 
 1. **Credential store (batch 6):** adopt upstream's OS-keyring storage for personal mode, or keep
@@ -121,3 +135,6 @@ conflicts.
    Recommendation: follow upstream for personal mode and keep "NotebookLM Enterprise" for
    enterprise.
 3. **Fork release after the sync:** probably 1.1.0, given the new features and dependencies.
+4. **OAuth and the external-bind refusal (batch 2):** exempt OAuth-protected servers, or keep
+   requiring `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1`? Keeping it is the conservative default.
+5. **Live auth check in `server_info` (batch 2):** report upstream's live personal-mode check?

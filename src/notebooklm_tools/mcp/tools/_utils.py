@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/_utils.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.0952
 # Purpose:  MCP Tools - Shared utilities and base components
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """MCP Tools - Shared utilities and base components."""
 
@@ -17,9 +18,9 @@ from collections.abc import Awaitable, Callable
 from typing import Any, ParamSpec, TypeAlias, TypeVar, cast
 
 from notebooklm_tools.core.api_profile import get_api_profile
-from notebooklm_tools.core.auth import load_cached_tokens
 from notebooklm_tools.core.client import NotebookLMClient
 from notebooklm_tools.core.utils import extract_cookies_from_chrome_export
+from notebooklm_tools.services.auth import load_cached_tokens
 
 # MCP request/response logger
 mcp_logger = logging.getLogger("notebooklm_tools.mcp")

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_file_upload.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0951
+# Purpose:  Tests for file upload functionality.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.7.0 (sync batch 2)
 """Tests for file upload functionality."""
 
 import tempfile
@@ -275,10 +282,45 @@ class TestAddFileIntegration:
             # Verify all three steps were called
             mock_register.assert_called_once_with("notebook-123", temp_path.name)
             mock_start.assert_called_once()
-            mock_upload.assert_called_once_with("https://upload.url/session", temp_path)
+            mock_upload.assert_called_once_with("https://upload.url/session", temp_path.resolve())
 
             # Verify result
             assert result["id"] == "source-id-123"
+            assert result["title"] == temp_path.name
+        finally:
+            temp_path.unlink()
+
+    def test_add_file_accepts_epub(self):
+        """Test that EPUB files pass validation and use the upload protocol."""
+        from notebooklm_tools.core.sources import SourceMixin
+
+        client = SourceMixin.__new__(SourceMixin)
+        client.cookies = {"test": "cookie"}
+        client.csrf_token = "test-csrf"
+        client._session_id = "test-session"
+        client._client = None
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".epub", delete=False) as f:
+            f.write(b"PK\x03\x04fake epub content")
+            temp_path = Path(f.name)
+
+        try:
+            with (
+                patch.object(
+                    client, "_register_file_source", return_value="source-id-epub"
+                ) as mock_register,
+                patch.object(
+                    client, "_start_resumable_upload", return_value="https://upload.url/session"
+                ) as mock_start,
+                patch.object(client, "_upload_file_streaming") as mock_upload,
+            ):
+                result = client.add_file("notebook-123", temp_path)
+
+            mock_register.assert_called_once_with("notebook-123", temp_path.name)
+            mock_start.assert_called_once()
+            mock_upload.assert_called_once_with("https://upload.url/session", temp_path.resolve())
+
+            assert result["id"] == "source-id-epub"
             assert result["title"] == temp_path.name
         finally:
             temp_path.unlink()

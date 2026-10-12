@@ -1,14 +1,16 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/cli/main.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.0951
 # Purpose:  Main CLI application for NotebookLM Tools
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Main CLI application for NotebookLM Tools."""
 
 import contextlib
 import logging
+from typing import Any
 
 import typer
 
@@ -94,6 +96,37 @@ profile_app = typer.Typer(
 )
 
 
+def _validate_saved_profile(auth: Any) -> tuple[Any, int]:
+    """Validate saved credentials by making a real NotebookLM API call."""
+    from notebooklm_tools.core.client import NotebookLMClient
+
+    p = auth.load_profile()
+    with NotebookLMClient(
+        cookies=p.cookies,
+        csrf_token=p.csrf_token or "",
+        session_id=p.session_id or "",
+        build_label=p.build_label or "",
+    ) as client:
+        notebooks = client.list_notebooks()
+
+    auth.save_profile(
+        cookies=p.cookies,
+        csrf_token=p.csrf_token,
+        session_id=p.session_id,
+        email=p.email,
+        build_label=p.build_label,
+    )
+    return p, len(notebooks)
+
+
+def _print_auth_valid(profile: Any, notebook_count: int) -> None:
+    console.print("[green]✓[/green] Authentication valid!")
+    console.print(f"  Profile: {profile.name}")
+    console.print(f"  Notebooks found: {notebook_count}")
+    if profile.email:
+        console.print(f"  Account: {profile.email}")
+
+
 @login_app.callback(invoke_without_command=True)
 def login_callback(
     ctx: typer.Context,
@@ -158,8 +191,9 @@ def login_callback(
 
     To switch active accounts, run `nlm login switch <profile>`.
     """
-    from notebooklm_tools.core.auth import AuthManager
+    from notebooklm_tools.core.errors import ClientAuthenticationError
     from notebooklm_tools.core.exceptions import AccountMismatchError, NLMError
+    from notebooklm_tools.services.auth import AuthManager
     from notebooklm_tools.utils.config import get_config
 
     # If a subcommand is invoked, don't run login logic
@@ -183,34 +217,9 @@ def login_callback(
     if check:
         # Check existing auth by making a real API call
         try:
-            from notebooklm_tools.core.client import NotebookLMClient
-
-            p = auth.load_profile()
+            p, notebook_count = _validate_saved_profile(auth)
             console.print(f"[dim]Checking credentials for profile: {p.name}...[/dim]")
-
-            # Actually test the API using profile's credentials
-            with NotebookLMClient(
-                cookies=p.cookies,
-                csrf_token=p.csrf_token or "",
-                session_id=p.session_id or "",
-                build_label=p.build_label or "",
-            ) as client:
-                notebooks = client.list_notebooks()
-
-            # Success! Update last validated
-            auth.save_profile(
-                cookies=p.cookies,
-                csrf_token=p.csrf_token,
-                session_id=p.session_id,
-                email=p.email,
-                build_label=p.build_label,
-            )
-
-            console.print("[green]✓[/green] Authentication valid!")
-            console.print(f"  Profile: {p.name}")
-            console.print(f"  Notebooks found: {len(notebooks)}")
-            if p.email:
-                console.print(f"  Account: {p.email}")
+            _print_auth_valid(p, notebook_count)
         except NLMError as e:
             console.print(f"[red]✗[/red] Authentication failed: {e.message}")
             if e.hint:
@@ -242,6 +251,14 @@ def login_callback(
         console.print(f"[red]Error:[/red] Unsupported provider '{provider}'")
         console.print("[dim]Supported values: builtin, openclaw[/dim]")
         raise typer.Exit(1)
+
+    if not force:
+        try:
+            p, notebook_count = _validate_saved_profile(auth)
+            _print_auth_valid(p, notebook_count)
+            return
+        except (NLMError, ClientAuthenticationError):
+            pass
 
     try:
         from notebooklm_tools.utils.cdp import (
@@ -533,7 +550,7 @@ def login_callback(
 @profile_app.command("list")
 def profile_list() -> None:
     """List all authentication profiles."""
-    from notebooklm_tools.core.auth import AuthManager
+    from notebooklm_tools.services.auth import AuthManager
 
     profiles = AuthManager.list_profiles()
 
@@ -564,7 +581,7 @@ def profile_delete(
     ),
 ) -> None:
     """Delete a profile and its credentials."""
-    from notebooklm_tools.core.auth import AuthManager
+    from notebooklm_tools.services.auth import AuthManager
 
     auth = AuthManager(profile)
 
@@ -589,8 +606,8 @@ def profile_rename(
     new_name: str = typer.Argument(..., help="New profile name"),
 ) -> None:
     """Rename an authentication profile."""
-    from notebooklm_tools.core.auth import AuthManager
     from notebooklm_tools.core.exceptions import NLMError
+    from notebooklm_tools.services.auth import AuthManager
 
     # Check if old profile exists
     old_auth = AuthManager(old_name)
@@ -633,7 +650,7 @@ def login_switch(
     profile: str = typer.Argument(..., help="Profile name to switch to"),
 ) -> None:
     """Switch the default profile for all commands."""
-    from notebooklm_tools.core.auth import AuthManager
+    from notebooklm_tools.services.auth import AuthManager
     from notebooklm_tools.utils.config import get_config, save_config
 
     # Check if profile exists
@@ -814,10 +831,12 @@ def cli_main():
         else:
             raise
     finally:
-        # Check for updates after command execution (runs even on typer.Exit)
-        from notebooklm_tools.cli.utils import print_update_notification
+        try:
+            from notebooklm_tools.cli.utils import print_update_notification
 
-        print_update_notification()
+            print_update_notification()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

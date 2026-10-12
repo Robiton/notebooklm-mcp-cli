@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/cli/ai_docs.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.0951
 # Purpose:  AI-friendly documentation output for the --ai flag
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """AI-friendly documentation output for the --ai flag."""
 
@@ -239,7 +240,7 @@ nlm source add <notebook-id> --file doc.pdf --wait          # Upload and wait un
 nlm source add <notebook-id> --drive <doc-id>              # Add Drive doc
 nlm source add <notebook-id> --drive <doc-id> --type slides  # Add Drive slides
 # Types: doc, slides, sheets, pdf
-# Supported file types: PDF, TXT, MD, DOCX, CSV, MP3, M4A, WAV, AAC, OGG, OPUS, MP4, JPG, JPEG, PNG, GIF, WEBP
+# Supported file types: PDF, TXT, MD, DOCX, CSV, EPUB, MP3, M4A, WAV, AAC, OGG, OPUS, MP4, JPG, JPEG, PNG, GIF, WEBP
 
 nlm source get <source-id>             # Get source metadata
 nlm source get <source-id> --json      # JSON output
@@ -321,6 +322,7 @@ nlm research status <notebook-id> --full             # Full details
 # Import discovered sources
 nlm research import <notebook-id> <task-id>              # Import all
 nlm research import <notebook-id> <task-id> --indices 0,2,5  # Import specific
+nlm research import <notebook-id> <task-id> --cited-only     # Import cited sources
 nlm research import <notebook-id> <task-id> --timeout 600    # Custom timeout (default: 300s)
 ```
 
@@ -693,6 +695,7 @@ nlm skill show                              # Display skill content
 - `cline` - Cline CLI terminal agent (`~/.cline/skills/nlm-skill/`)
 - `openclaw` - OpenClaw AI agent framework (`~/.openclaw/workspace/skills/nlm-skill/`)
 - `alef-agent` - Alef Agent AI agent framework (`~/.alef-agent/workspace/skills/nlm-skill/`)
+- `hermes` - Hermes Agent by NousResearch (`~/.hermes/skills/nlm-skill/`)
 - `other` - Export all formats to `./nlm-skill-export/` for manual installation
 
 **Installation Levels:**

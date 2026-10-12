@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/downloads.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0901
+# Version:  1.0.8.20261012.0952
 # Purpose:  Downloads service — shared validation and routing for artifact downloads
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Downloads service — shared validation and routing for artifact downloads."""
 
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..core.client import NotebookLMClient
+from ..core.errors import ArtifactDownloadError
 from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
 
@@ -87,6 +89,28 @@ _BLOCKED_FILES = {
     "id_rsa",
     "id_ed25519",
 }
+
+_MISMATCHED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".flac", ".aiff", ".wma"}
+
+
+def validate_audio_extension(output_path: str) -> None:
+    """Reject output extensions that don't match NotebookLM's AAC-in-MP4 audio format.
+
+    NotebookLM Studio delivers audio as AAC inside an MP4/M4A container.
+    Writing that stream to a `.mp3` (or other incompatible) extension produces
+    a file whose bytes don't match the extension, breaking downstream tools.
+
+    Raises ValidationError with a helpful message and ffmpeg workaround.
+    """
+    suffix = Path(output_path).suffix.lower()
+    if suffix in _MISMATCHED_AUDIO_EXTENSIONS:
+        raise ValidationError(
+            f"NotebookLM delivers AAC audio in an MP4 container; "
+            f"cannot honor '{suffix}' suffix.\n"
+            f"Re-run with a .m4a or .mp4 suffix, or transcode with ffmpeg:\n"
+            f"  nlm download audio <id> -o raw.m4a\n"
+            f"  ffmpeg -i raw.m4a -acodec libmp3lame -q:a 2 podcast.mp3",
+        )
 
 
 def _safe_output_path(path: str | Path) -> Path:
@@ -188,6 +212,9 @@ def download_sync(
     validate_artifact_type(artifact_type)
     _safe_output_path(output_path)
 
+    if artifact_type == "audio":
+        validate_audio_extension(output_path)
+
     if artifact_type in INTERACTIVE_TYPES:
         validate_output_format(output_format)
 
@@ -251,6 +278,9 @@ async def download_async(
     validate_artifact_type(artifact_type)
     _safe_output_path(output_path)
 
+    if artifact_type == "audio":
+        validate_audio_extension(output_path)
+
     if artifact_type in INTERACTIVE_TYPES:
         validate_output_format(output_format)
 
@@ -267,6 +297,19 @@ async def download_async(
         )
     except (ValidationError, ServiceError):
         raise
+    except ArtifactDownloadError as e:
+        if artifact_type == "audio" and "still propagating" in e.details:
+            raise ServiceError(
+                f"Failed to download {artifact_type}: {e}",
+                user_message=(
+                    "Audio is complete, but its media download URL is still propagating. "
+                    "Try again in a few minutes."
+                ),
+            ) from e
+        raise ServiceError(
+            f"Failed to download {artifact_type}: {e}",
+            user_message=f"Download failed for {artifact_type}.",
+        ) from e
     except Exception as e:
         raise ServiceError(
             f"Failed to download {artifact_type}: {e}",
