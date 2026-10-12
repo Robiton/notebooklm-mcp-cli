@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/mcp/tool_groups.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1333
+# Purpose:  Optional group-based gating of MCP tools.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Optional group-based gating of MCP tools.
 
 The server registers a large tool set (46 tools in this fork). Clients that only need a

@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/services/test_chat.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1333
+# Purpose:  Tests for services.chat module.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Tests for services.chat module."""
 
 from unittest.mock import MagicMock, patch

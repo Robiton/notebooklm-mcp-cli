@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/data_types.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1333
+# Purpose:  Dataclasses for NotebookLM API client.
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 # src/notebooklm_tools/core/data_types.py
 """Dataclasses for NotebookLM API client.
 

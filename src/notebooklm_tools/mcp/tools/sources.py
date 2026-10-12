@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/sources.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.1233
+# Version:  1.0.8.20261012.1333
 # Purpose:  Source tools - Source management with consolidated source_add.
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.10.0 (sync batch 4)
 #   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.7.0 (sync batch 2)
 """Source tools - Source management with consolidated source_add."""

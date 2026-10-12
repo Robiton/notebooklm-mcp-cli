@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_base_url_resolution.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1333
+# Purpose:  Regression tests for NotebookLM base-URL host resolution (issue #269).
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.10.0 (sync batch 4)
 """Regression tests for NotebookLM base-URL host resolution (issue #269).
 
 Google is rolling out a rebrand of NotebookLM to "Gemini Notebook" at
