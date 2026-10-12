@@ -34,7 +34,8 @@ _Most recent session at the top._
 - CI fixes on the PR: pinned scanners installed in scaffold-check.yml; all workflow actions pinned to commit SHAs; uv cache off in publish.yml (zizmor). Merged as #34.
 - `uv.lock` churn root cause: the v1.0.8 bump never re-ran `uv lock` (lock said 1.0.7). Synced the version line only (kept `revision = 3`; newer local uv writes 5). `version-check.yml` now also compares `uv.lock`; release checklist has a `uv lock` step. Merged as #35.
 - Dependabot: 56 open alerts (2 critical, 18 high), all transitive except pytest. Targeted `uv lock --upgrade-package` on the 14 flagged packages (lock now `revision = 5`). Notable: starlette 0.50→1.7, mcp 1.25→1.30, cryptography 46→50, authlib 1.6→1.8 (adds joserfc). 750 tests pass, `nlm --help` OK, HTTP MCP `initialize` OK, pip-audit clean. Merged as #36; Dependabot open alerts → 0 after the graph rescan.
-- Investigated the two open scaffold decisions (CHANGELOG gate, header rule). Findings and recommendations are recorded on the BACKLOG items; both still need a decision from Brian. Filed Robiton/ai-project-scaffold#380 (CHANGELOG opt-out). #37 merged.
+- Investigated the two open scaffold decisions (CHANGELOG gate, header rule). Findings and recommendations are recorded on the BACKLOG items; both still need a decision from Brian. Filed Robiton/ai-project-scaffold#380 (CHANGELOG opt-out). #37, #38 merged.
+- Standing instruction from Brian: scaffold defects found here get filed on Robiton/ai-project-scaffold. Filed #381 (guarded multi-line `git remote add` flagged), #382 (scaffold-check.yml installs no scanners; osv-scanner unpinned), #383 (pre-0.4.0 adoption has no merge base), #384 (vendored `tools/*.py` linted by adopter ruff). Tracked in BACKLOG.
 
 **Next steps:**
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
