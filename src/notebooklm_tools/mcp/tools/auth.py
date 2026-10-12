@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/auth.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0952
+# Version:  1.0.8.20261012.1233
 # Purpose:  MCP tools for personal-mode authentication (refresh, save tokens)
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — merged upstream v0.6.0 changes (sync batch 1)
 #   2026-10-12 v1.0.8 — mark token status strings scaffold:not-a-secret (secret_scan false positive)
@@ -54,16 +55,17 @@ def refresh_auth() -> ResultDict:
             # re-auth if those tokens are already dead. Validate live before
             # creating any client, otherwise agents loop on doomed studio calls
             # (and we leave a client object initialized with bad tokens behind).
-            from notebooklm_tools.services.auth import check_auth
+            from notebooklm_tools.services.auth import credentials_are_usable
 
-            check = check_auth(live=True)
-            if not check.valid:
+            usable, status, detail = credentials_are_usable(force=True)
+            if not usable:
                 return error_result(
                     "Auth tokens were reloaded from disk but are no longer valid "
-                    f"(reason: {check.reason}). A disk reload cannot revive expired "
+                    f"(reason: {status}). A disk reload cannot revive expired "
                     "credentials — run `nlm login` in a terminal to re-authenticate.",
                     status="expired",
-                    reason=check.reason,
+                    reason=status,
+                    details=detail,
                 )
             reset_client()
             get_client()
@@ -72,11 +74,13 @@ def refresh_auth() -> ResultDict:
                 "message": "Auth tokens reloaded from disk cache and validated.",
             }
 
-        # Try headless auth if Chrome profile exists
+        # Try headless auth if the configured default Chrome profile exists
         try:
-            from notebooklm_tools.utils.cdp import run_headless_auth
+            from notebooklm_tools.utils.auth_browser import run_headless_auth
+            from notebooklm_tools.utils.config import get_config
 
-            tokens = run_headless_auth()
+            profile_name = get_config().auth.default_profile
+            tokens = run_headless_auth(profile_name=profile_name)
             if tokens:
                 reset_client()
                 get_client()

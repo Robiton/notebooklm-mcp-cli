@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     tests/test_mcp_file_upload.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.1233
+# Purpose:  Tests for MCP file upload functionality via consolidated source_add.
+# Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 """Tests for MCP file upload functionality via consolidated source_add."""
 
 import tempfile
@@ -65,3 +72,27 @@ class TestMCPSourceAddFile:
 
         assert result["status"] == "error"
         assert "file_path is required" in result["error"]
+
+    def test_source_add_file_returns_server_path_and_reason(self, tmp_path):
+        """File failures identify the server-side path that could not be read."""
+        from notebooklm_tools.mcp.tools import sources
+
+        requested_path = tmp_path / "missing.pdf"
+        resolved_path = requested_path.resolve()
+        mock_client = MagicMock()
+        mock_client.add_file.side_effect = FileNotFoundError(f"File not found: {resolved_path}")
+
+        with patch(
+            "notebooklm_tools.mcp.tools.sources.get_client",
+            return_value=mock_client,
+        ):
+            result = sources.source_add(
+                notebook_id="test-notebook",
+                source_type="file",
+                file_path=str(requested_path),
+            )
+
+        assert result["status"] == "error"
+        assert result["error"] == f"Could not add file source: File not found: {resolved_path}"
+        assert "machine running nlm or the MCP server" in result["hint"]
+        assert str(requested_path) in result["hint"]

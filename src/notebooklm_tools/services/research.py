@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/services/research.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0952
+# Version:  1.0.8.20261012.1233
 # Purpose:  Research service — shared business logic for research start, poll, and import
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Research service — shared business logic for research start, poll, and import."""
@@ -14,7 +15,7 @@ from collections import defaultdict
 
 from ..core.client import NotebookLMClient
 from ..core.constants import RESULT_TYPE_DEEP_REPORT
-from ..core.errors import RPCError
+from ..core.errors import RPCDriftError, RPCError
 from ._compat import TypedDict
 from .errors import ServiceError, ValidationError
 
@@ -264,6 +265,9 @@ def start_research(
                 f"This is likely a transient issue. Try again in a few minutes, or use --mode fast."
             ),
         ) from e
+    except RPCDriftError as e:
+        # Let the actionable NOTEBOOKLM_RPC_OVERRIDES guidance reach the user verbatim.
+        raise ServiceError(message=str(e), user_message=str(e)) from e
     except Exception as e:
         raise ServiceError(f"Failed to start research: {e}") from e
 
@@ -291,6 +295,7 @@ def poll_research(
     compact: bool = True,
     poll_interval: int = 30,
     max_wait: int = 0,
+    auto_import: bool = False,
 ) -> ResearchStatusResult:
     """Poll research progress, optionally blocking until complete or timeout.
 
@@ -358,6 +363,16 @@ def poll_research(
             sources = sources[:5]
             sources.append({"note": f"...and {total - 5} more sources"})
 
+    completed_task_id = result.get("task_id") if status == "completed" else None
+
+    imported = False
+    if auto_import and status == "completed" and completed_task_id:
+        try:
+            import_research(client, notebook_id, completed_task_id)
+            imported = True
+        except Exception:
+            pass
+
     return {
         "status": status,
         "notebook_id": notebook_id,
@@ -365,9 +380,16 @@ def poll_research(
         "sources_found": len(result.get("sources", [])),
         "sources": sources,
         "report": report,
+        "imported": imported if auto_import else None,
         "message": "Use research_import to add sources to notebook."
-        if status == "completed"
+        if (status == "completed" and not auto_import)
         else None,
+        "next_action": (
+            f"Call research_import(notebook_id={notebook_id!r}, "
+            f"task_id={completed_task_id!r}) to add the sources to the notebook."
+            if (completed_task_id and not auto_import)
+            else None
+        ),
     }
 
 

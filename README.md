@@ -112,6 +112,7 @@ Then use natural language: *"Create a notebook about quantum computing and gener
 - **[CLI Guide](docs/CLI_GUIDE.md)** — Complete command reference
 - **[MCP Guide](docs/MCP_GUIDE.md)** — All 35 MCP tools with examples
 - **[Authentication](docs/AUTHENTICATION.md)** — Setup and troubleshooting
+- **[Remote MCP](docs/REMOTE_MCP.md)** — Web/mobile connector feasibility, security, and authentication limitations
 - **[API Reference](docs/API_REFERENCE.md)** — Internal API docs for contributors
 
 ## Important Disclaimer
@@ -381,7 +382,7 @@ For detailed instructions and troubleshooting, see **[docs/AUTHENTICATION.md](do
 
 ## MCP Configuration
 
-> **⚠️ Context Window Warning:** This MCP provides **35 tools**. Disable it when not using NotebookLM to preserve context. In Claude Code: `@notebooklm-mcp` to toggle.
+> **⚠️ Context Window Warning:** This MCP provides **39 tools**. Disable it when not using NotebookLM to preserve context. In Claude Code: `@notebooklm-mcp` to toggle.
 
 ### Automatic Setup (Recommended)
 
@@ -508,7 +509,7 @@ Find your path with: `which notebooklm-mcp`
 
 </details>
 
-📚 **Full configuration details:** [MCP Guide](docs/MCP_GUIDE.md) — Server options, environment variables, HTTP transport, multi-user setup, and context window management.
+📚 **Full configuration details:** [MCP Guide](docs/MCP_GUIDE.md) — Server options, environment variables, HTTP transport, and context window management. For Claude web/mobile and public deployment, read [Remote MCP Deployment](docs/REMOTE_MCP.md) first.
 
 ## What You Can Do
 
@@ -543,6 +544,7 @@ Simply chat with your AI tool (Claude Code, Cursor, Gemini CLI) using natural la
 
 - "Create an audio podcast overview of this notebook in deep dive format"
 - "Generate a video explainer with classic visual style"
+- "Make a short vertical video overview of the key idea"
 - "Make a briefing doc from these sources"
 - "Create flashcards for studying, medium difficulty"
 - "Generate an infographic in landscape orientation with professional style"
@@ -649,6 +651,15 @@ Special thanks to:
 - **codepiano** ([@codepiano](https://github.com/codepiano)) for the configurable DevTools timeout for the auth CLI.
 - **Tony Hansmann** ([@997unix](https://github.com/997unix)) for contributing the `nlm setup` and `nlm doctor` commands and CLI Guide documentation.
 - **Fabiana Furtado** ([@fabianafurtadoff](https://github.com/fabianafurtadoff)) for batch operations, cross-notebook query, pipelines, and smart select/tagging (PR #90).
+- **Amy-Ra-lph** ([@Amy-Ra-lph](https://github.com/Amy-Ra-lph)) for security hardening: TOCTOU-safe credential storage, sensitive cookie redaction from debug logs, and pinning all CI actions to full commit SHAs (PRs #205–207).
+- **Kyle Brodeur** ([@kylebrodeur](https://github.com/kylebrodeur)) for WSL2 authentication support with Windows Chrome integration (PR #138).
+- **Robiton** ([@Robiton](https://github.com/Robiton)) for enterprise NotebookLM support via configurable base URL (PR #114).
+- **pjeby** ([@pjeby](https://github.com/pjeby)) for connection pooling and fast startup improvements (PR #54).
+- **beausea** ([@beausea](https://github.com/beausea)) for making the interface language configurable via the `NOTEBOOKLM_HL` environment variable (PR #59).
+- **JumpLao** ([@JumpLao](https://github.com/JumpLao)) for extended audio, video, and image format support (PR #82).
+- **cbruyndoncx** ([@cbruyndoncx](https://github.com/cbruyndoncx)) for including `cited_text` passages in query output (PR #81).
+- **zxyasfas** ([@zxyasfas](https://github.com/zxyasfas)) for cited-only research import (PR #188).
+- **Serdar Akın** ([@SERDAR-AKIN](https://github.com/SERDAR-AKIN)) for the multi-probe `AuthHealthChecker` that fixes false `"stale"` reports for semi-stale cookies (PR #219).
 
 
 ## License

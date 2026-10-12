@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/utils/cdp.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0952
+# Version:  1.0.8.20261012.1233
 # Purpose:  Chrome DevTools Protocol (CDP) utilities for cookie extraction
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Chrome DevTools Protocol (CDP) utilities for cookie extraction.
@@ -1360,10 +1361,17 @@ def has_chrome_profile(profile_name: str = "default") -> bool:
 
     Checks both standard and snap-accessible profile directories.
     """
+
+    def _profile_has_cookie_db(profile_dir: Path) -> bool:
+        cookie_paths = (
+            profile_dir / "Default" / "Cookies",
+            profile_dir / "Default" / "Network" / "Cookies",
+        )
+        return any(path.exists() for path in cookie_paths)
+
     # Check standard profile directory
     profile_dir = get_chrome_profile_dir(profile_name)
-    cookies_file = profile_dir / "Default" / "Cookies"
-    if cookies_file.exists():
+    if _profile_has_cookie_db(profile_dir):
         return True
 
     # Check snap-accessible profile directory
@@ -1373,8 +1381,7 @@ def has_chrome_profile(profile_name: str = "default") -> bool:
 
         snap_common = get_snap_common_dir(chrome_path)
         snap_profile_dir = get_snap_chrome_profile_dir(profile_name, snap_common)
-        snap_cookies_file = snap_profile_dir / "Default" / "Cookies"
-        if snap_cookies_file.exists():
+        if _profile_has_cookie_db(snap_profile_dir):
             return True
 
     return False

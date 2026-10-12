@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/server.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0952
+# Version:  1.0.8.20261012.1233
 # Purpose:  NotebookLM MCP Server - Modular Architecture
 # Changelog:
+#   2026-10-12 v1.0.8 — fork-modified file merged with upstream v0.8.0 (sync batch 3)
 #   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """NotebookLM MCP Server - Modular Architecture.
@@ -77,6 +78,10 @@ mcp = FastMCP(
 Consolidated tools:
 - source_add(source_type=url|text|drive|file): Add any source type
 - studio_create(artifact_type=audio|video|...): Create any artifact type
+- studio_revise: Revise individual slides in an existing slide deck
+- download_artifact(artifact_type=audio|video|...): Download any artifact type
+- note(action=create|list|update|delete): Manage notes in notebooks
+- label(action=auto|list|reorganize|create|rename|set_emoji|move_source|delete): Manage source labels
 - configure_mode(mode, project_id, location): Switch between personal and enterprise
 - podcast_create(text): Generate standalone podcast (enterprise only, no notebook needed)""",
 )

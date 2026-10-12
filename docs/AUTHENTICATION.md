@@ -2,6 +2,11 @@
 
 This guide explains how to authenticate with NotebookLM MCP and CLI.
 
+> For public HTTP deployment or Claude web/mobile connectors, see
+> [Remote MCP Deployment](REMOTE_MCP.md). Remote use introduces a separate MCP
+> endpoint authentication requirement in addition to the Google browser session
+> described here.
+
 ## Overview
 
 NotebookLM uses browser cookies for authentication (there is no official API). The CLI/MCP extracts these cookies automatically from a managed browser session:
@@ -270,9 +275,14 @@ When you start seeing authentication errors, simply run `nlm login` again to ref
 ## Understanding `auth_status`
 
 The MCP `server_info` tool and `nlm login --check` report one of five
-`auth_status` values after a best-effort *live* check against NotebookLM.
-Knowing the difference matters: a `stale` status means you must re-auth, but
+`auth_status` values from the multi-probe AuthHealthChecker. Knowing the
+difference matters: a `stale` status means you must re-auth, but
 an `unverified` status is a network problem, not a credential problem.
+
+> **Caching note:** the `server_info` result is cached for 30 seconds
+> (the checker's `CACHE_TTL`) and bypassed on the next call if any auth
+> file on disk is rewritten, so an external `nlm login` is reflected
+> without waiting for the TTL. `nlm login --check` is always live.
 
 | Status | Meaning | What to do |
 |--------|---------|------------|
