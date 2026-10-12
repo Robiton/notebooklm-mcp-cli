@@ -147,9 +147,15 @@ conflicts.
   REST client for MCP. Resolution: one source of truth. `BaseClient._is_enterprise()`, the location
   prefix and the query endpoint now read the fork's profile, so upstream's new enterprise branches
   (notebook listing, chat) follow the fork's mode. Upstream's Vertex AI Search host is not supported.
-  Upstream's enterprise structures come from a contributor capture, not a live run; the fork's
-  had no recorded verification either. Listing params and the upload path now follow the capture.
-  **Needs a live Enterprise test of the CLI path** (BACKLOG).
+  Upstream's README says the `notebook.cloud.google.com` host was live-verified on a
+  project-qualified `global` deployment (other hosts and locations are not); the fork's
+  batchexecute enterprise route had no recorded verification. Listing params and the upload path
+  now follow upstream. **Live-test the fork's CLI enterprise path** (BACKLOG), since it runs on the
+  fork's profile rather than upstream's exact code.
+- **Positioning.** Upstream now offers Enterprise too (cookie auth, unofficial batchexecute API,
+  experimental). The fork's distinct value is the official Discovery Engine REST API, gcloud OAuth,
+  `configure_mode`, persistent mode config and the Podcast API. README positioning ("upstream for
+  personal, this fork for enterprise") needs revisiting with the rebrand decision.
 - **Personal accounts on `notebook.google.com`** (upstream #269): kept. The client routes to the
   host the account signed in on; `nlm setup` registers `gemini-notebook-mcp`.
 - **`git checkout --ours` discards clean upstream hunks too.** On a file with only a version
@@ -171,7 +177,7 @@ conflicts.
    "NotebookLM"? The enterprise API is still Discovery Engine "NotebookLM Enterprise".
    Recommendation: follow upstream for personal mode and keep "NotebookLM Enterprise" for
    enterprise.
-3. **Fork release after the sync:** probably 1.1.0, given the new features and dependencies.
+3. **Fork release after the sync:** the target is now **v1.5** (Brian, 2026-10-12); plan to follow.
 4. **OAuth and the external-bind refusal (batch 2):** exempt OAuth-protected servers, or keep
    requiring `NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1`? Keeping it is the conservative default.
 5. **Live auth check in `server_info` (batch 2):** report upstream's live personal-mode check?
