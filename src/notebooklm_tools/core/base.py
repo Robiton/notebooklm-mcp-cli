@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/base.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Base client infrastructure for NotebookLM API
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Base client infrastructure for NotebookLM API.
 
 This module contains the BaseClient class which provides all HTTP/RPC

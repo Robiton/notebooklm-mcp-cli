@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/core/studio.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  StudioMixin for NotebookLM client - studio content creation and status
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """StudioMixin for NotebookLM client - studio content creation and status."""
 
 import contextlib

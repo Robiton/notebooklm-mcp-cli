@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/services/notebooks.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  Notebooks service — shared business logic for notebook CRUD and metadata operations
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """Notebooks service — shared business logic for notebook CRUD and metadata operations."""
 
 from ..core.api_profile import get_api_profile

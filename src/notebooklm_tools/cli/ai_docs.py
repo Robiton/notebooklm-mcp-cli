@@ -1,3 +1,10 @@
+# Project:  notebooklm-mcp-cli
+# File:     src/notebooklm_tools/cli/ai_docs.py
+# Modified: 2026-10-12
+# Version:  1.0.8.20261012.0901
+# Purpose:  AI-friendly documentation output for the --ai flag
+# Changelog:
+#   2026-10-12 v1.0.8 — header added: fork-modified file merged with upstream v0.6.0 (sync batch 1)
 """AI-friendly documentation output for the --ai flag."""
 
 from notebooklm_tools import __version__
