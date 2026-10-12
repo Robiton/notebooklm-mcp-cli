@@ -1,9 +1,10 @@
 # Project:  notebooklm-mcp-cli
 # File:     src/notebooklm_tools/mcp/tools/auth.py
 # Modified: 2026-10-12
-# Version:  1.0.8.20261012.0911
+# Version:  1.0.8.20261012.0952
 # Purpose:  MCP tools for personal-mode authentication (refresh, save tokens)
 # Changelog:
+#   2026-10-12 v1.0.8 — merged upstream v0.7.0 changes (sync batch 2)
 #   2026-10-12 v1.0.8 — merged upstream v0.6.0 changes (sync batch 1)
 #   2026-10-12 v1.0.8 — mark token status strings scaffold:not-a-secret (secret_scan false positive)
 """Auth tools - Authentication management."""
