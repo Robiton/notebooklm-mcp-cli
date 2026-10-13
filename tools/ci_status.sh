@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Project:  ai-project-scaffold
 # File:     tools/ci_status.sh
-# Modified: 2026-10-08
-# Version:  0.17.10.20261008.1245
+# Modified: 2026-10-13
+# Version:  0.17.11.20261013.0405
 # Purpose:  Report red CI on the remote at session start — local green is not CI green.
 # Changelog:
+#   2026-10-13 v0.17.11.20261013.0405 — local edit in a public adopter: work mirror account no longer named; mirror comes from SCAFFOLD_UPSTREAM_MIRROR (scaffold issue #387).
 #   2026-10-08 v0.17.10.20261008.1245 — the token-in-URL selftest fixture is marked not-a-secret, for secret_scan's new URL-credential shape. No behaviour change.
 #   2026-09-23 v0.17.9.20260923.0941 — mktemp takes a ${TMPDIR} template. macOS mktemp ignores TMPDIR without one, so a guarded fixture root could not contain it.
 #   2026-09-23 v0.17.8.20260923.0843 — every mktemp fails closed. A failed one left the temp variable empty, so the fixture ran in the caller's directory; header_check's committed into Robiton/control.
@@ -73,7 +74,7 @@
 #                        sharing COVERS_PY's grouping and verdict list because a name that
 #                        disagreed with the state it explains is worse than no name. The
 #                        advice now branches on it. Verified against the real run list for
-#                        07b760a: "Mirror to work-mirror (cancelled)". Four cases, two
+#                        07b760a: "Mirror to the work mirror account (cancelled)". Four cases, two
 #                        watched failing first, two controls -- a workflow that ANSWERED is
 #                        never named, and a cancelled run on an older sha is not this tip's
 #                        gap. The gap itself is unchanged: we still do not have a verdict.
@@ -214,7 +215,7 @@
 #                        green. It was reduced with `any(status == completed)` across every run
 #                        for the commit, so ONE workflow finishing answered for ALL of them.
 #                        Measured on a real push of 54697ab: two workflows started, "Mirror to
-#                        work-mirror" finished in seconds, "Scaffold Check" -- the gate --
+#                        the work mirror account" finished in seconds, "Scaffold Check" -- the gate --
 #                        ran for another 65 s, and this printed "CI green on main @ 54697ab"
 #                        for that whole minute. The standing rule here is to check CI after
 #                        every push, and the tool that answers it was answering early.
@@ -769,7 +770,7 @@ else:
     # really is an answer -- and wrong about DIFFERENT workflows, because one workflow
     # completing says nothing whatever about another.
     #
-    # Measured 2026-09-08: pushing 54697ab started two workflows. "Mirror to work-mirror"
+    # Measured 2026-09-08: pushing 54697ab started two workflows. "Mirror to the work mirror account"
     # finished in seconds; "Scaffold Check", the actual gate, ran for another 65 seconds.
     # This printed "CI green on main @ 54697ab" for the whole of that minute -- the exact
     # defect the pending answer was added to remove, one level down. It survived because the

@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # Project:  ai-project-scaffold
 # File:     tools/scaffold_upgrade.sh
-# Modified: 2026-10-10
-# Version:  0.26.2.20261010.1205
+# Modified: 2026-10-13
+# Version:  0.26.3.20261013.0405
 # Purpose:  Upgrade an adopting project from the scaffold release it is on to a newer one.
 # Changelog:
+#   2026-10-13 v0.26.3.20261013.0405 — local edit in a public adopter: work mirror account no longer named; mirror comes from SCAFFOLD_UPSTREAM_MIRROR (scaffold issue #387).
 #   2026-10-10 v0.26.2.20261010.1205 — the new tree is checked against its release's SHA256SUMS before anything is written, and a release with none is named UNVERIFIED (report item 15). The release-to-newest-tag fallback fires only where the upstream has no releases at all, the release tag passes through newest_tag, and a declared upstream that is not owner/repo stops the upgrade. Selftest: units for the manifest and the name check, and a gh-path end to end through a fake gh; each half proven red by mutation.
 #   2026-10-07 v0.26.1.20261007.0658 — THE PROBE READS THE ANSWER, NOT THAT THERE WAS ONE. gh api prints its 404 body to STDOUT
 #                        even with --jq, so a work machine that cannot see Robiton got non-empty output for it and
 #                        picked it, and 0.111.15's mirror support never engaged. The tag picker then took a version out
 #                        of that error JSON and cached it. Found end-to-end as the work account, after release; the
 #                        selftest's fake gh printed nothing on failure, which no real gh does. It now prints the 404.
-#   2026-10-07 v0.26.0.20261007.0347 — upgrades from wherever this project got the scaffold. Work adopters read the work-mirror mirror, which has every tag and no GitHub releases and is often the only copy their machine can see; this always asked Robiton for its latest release and died there. Source order: SCAFFOLD_UPSTREAM, then .scaffold-upstream, then the first of Robiton and the mirror this machine can read. With no release, the newest tag is the target. The tag list is paginated: 201 tags upstream, and the first page of 30 could not find the base for an older adoption.
+#   2026-10-07 v0.26.0.20261007.0347 — upgrades from wherever this project got the scaffold. Work adopters read the the work mirror account mirror, which has every tag and no GitHub releases and is often the only copy their machine can see; this always asked Robiton for its latest release and died there. Source order: SCAFFOLD_UPSTREAM, then .scaffold-upstream, then the first of Robiton and the mirror this machine can read. With no release, the newest tag is the target. The tag list is paginated: 201 tags upstream, and the first page of 30 could not find the base for an older adoption.
 #   2026-09-29 v0.25.5.20260929.1446 — the vendored localcoder files are retired on upgrade. tools/RETIRED.tsv gains the 14 files the scaffold shipped before localcoder became its own product (0.36.0), each with every sha it shipped with. A row whose note begins `localcoder:` is skipped in the repository declaring scaffold:owns-localcoder, where it is the product: localcoder's apple-m3-max.md still matches a shipped sha. ai/eval_tasks.py stays, because the installed localcoder reads it.
 #   2026-09-23 v0.25.4.20260923.0941 — fixtures run inside the root tools/fixture_guard.sh validates. There a git and a mktemp on PATH refuse anything that would land outside it. Every mktemp takes a ${TMPDIR} template, because macOS mktemp ignores TMPDIR without one. The selftest runs from a temp copy, so SCAFFOLD_UPGRADE_TOOLS carries the real tools directory across the re-exec to find fixture_guard.sh. The upgrade path's EXIT trap was left as it was: fg_cleanup exists only in the selftest.
 #   2026-09-23 v0.25.3.20260923.0843 — every mktemp fails closed. A failed one left the temp variable empty, so the fixture ran in the caller's directory; header_check's committed into Robiton/control.
@@ -512,7 +513,7 @@ ROOT="${SCAFFOLD_UPGRADE_ORIGIN:-$(pwd)}"
 cd "$ROOT" || exit 1
 
 # WHERE THIS PROJECT GETS THE SCAFFOLD FROM. Personal repos: Robiton. Work repos: the
-# work-mirror mirror, which mirror-sync.yml keeps identical (main and every tag) but which
+# the work mirror account mirror, which mirror-sync.yml keeps identical (main and every tag) but which
 # has NO GitHub releases, and is often the only copy a work machine can read.
 # Order: SCAFFOLD_UPSTREAM, then `.scaffold-upstream` in the project root (adopter-owned, one
 # owner/repo line, # comments allowed), then the first candidate this machine's gh can read.
@@ -527,7 +528,8 @@ cd "$ROOT" || exit 1
 # replaces itself mid-run, so a library is one more file to deliver in step -- and the
 # drift this block caused (item 8) came from copies nobody compared, not from copying.
 UPSTREAM_DEFAULT="Robiton/ai-project-scaffold"
-UPSTREAM_MIRROR="work-mirror/ai-project-scaffold"
+# Local edit (public adopter, scaffold issue #387): the work mirror is configured, not named.
+UPSTREAM_MIRROR="${SCAFFOLD_UPSTREAM_MIRROR:-}"
 upstream_valid() {  # upstream_valid <name> -> 0 only for one owner/repo
   # (An underscore is legal in an owner: managed-user accounts, like the mirror's, carry one.)
   # The name is spliced into `gh api repos/<name>/tarball/<tag>`, so `../x`, a third
@@ -606,7 +608,7 @@ PY_SUMS
 # ONE BODY, TWO FILES: the two that fetch a release. Not in shared:upstream, because
 # scaffold_version.sh pins every gh call it carries to a bound, and it never fetches.
 release_sums() {  # release_sums <owner/repo> <tag> <out> -> 0 fetched, 1 this release has none
-  # The work-mirror mirror has tags and no releases (a deploy key cannot create one), so
+  # The the work mirror account mirror has tags and no releases (a deploy key cannot create one), so
   # there is nothing to fetch there, and releases cut before 0.111.21 carry no SHA256SUMS.
   # Both are "unverified", which the caller reports; neither is a mismatch.
   command -v gh >/dev/null 2>&1 || return 1
@@ -620,7 +622,7 @@ release_sums() {  # release_sums <owner/repo> <tag> <out> -> 0 fetched, 1 this r
 probe_upstream() {  # stdout: the first candidate this machine can read, else the default
   local _c
   if command -v gh >/dev/null 2>&1; then
-    for _c in "$UPSTREAM_DEFAULT" "$UPSTREAM_MIRROR"; do
+    for _c in "$UPSTREAM_DEFAULT" ${UPSTREAM_MIRROR:+"$UPSTREAM_MIRROR"}; do
       # COMPARE THE ANSWER: gh prints a 404 body to stdout, so "non-empty" picked a repo
       # this machine cannot see. Same fix as scaffold_version.sh.
       if [ "$(gh api "repos/$_c" --jq .full_name 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)" \
@@ -799,7 +801,7 @@ selftest() {
   # a fake adoption carrying the four kinds of content that must survive.
   local T fails=0
   # WHERE THE SCAFFOLD COMES FROM -- checked first, offline, against a fake gh. Work
-  # adopters read the work-mirror mirror and usually cannot see Robiton at all.
+  # adopters read the the work mirror account mirror and usually cannot see Robiton at all.
   local _u _r
   _u="$(mktemp -d "${TMPDIR:-/tmp}/scaffold_upgrade_up.XXXXXX")" || return 1
   _r="$(unset SCAFFOLD_UPSTREAM; upstream_pinned "$_u")"
@@ -811,7 +813,8 @@ selftest() {
   [ "$_r" = x/y ] && echo "  ok   SCAFFOLD_UPSTREAM beats the file" || { echo "  FAIL env vs file -> got '$_r'"; fails=$((fails+1)); }
   mkdir -p "$_u/bin"
   # A REAL gh PRINTS THE 404 BODY ON STDOUT AND EXITS 1 -- a silent fake hid the 0.111.15 bug.
-  printf '#!/bin/sh\ncase "$*" in *Robiton/*) echo "{\\"message\\":\\"Not Found\\",\\"status\\":\\"404\\"}"; exit 1 ;; *work-mirror/*) echo work-mirror/ai-project-scaffold ;; esac\n' > "$_u/bin/gh"
+  UPSTREAM_MIRROR=example-mirror/ai-project-scaffold  # fixture: no real account (issue #387)
+  printf '#!/bin/sh\ncase "$*" in *Robiton/*) echo "{\\"message\\":\\"Not Found\\",\\"status\\":\\"404\\"}"; exit 1 ;; *example-mirror/*) echo example-mirror/ai-project-scaffold ;; esac\n' > "$_u/bin/gh"
   chmod +x "$_u/bin/gh"
   _r="$(PATH="$_u/bin:$PATH" probe_upstream)"
   [ "$_r" = "$UPSTREAM_MIRROR" ] && echo "  ok   a mirror-only machine resolves the mirror" || { echo "  FAIL mirror-only machine -> got '$_r'"; fails=$((fails+1)); }
@@ -826,7 +829,7 @@ selftest() {
   # THE DECLARED UPSTREAM IS ONE owner/repo, OR IT IS NOT USED (report item 15). It is spliced
   # into `gh api repos/<it>/tarball/<tag>`, and context_survival word-split it unquoted.
   local _n _bad_up=""
-  for _n in Robiton/ai-project-scaffold work-mirror/ai-project-scaffold acme/.github; do
+  for _n in Robiton/ai-project-scaffold example-mirror/ai-project-scaffold acme/.github; do
     upstream_valid "$_n" || _bad_up="$_bad_up rejected:$_n"
   done
   for _n in ../evil a/b/c .x/y a/.. "a b/c" "x/y;rm" ""; do

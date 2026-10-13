@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Project:  ai-project-scaffold
 # File:     tools/scaffold_version.sh
-# Modified: 2026-10-10
-# Version:  0.8.3.20261010.1205
+# Modified: 2026-10-13
+# Version:  0.8.4.20261013.0405
 # Purpose:  Tell an adopting project when the scaffold it vendored has gone stale.
 # Changelog:
+#   2026-10-13 v0.8.4.20261013.0405 — local edit in a public adopter: work mirror account no longer named; mirror comes from SCAFFOLD_UPSTREAM_MIRROR (scaffold issue #387).
 #   2026-10-10 v0.8.3.20261010.1205 — carries shared:upstream (report item 16): upstream_pinned now refuses a declared upstream that is not one owner/repo, and the block is gated byte-identical across the four tools that carry it.
 #   2026-10-08 v0.8.2.20261008.1245 — count_newer takes the version-shape filter newest_of already had. A GraphQL error body counted as one newer release; a list holding no version now reports could-not-tell, not 0.
 #   2026-10-07 v0.8.1.20261007.0658 — THE PROBE READS THE ANSWER, NOT THAT THERE WAS ONE. gh api prints its 404 body to STDOUT
@@ -12,7 +13,7 @@
 #                        picked it, and 0.111.15's mirror support never engaged. The tag picker then took a version out
 #                        of that error JSON and cached it. Found end-to-end as the work account, after release; the
 #                        selftest's fake gh printed nothing on failure, which no real gh does. It now prints the 404.
-#   2026-10-07 v0.8.0.20261007.0347 — THE UPSTREAM IS WHERE THIS PROJECT GOT THE SCAFFOLD. Work adopters get it from the work-mirror mirror, which carries every tag but no GitHub releases, and cannot see Robiton at all; this asked Robiton for its latest release and so could never answer there. Source order: SCAFFOLD_UPSTREAM, then a .scaffold-upstream file, then the first of Robiton and the mirror that this machine can read. With no release, the newest annotated tag and its tagger date stand in.
+#   2026-10-07 v0.8.0.20261007.0347 — THE UPSTREAM IS WHERE THIS PROJECT GOT THE SCAFFOLD. Work adopters get it from the the work mirror account mirror, which carries every tag but no GitHub releases, and cannot see Robiton at all; this asked Robiton for its latest release and so could never answer there. Source order: SCAFFOLD_UPSTREAM, then a .scaffold-upstream file, then the first of Robiton and the mirror that this machine can read. With no release, the newest annotated tag and its tagger date stand in.
 #   2026-09-23 v0.7.2.20260923.0941 — mktemp takes a ${TMPDIR} template. macOS mktemp ignores TMPDIR without one, so a guarded fixture root could not contain it.
 #   2026-09-23 v0.7.1.20260923.0843 — every mktemp fails closed. A failed one left the temp variable empty, so the fixture ran in the caller's directory; header_check's committed into Robiton/control.
 #   2026-09-06 v0.7.0.20260906.0406 — STALENESS IS DENOMINATED IN TIME, NOT RELEASES (#301).
@@ -194,7 +195,7 @@ CACHE="$ROOT/.scaffold-version-check"
 # WHERE THIS PROJECT GETS THE SCAFFOLD FROM, WHICH IS NOT ALWAYS ROBITON.
 #
 # Personal repos take it from Robiton/ai-project-scaffold. Work repos take it from the
-# work-mirror mirror, which mirror-sync.yml keeps byte-identical -- main and every tag --
+# the work mirror account mirror, which mirror-sync.yml keeps byte-identical -- main and every tag --
 # but which has NO GitHub releases, because a deploy key can push tags and cannot create a
 # release. A work machine usually cannot see Robiton at all. Hardcoding Robiton therefore
 # made this check unanswerable on every work adoption.
@@ -211,7 +212,8 @@ CACHE="$ROOT/.scaffold-version-check"
 # replaces itself mid-run, so a library is one more file to deliver in step -- and the
 # drift this block caused (item 8) came from copies nobody compared, not from copying.
 UPSTREAM_DEFAULT="Robiton/ai-project-scaffold"
-UPSTREAM_MIRROR="work-mirror/ai-project-scaffold"
+# Local edit (public adopter, scaffold issue #387): the work mirror is configured, not named.
+UPSTREAM_MIRROR="${SCAFFOLD_UPSTREAM_MIRROR:-}"
 upstream_valid() {  # upstream_valid <name> -> 0 only for one owner/repo
   # (An underscore is legal in an owner: managed-user accounts, like the mirror's, carry one.)
   # The name is spliced into `gh api repos/<name>/tarball/<tag>`, so `../x`, a third
@@ -545,7 +547,7 @@ bounded() {
 probe_upstream() {  # stdout: the first candidate this machine can read, else the default
   local _c
   if command -v gh >/dev/null 2>&1; then
-    for _c in "$UPSTREAM_DEFAULT" "$UPSTREAM_MIRROR"; do
+    for _c in "$UPSTREAM_DEFAULT" ${UPSTREAM_MIRROR:+"$UPSTREAM_MIRROR"}; do
       # COMPARE THE ANSWER. gh prints a 404 body to stdout, so "non-empty" was true for a
       # repo this machine cannot see, and bounded() does not pass gh's exit status through.
       if [ "$(bounded 8 gh api "repos/$_c" --jq .full_name | tr '[:upper:]' '[:lower:]' || true)" \
@@ -808,7 +810,7 @@ if [ "$DO_SELFTEST" = "1" ]; then
   st "the declared fixture marker exempts" yes \
      "$(SCAFFOLD_ADOPTION_FIXTURE=1; fixture_exempt && echo yes || echo no)"
 
-  # WHERE THE SCAFFOLD COMES FROM. Work adopters read the work-mirror mirror; a check
+  # WHERE THE SCAFFOLD COMES FROM. Work adopters read the the work mirror account mirror; a check
   # pinned to Robiton could never answer there. Every case uses its own temp root, never
   # this repo's files (a selftest asserts the tool, not the repo it runs in).
   _u="$(mktemp -d "${TMPDIR:-/tmp}/scaffold_version.XXXXXX")" || { echo "scaffold_version: mktemp failed; stopping" >&2; exit 1; }
@@ -820,7 +822,8 @@ if [ "$DO_SELFTEST" = "1" ]; then
   mkdir -p "$_u/bin"
   # A REAL gh PRINTS THE 404 BODY ON STDOUT AND EXITS 1. A fake that printed nothing is how
   # 0.111.15 shipped a probe that could never pick the mirror.
-  printf '#!/bin/sh\ncase "$*" in *Robiton/*) echo "{\\"message\\":\\"Not Found\\",\\"status\\":\\"404\\"}"; exit 1 ;; *work-mirror/*) echo work-mirror/ai-project-scaffold ;; esac\n' > "$_u/bin/gh"
+  UPSTREAM_MIRROR=example-mirror/ai-project-scaffold  # fixture: no real account (issue #387)
+  printf '#!/bin/sh\ncase "$*" in *Robiton/*) echo "{\\"message\\":\\"Not Found\\",\\"status\\":\\"404\\"}"; exit 1 ;; *example-mirror/*) echo example-mirror/ai-project-scaffold ;; esac\n' > "$_u/bin/gh"
   chmod +x "$_u/bin/gh"
   st "a mirror-only machine resolves the mirror" "$UPSTREAM_MIRROR" "$(PATH="$_u/bin:$PATH" probe_upstream)"
   printf '#!/bin/sh\necho Robiton/ai-project-scaffold\n' > "$_u/bin/gh"
