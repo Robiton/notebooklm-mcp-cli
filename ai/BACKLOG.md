@@ -44,15 +44,9 @@ _(nothing active)_
 - [x] Close issue #26 (upstream drift) — Closed 2026-10-12 after #45. Upstream has no release after v0.15.4; all 4 upstream GHSAs fixed by v0.11.2 and merged | Priority: Low | Owner: Claude Code | Due: —
 - [ ] Merge #46: CodeQL false positives in `tests/test_base_url_resolution.py` (alerts #19/#20) | Priority: Low | Owner: Brian | Due: —
 
-### v1.5 — hosted enterprise-only weekly publishing MCP (plan: docs/plans/2026-10-12-v1.5-plan.md)
+### v1.5
 
-- [ ] **Run the spike** `scripts/spike_enterprise_v15.py --project-number <N> --share-email <you>` and paste the findings JSON back. Answers: audio fields accepted? audio status pollable? API share works (user/group)? | Priority: High | Owner: Brian | Due: —
-- [ ] Decide: v1.5 repo, public fork vs new private repo (recommended: new private repo; a fork can't go private without leaving the fork network, and free-plan private repos lose rulesets and CodeQL) | Priority: High | Owner: Brian | Due: —
-- [ ] Decide: v1.5 hosting target, container vs AgentCore Runtime (recommended: AgentCore Runtime if 2.0 uses AgentCore Gateway) | Priority: Med | Owner: Brian | Due: —
-- [ ] Enterprise-only server mode: registers only enterprise tools, refuses personal mode, never calls batchexecute | Priority: High | Owner: Claude Code | Due: —
-- [ ] `create_audio_overview` with `episodeFocus`/`languageCode`/`sourceIds` (if the spike says they're accepted); batch text sources | Priority: High | Owner: Claude Code | Due: —
-- [ ] Distribution-list config tools + `publish_weekly` composite tool | Priority: High | Owner: Claude Code | Due: —
-- [ ] Remote hosting with OAuth as a Claude custom connector; weekly scheduled-task prompt | Priority: High | Owner: Claude Code + Brian | Due: —
+- [x] v1.5 work moved to a separate private repo (2026-10-13). This public fork stays the personal/enterprise MCP and the upstream sync point | Priority: High | Owner: Brian | Due: —
 
 ### Research tasks
 
