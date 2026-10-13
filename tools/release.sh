@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Project:  ai-project-scaffold
 # File:     tools/release.sh
-# Modified: 2026-10-10
-# Version:  0.9.5.20261010.1252
+# Modified: 2026-10-13
+# Version:  0.9.6.20261013.0405
 # Purpose:  Cut a release that fails closed and leaves a receipt saying what was actually checked
 # Changelog:
+#   2026-10-13 v0.9.6.20261013.0405 — local edit in a public adopter: work mirror account no longer named; mirror comes from SCAFFOLD_UPSTREAM_MIRROR (scaffold issue #387).
 #   2026-10-10 v0.9.5.20261010.1252 — the pipx build fallback is pinned to build==1.6.1 (report item 28, S9).
 #   2026-10-10 v0.9.4.20261010.1205 — a SHA256SUMS manifest of the tagged tree is built before the tag is pushed and attached to the release (report item 15). A manifest of files, not a tarball hash: GitHub builds tarballs on demand.
 #   2026-09-23 v0.9.3.20260923.0941 — fixtures run inside the root tools/fixture_guard.sh validates. There a git and a mktemp on PATH refuse anything that would land outside it. Every mktemp takes a ${TMPDIR} template, because macOS mktemp ignores TMPDIR without one.
@@ -62,7 +63,8 @@ set -euo pipefail
 # replaces itself mid-run, so a library is one more file to deliver in step -- and the
 # drift this block caused (item 8) came from copies nobody compared, not from copying.
 UPSTREAM_DEFAULT="Robiton/ai-project-scaffold"
-UPSTREAM_MIRROR="bworrell_Zotec/ai-project-scaffold"
+# Local edit (public adopter, scaffold issue #387): the work mirror is configured, not named.
+UPSTREAM_MIRROR="${SCAFFOLD_UPSTREAM_MIRROR:-}"
 upstream_valid() {  # upstream_valid <name> -> 0 only for one owner/repo
   # (An underscore is legal in an owner: managed-user accounts, like the mirror's, carry one.)
   # The name is spliced into `gh api repos/<name>/tarball/<tag>`, so `../x`, a third
