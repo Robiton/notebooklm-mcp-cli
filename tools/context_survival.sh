@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Project:  ai-project-scaffold
 # File:     tools/context_survival.sh
-# Modified: 2026-10-10
-# Version:  0.3.6.20261010.1205
+# Modified: 2026-10-13
+# Version:  0.3.7.20261013.0405
 # Purpose:  Prove an adopter's own content survives setup, upgrade and overlay application.
 # Changelog:
+#   2026-10-13 v0.3.7.20261013.0405 — local edit in a public adopter: work mirror account no longer named; mirror comes from SCAFFOLD_UPSTREAM_MIRROR (scaffold issue #387).
 #   2026-10-10 v0.3.6.20261010.1205 — a baseline tarball that does not match its release's SHA256SUMS is not used (report item 15), and the declared upstream comes from the shared parser, quoted -- it was word-split into the loop.
-#   2026-10-07 v0.3.5.20261007.0347 — the baseline tarball comes from wherever this project gets the scaffold. It was fetched from Robiton only, which a work machine on the work-mirror mirror cannot read, so the upgrade path always skipped there. Tries SCAFFOLD_UPSTREAM or .scaffold-upstream first, then Robiton, then the mirror.
+#   2026-10-07 v0.3.5.20261007.0347 — the baseline tarball comes from wherever this project gets the scaffold. It was fetched from Robiton only, which a work machine on the the work mirror account mirror cannot read, so the upgrade path always skipped there. Tries SCAFFOLD_UPSTREAM or .scaffold-upstream first, then Robiton, then the mirror.
 #   2026-10-04 v0.3.4.20261004.0655 — A FAIL IS EXIT 1 EVEN WHEN SOMETHING ELSE SKIPPED. Any skip forced exit 3, and in an adoption the overlay path always skips, so a real failure there could never come out as 1. preflight showed it as [SKIP] and adoption_check accepted it. Measured in localcoder: "6 passed, 1 failed", exit 3, and a message saying the upgrade path was not verified, printed under 6 passing upgrade-path checks. The failure was path 1: setup.sh refuses outside a template clone, so it exited 2 in every adoption. Paths 1 and 3 now print n/a where scaffold_clone is false. They test the template, which an adoption does not have, so not running them there is neither unverified nor a pass. The exit decision is verdict(), and --selftest drives it.
 #   2026-09-23 v0.3.3.20260923.0941 — fixtures run inside the root tools/fixture_guard.sh validates. There a git and a mktemp on PATH refuse anything that would land outside it. Every mktemp takes a ${TMPDIR} template, because macOS mktemp ignores TMPDIR without one.
 #   2026-09-23 v0.3.2.20260923.0843 — every mktemp fails closed. A failed one left the temp variable empty, so the fixture ran in the caller's directory; header_check's committed into Robiton/control.
@@ -98,7 +99,8 @@ pass=0; fail=0; UNBUILDABLE=0
 # replaces itself mid-run, so a library is one more file to deliver in step -- and the
 # drift this block caused (item 8) came from copies nobody compared, not from copying.
 UPSTREAM_DEFAULT="Robiton/ai-project-scaffold"
-UPSTREAM_MIRROR="work-mirror/ai-project-scaffold"
+# Local edit (public adopter, scaffold issue #387): the work mirror is configured, not named.
+UPSTREAM_MIRROR="${SCAFFOLD_UPSTREAM_MIRROR:-}"
 upstream_valid() {  # upstream_valid <name> -> 0 only for one owner/repo
   # (An underscore is legal in an owner: managed-user accounts, like the mirror's, carry one.)
   # The name is spliced into `gh api repos/<name>/tarball/<tag>`, so `../x`, a third
@@ -177,7 +179,7 @@ PY_SUMS
 # ONE BODY, TWO FILES: the two that fetch a release. Not in shared:upstream, because
 # scaffold_version.sh pins every gh call it carries to a bound, and it never fetches.
 release_sums() {  # release_sums <owner/repo> <tag> <out> -> 0 fetched, 1 this release has none
-  # The work-mirror mirror has tags and no releases (a deploy key cannot create one), so
+  # The the work mirror account mirror has tags and no releases (a deploy key cannot create one), so
   # there is nothing to fetch there, and releases cut before 0.111.21 carry no SHA256SUMS.
   # Both are "unverified", which the caller reports; neither is a mismatch.
   command -v gh >/dev/null 2>&1 || return 1
@@ -290,12 +292,12 @@ make_adoption() {   # what setup.sh PRODUCES, and what the upgrader runs against
     # from upstream. Works in an adoption when the machine has gh and network.
     local _t; _t="$(mktemp -d "${TMPDIR:-/tmp}/context_survival.XXXXXX")" || { echo "context_survival: mktemp failed; stopping" >&2; exit 1; }
     # FROM WHEREVER THIS PROJECT GETS THE SCAFFOLD: work machines read only the
-    # work-mirror mirror. Same order as scaffold_upgrade.sh's upstream_pinned/probe.
+    # the work mirror account mirror. Same order as scaffold_upgrade.sh's upstream_pinned/probe.
     # The shared block's parser, so a name that is not owner/repo is refused here too
     # (it was word-split into the loop unquoted), then the two known upstreams.
     local _pin _src
     _pin="$(upstream_pinned "$ROOT")" || _pin=""
-    for _src in ${_pin:+"$_pin"} "$UPSTREAM_DEFAULT" "$UPSTREAM_MIRROR"; do
+    for _src in ${_pin:+"$_pin"} "$UPSTREAM_DEFAULT" ${UPSTREAM_MIRROR:+"$UPSTREAM_MIRROR"}; do
       rm -rf "$_t/tree"; mkdir "$_t/tree"
       if gh api "repos/$_src/tarball/$from_tag" > "$_t/b.tgz" 2>/dev/null \
          && tar -xz -C "$_t/tree" --strip-components=1 -f "$_t/b.tgz" 2>/dev/null; then
