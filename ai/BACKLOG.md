@@ -37,11 +37,16 @@ _(nothing active)_
 - [ ] **Live-test the enterprise batchexecute (CLI) path after batch 4** — notebook listing params and upload path now follow upstream's captured enterprise traffic; upstream live-verified `notebook.cloud.google.com` / `global` with its own code, but the fork's CLI path (fork profile) has not been run against a live Enterprise deployment | Priority: High | Owner: Brian | Due: —
 - [x] **Batch 5 — v0.10.1–v0.12.0** (32 commits, 20 conflicts) — Merged as #44 2026-10-12. Interactive reports, usage tools, `nlm auth refresh`, download containment (GHSA-92q4) merged with the fork's CLI allowlist. 1747 tests pass | Priority: High | Owner: Claude Code | Due: —
 - [ ] Decide: MCP downloads now default to `~/Downloads/gemini-notebook` (upstream GHSA-92q4 fix). Keep that folder name, or rename it with the rebrand decision? | Priority: Low | Owner: Brian | Due: —
-- [ ] **Batch 6 — v0.12.1–v0.15.4** (105 commits) — PR open. Protected credential store adopted after a security read, with fork hardening (`python -I` worker; no keystore probe or login notice in enterprise mode); `profile`/`alias` tools, `nlm setup` wizard; upstream's Windows CI leg dropped (hosted-MCP target, macOS dev); build-label and package-name fixes. 56 MCP tools; 2500 tests pass | Priority: High | Owner: Claude Code | Due: —
+- [x] **Batch 6 — v0.12.1–v0.15.4** (105 commits) — Merged as #45 2026-10-12. Protected credential store adopted after a security read, with fork hardening (`python -I` worker; no keystore probe or login notice in enterprise mode); `profile`/`alias` tools, `nlm setup` wizard; upstream's Windows CI leg dropped (hosted-MCP target, macOS dev); build-label and package-name fixes. 56 MCP tools; 2500 tests pass | Priority: High | Owner: Claude Code | Due: —
 - [ ] Decide: new interactive desktop logins offer protected credential storage with protected as the prompt default (`cli/main.py` `default=1`). Keep, or default to file mode (`default=2`) for strict opt-in? | Priority: Med | Owner: Brian | Due: —
 - [ ] Credential-store lows from the batch 6 security read (v1.5 candidates): plaintext deleted with `rmtree` (backups may keep copies); unsalted hashes in operation markers; `ALLOW_REAL_KEYSTORE` / `NOTEBOOKLM_KEYSTORE_SERVICE_NAME` test toggles honoured in production builds; MCP "protect your login" notice is agent-read text in tool output | Priority: Low | Owner: Brian | Due: —
 - [ ] Decide: rebrand wording ("Gemini Notebook") and README positioning now that upstream also supports Enterprise. Release target after sync: v1.5 (plan to follow) | Priority: Med | Owner: Brian | Due: —
-- [ ] Close issue #26 (upstream drift) when batch 6 merges | Priority: Low | Owner: Claude Code | Due: —
+- [x] Close issue #26 (upstream drift) — Closed 2026-10-12 after #45. Upstream has no release after v0.15.4; all 4 upstream GHSAs fixed by v0.11.2 and merged | Priority: Low | Owner: Claude Code | Due: —
+- [ ] Merge #46: CodeQL false positives in `tests/test_base_url_resolution.py` (alerts #19/#20) | Priority: Low | Owner: Brian | Due: —
+
+### v1.5
+
+- [x] v1.5 work moved to a separate private repo (2026-10-13). This public fork stays the personal/enterprise MCP and the upstream sync point | Priority: High | Owner: Brian | Due: —
 
 ### Research tasks
 
