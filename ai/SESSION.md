@@ -56,10 +56,12 @@ _Most recent session at the top._
 
 - Batch 6 merged as #45; issue #26 closed. Upstream's Windows CI leg dropped (it renamed the required "Run tests" check; fork targets a hosted MCP, developed on macOS). Post-sync patch check: upstream has nothing after v0.15.4, all 4 upstream GHSAs fixed and merged, Dependabot 0 open, pip-audit clean; CodeQL test false positives fixed in #46.
 - v1.5 brief received. v1.5 development moved to a separate private repo seeded from this fork (2026-10-13); this fork stays public, keeps personal + enterprise support, and remains the upstream sync point. Vendored scaffold tools named a work GitHub account: removed in a follow-up PR, scaffold issue filed.
+- 2026-10-13: #46, #47, #48 merged (sanitize PR removed the work account name from 5 vendored `tools/*.sh`; scaffold issue #387). History rewrite done at Brian's request: the account name and a work email (author/committer on 92 commits, from the machine's global git config) appeared only in the 54 commits since 2026-10-12, so `git filter-repo --refs <heads> ^5a027e1 ^upstream/main` rewrote just those. `main` tree byte-identical, all 83 tags and the upstream merge base unchanged; 11 branches force-pushed with lease while the ruleset was briefly disabled (Brian ran the script). A fresh clone shows no trace. A first full-history attempt was discarded: filter-repo strips signatures, which would have rewritten all upstream commits. Repo-local `user.email` now set to the personal address in this repo and the private one.
 
 **Next steps:**
 - Keep syncing upstream here; v1.5 work continues in the private repo
-- Decide whether to rewrite this repo's git history to drop the work account name (see the sanitize PR)
+- Ask GitHub Support to purge cached views and PR refs #34–#48 (old commits are still reachable through them)
+- Local clones made before 2026-10-13 hold the old history: reset to `origin/main` and delete stale local branches; never push them
 - Brian decisions: credential-store prompt default; credential-store lows (BACKLOG); rebrand wording; download folder name; OAuth bind exemption; live auth in `server_info`; live enterprise CLI test
 - Decide header-rule policy for upstream-derived `src/` files and the CHANGELOG gate (BACKLOG)
 - Optionally wire session hooks: `./setup.sh` writes `.claude/settings.json` hooks (currently a personal allowlist only)
