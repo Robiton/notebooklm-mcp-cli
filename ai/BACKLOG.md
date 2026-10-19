@@ -42,7 +42,10 @@ _(nothing active)_
 - [ ] Credential-store lows from the batch 6 security read (v1.5 candidates): plaintext deleted with `rmtree` (backups may keep copies); unsalted hashes in operation markers; `ALLOW_REAL_KEYSTORE` / `NOTEBOOKLM_KEYSTORE_SERVICE_NAME` test toggles honoured in production builds; MCP "protect your login" notice is agent-read text in tool output | Priority: Low | Owner: Brian | Due: —
 - [ ] Decide: rebrand wording ("Gemini Notebook") and README positioning now that upstream also supports Enterprise. Release target after sync: v1.5 (plan to follow) | Priority: Med | Owner: Brian | Due: —
 - [x] Close issue #26 (upstream drift) — Closed 2026-10-12 after #45. Upstream has no release after v0.15.4; all 4 upstream GHSAs fixed by v0.11.2 and merged | Priority: Low | Owner: Claude Code | Due: —
-- [ ] Merge #46: CodeQL false positives in `tests/test_base_url_resolution.py` (alerts #19/#20) | Priority: Low | Owner: Brian | Due: —
+- [x] Merge #46: CodeQL false positives in `tests/test_base_url_resolution.py` (alerts #19/#20) — Merged 2026-10-13 | Priority: Low | Owner: Brian | Due: —
+- [x] Remove work identifiers from public history — Done 2026-10-13: 54 commits since 2026-10-12 rewritten and force-pushed; tags and upstream ancestry unchanged | Priority: High | Owner: Brian | Due: —
+- [ ] Ask GitHub Support to purge cached views and PR refs #34–#48 on this repo (old commits stay reachable through them) | Priority: Med | Owner: Brian | Due: —
+- [ ] Reset local clones made before 2026-10-13 to `origin/main` and delete stale local branches (they carry the pre-rewrite history; never push them) | Priority: Med | Owner: Brian | Due: —
 
 ### v1.5
 
